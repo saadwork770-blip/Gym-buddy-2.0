@@ -15,13 +15,15 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 
 /* Load order matters: the engines reference each other at call time, but
-   data.js and templates.js must be evaluated first. */
+   the data layer and templates.js must be evaluated first. */
 const FILES = [
   "js/i18n.js",
   "js/i18n/en.js",
   "js/i18n/ar.js",
   "js/i18n/content.ar.js",
-  "js/data.js",
+  "js/data/library.js",
+  "js/data/coaching.js",
+  "js/data/labels.js",
   "js/templates.js",
   "js/engine/periodization.js",
   "js/engine/progression.js",
@@ -37,7 +39,7 @@ const EXPORTS = [
   "I18n", "Analysis", "exerciseById", "exercisesForDay", "exercisesByPattern", "templateOverlap",
   "exName", "exSteps", "exTips", "muscleLabel", "patternLabel", "loadTypeLabel",
   "dayLabel", "dayShort", "jointLabel", "templateName", "splitName", "splitRationale",
-  "EXERCISES", "SPLITS", "SESSION_TEMPLATES", "VOLUME_LANDMARKS", "PATTERNS",
+  "EXERCISES", "SPLITS", "SESSION_TEMPLATES", "VOLUME_LANDMARKS", "PATTERNS", "exerciseSkill",
   "MUSCLE_LABELS", "GOAL_PROFILES", "LEVEL_PROFILES", "LOAD_TYPES", "PROGRAM",
   "DAY_KEYS", "DAY_LABELS", "DAY_SHORT",
 ];

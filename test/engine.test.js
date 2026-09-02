@@ -318,10 +318,8 @@ function simulate(g, profileId, weeks, shape) {
       const d = new Date(now);
       d.setDate(now.getDate() - today - (w * 7) + idx[planned.dayKey]);
       if (d > now) return;
-      const s = g.Store.startSession(profileId, planned.dayKey, null);
+      const s = g.Store.startSession(profileId, planned.dayKey, null, d);
       if (!s) return;
-      s.date = d.toISOString().slice(0, 10);
-      s.startedAt = d.getTime();
       s.sets = [];
       s.blocks.forEach(b => {
         for (let i = 0; i < b.sets; i++) {
@@ -573,7 +571,10 @@ suite("The coaching engine speaks both languages");
   check(/[\u0600-\u06FF]/.test(arabic), "the Arabic rendering actually contains Arabic script");
   check(!/^[a-z.]+\.[a-z]/.test(arabic.trim()),
     `no raw translation key leaks into the output (got: ${arabic.slice(0, 40)}…)`);
-  check(arabic.includes("\u2068") || !/[0-9]/.test(arabic),
+  /* U+2068 first-strong for runs containing letters, U+2066 left-to-right for
+     digit-only runs like "-3.6" or "12/12/12", which have no strong character
+     to take a direction from. Either one, closed by U+2069, is correct. */
+  check(/[\u2066\u2068][^\u2069]*\u2069/.test(arabic) || !/[0-9]/.test(arabic),
     "numbers inside Arabic prose are wrapped in bidi isolates");
 
   // Whole-feed sweep: nothing should render as a dotted key.
@@ -641,6 +642,309 @@ suite("Arabic plural forms are wired up");
   g3.I18n.setLang("en");
   const enForms = [1, 2].map(n => g3.I18n.t("common.sessions", { count: n }));
   check(enForms[0] !== enForms[1], "English still distinguishes singular from plural");
+}
+
+suite("Coming back from a layoff is not treated as another training week");
+{
+  const g4 = load();
+  const p4 = g4.Store.createProfile(baseProfile);
+  g4.Store.updateSettings(p4.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const ex = g4.exerciseById("barbell-bench-press");
+
+  /* Trained steadily to 75 kg, then vanished. The dates are what matter here,
+     so the log is written directly rather than simulated. */
+  const write = gaps => {
+    const db = JSON.parse(g4.__storage["gymbuddy_profiles_v2"]);
+    db[p4.id].sessionLog = gaps.map((d, i) => ({
+      id: `s${i}`, date: today(-d), completed: true,
+      sets: [0, 1, 2].map(n => ({ exerciseId: ex.id, setIndex: n, weight: 75, reps: 8, rpe: 7.5, done: true })),
+    })).sort((a, b) => (a.date < b.date ? -1 : 1));
+    g4.__storage["gymbuddy_profiles_v2"] = JSON.stringify(db);
+    return g4.Store.getProfile(p4.id);
+  };
+  const rec = profile => g4.Progression.recommend({
+    profile, exercise: ex, phase: g4.Periodization.phaseFor(profile) });
+
+  const fresh = rec(write([17, 14, 10, 7, 3]));
+  check(fresh.action !== "comeback", "a week of normal training is not a layoff");
+
+  const away = write([52, 49, 45, 42, 38]);
+  const back = rec(away);
+  check(back.action === "comeback", "five weeks away triggers a re-entry, not an increase");
+  check(back.weight < 75, `the load actually comes down (75 → ${back.weight} kg)`);
+  check(back.weight >= 75 * 0.8, `but not further than the evidence supports (${back.weight} kg)`);
+  check(back.rpeCap <= 8, `and the effort ceiling comes with it (RPE ${back.rpeCap})`);
+  check(g4.Periodization.phaseFor(away).returning === true,
+    "the mesocycle presents as week 1 rather than dropping them into a deload");
+
+  /* Longer off means more given back, monotonically. */
+  const loads = [12, 25, 45, 90, 200].map(d => rec(write([d, d + 3, d + 7])).weight);
+  check(loads.every((w, i) => i === 0 || w <= loads[i - 1]),
+    `a longer break gives back more (${loads.join(" → ")} kg)`);
+
+  /* The ramp ends by itself: after the prescribed sessions back, normal rules. */
+  const served = write([60, 57, 6, 3]);
+  check(g4.Progression.layoffState(served) === null,
+    "the re-entry ramp expires once the sessions back are logged");
+}
+
+suite("A lift that rotated out of the block restarts slightly below where it left");
+{
+  const g5 = load();
+  const p5 = g5.Store.createProfile(baseProfile);
+  g5.Store.updateSettings(p5.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const rusty = g5.exerciseById("barbell-bench-press");
+  const kept = g5.exerciseById("lat-pulldown-wide");
+
+  const db = JSON.parse(g5.__storage["gymbuddy_profiles_v2"]);
+  const set = (id, w) => ({ exerciseId: id, setIndex: 0, weight: w, reps: 8, rpe: 7.5, done: true });
+  db[p5.id].sessionLog = [
+    { id: "a", date: today(-45), completed: true, sets: [set(rusty.id, 75), set(kept.id, 50)] },
+    { id: "b", date: today(-18), completed: true, sets: [set(kept.id, 50)] },
+    { id: "c", date: today(-11), completed: true, sets: [set(kept.id, 50)] },
+    { id: "d", date: today(-4),  completed: true, sets: [set(kept.id, 50)] },
+  ];
+  g5.__storage["gymbuddy_profiles_v2"] = JSON.stringify(db);
+  const profile = g5.Store.getProfile(p5.id);
+  const phase = g5.Periodization.phaseFor(profile);
+
+  check(g5.Progression.layoffState(profile) === null, "training never stopped, so this is not a layoff");
+  const r = g5.Progression.recommend({ profile, exercise: rusty, phase });
+  check(r.action === "comeback", "the lift that went quiet is eased back in");
+  check(r.weight < 75 && r.weight >= 75 * 0.9,
+    `with a much smaller haircut than a real layoff (75 → ${r.weight} kg)`);
+  const other = g5.Progression.recommend({ profile, exercise: kept, phase });
+  check(other.action !== "comeback", "the lift trained all along is untouched");
+}
+
+suite("The program varies across blocks instead of repeating itself forever");
+{
+  const g6 = load();
+  const p6 = g6.Store.createProfile(baseProfile);
+  g6.Store.updateSettings(p6.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const prof = g6.Store.getProfile(p6.id);
+  const at = block => g6.Scheduler.buildPlan(prof, {
+    phase: { ...g6.Periodization.phaseFor(prof), block } });
+  const sig = plan => plan.sessions.map(s => s.blocks.map(b => b.exerciseId).join(",")).join("|");
+
+  const plans = [1, 2, 3, 4, 5, 6, 7, 8].map(at);
+  const distinct = new Set(plans.map(sig)).size;
+  check(distinct >= 6, `eight blocks produce ${distinct} distinct programs, not one`);
+
+  /* Rotation is staggered on purpose — a block where every exercise is
+     unfamiliar is a block of bad sets and no comparable data — so a session
+     standing still for one turnover is correct. What would be wrong is a
+     session that never moves, or one that freezes for half a year. */
+  const runs = plans[0].sessions.map(() => ({ longest: 0, current: 0, changes: 0 }));
+  for (let i = 0; i < plans.length - 1; i++) {
+    plans[i].sessions.forEach((s, j) => {
+      const before = new Set(s.blocks.map(b => b.exerciseId));
+      const changed = plans[i + 1].sessions[j].blocks.filter(id => !before.has(id.exerciseId)).length;
+      const r = runs[j];
+      if (changed) { r.changes++; r.current = 0; }
+      else { r.current++; r.longest = Math.max(r.longest, r.current); }
+    });
+  }
+  check(runs.every(r => r.changes >= 2),
+    `every session rotates more than once across eight blocks (${runs.map(r => r.changes).join("/")} changes)`);
+  check(runs.every(r => r.longest <= 2),
+    `and none of them stands still for more than two blocks running (longest freeze: ${Math.max(...runs.map(r => r.longest))})`);
+
+  const churn = [2, 3, 4, 5, 6, 7, 8].map(b => at(b).rotated.length);
+  check(churn.every(n => n >= 2 && n <= 14),
+    `each block changes some of the program but not all of it (${churn.join(", ")} of 24)`);
+
+  /* The first block is the program you were handed. The engine earns the right
+     to redesign it by watching you run it, not before. */
+  const first = at(1).sessions.find(s => s.templateId === "upper_a").blocks.map(b => b.exerciseId);
+  check(first[0] === "chest-press-machine" && first[1] === "lat-pulldown-wide",
+    "block 1 is still the source plan, unrotated");
+}
+
+suite("Every exercise in the library can actually be programmed");
+{
+  const g7 = load();
+  const reached = new Set();
+  [["mon", "wed", "fri"], ["mon", "tue", "thu", "fri"],
+   ["mon", "tue", "wed", "thu", "fri"], ["mon", "thu"]].forEach(days => {
+    ["New to training", "Some experience", "Experienced"].forEach(level => {
+      ["Fat loss", "Muscle gain", "Strength", "General fitness"].forEach(goal => {
+        const q = g7.Store.createProfile({ ...baseProfile, level, goal });
+        g7.Store.updateSettings(q.id, { trainingDays: days });
+        const pr = g7.Store.getProfile(q.id);
+        for (let b = 1; b <= 12; b++) {
+          g7.Scheduler.buildPlan(pr, { phase: { ...g7.Periodization.phaseFor(pr), block: b } })
+            .sessions.forEach(s => s.blocks.forEach(x => reached.add(x.exerciseId)));
+        }
+      });
+    });
+  });
+  const strength = g7.EXERCISES.filter(e => e.muscle !== "cardio");
+  const missing = strength.filter(e => !reached.has(e.id));
+  check(missing.length === 0,
+    `all ${strength.length} strength exercises are reachable at default settings${missing.length ? " — missing: " + missing.map(e => e.id).join(", ") : ""}`);
+}
+
+suite("Experience and goal change which exercises you are given");
+{
+  const g8 = load();
+  const survey = (level, goal) => {
+    const q = g8.Store.createProfile({ ...baseProfile, level, goal });
+    g8.Store.updateSettings(q.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+    const pr = g8.Store.getProfile(q.id);
+    let primary = 0, technical = 0, barbell = 0, isoPrimary = 0;
+    for (let b = 1; b <= 8; b++) {
+      g8.Scheduler.buildPlan(pr, { phase: { ...g8.Periodization.phaseFor(pr), block: b } })
+        .sessions.forEach(s => s.blocks.forEach(x => {
+          const ex = g8.exerciseById(x.exerciseId);
+          if (ex.loadType === "barbell") barbell++;
+          if (x.role !== "primary") return;
+          primary++;
+          if (g8.exerciseSkill(ex) === 3) technical++;
+          if (ex.role === "isolation") isoPrimary++;
+        }));
+    }
+    return { pctTechnical: Math.round(technical / primary * 100), barbell, isoPrimary };
+  };
+
+  const novice = survey("New to training", "Fat loss");
+  const veteran = survey("Experienced", "Fat loss");
+  check(veteran.pctTechnical > novice.pctTechnical + 15,
+    `a beginner meets far fewer technical lifts in primary slots (${novice.pctTechnical}% vs ${veteran.pctTechnical}%)`);
+
+  const strength = survey("Experienced", "Strength");
+  const hypertrophy = survey("Experienced", "Muscle gain");
+  check(strength.barbell > hypertrophy.barbell,
+    `a strength goal earns more barbell work (${strength.barbell} vs ${hypertrophy.barbell} selections)`);
+
+  check(novice.isoPrimary === 0 && veteran.isoPrimary === 0,
+    "no amount of rotation puts an isolation exercise in a primary slot");
+}
+
+suite("Starting weights come from your numbers when you give them");
+{
+  const g9 = load();
+  const p9 = g9.Store.createProfile(baseProfile);      // 114 kg, "some experience"
+  g9.Store.updateSettings(p9.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const seed = (profile, id, range) =>
+    g9.Progression.seedWeight(g9.exerciseById(id), profile, range || [8, 12]);
+
+  const guessed = g9.Store.getProfile(p9.id);
+  const beforeLeg = seed(guessed, "leg-press");
+  const beforeCurl = seed(guessed, "seated-db-bicep-curl", [12, 15]);
+  const beforeAssist = seed(guessed, "assisted-pull-up-machine");
+  check(g9.Progression.calibrationScale(guessed) === 1, "an uncalibrated profile is left alone");
+
+  const targets = g9.Store.calibrationTargets(guessed, 4).map(e => e.id);
+  check(targets.length >= 3 && targets.includes("leg-press"),
+    `the lifts it asks about are the main ones in the plan (${targets.join(", ")})`);
+
+  /* A lifter who is a long way stronger than the formula assumed. */
+  g9.Store.setCalibration(p9.id, [
+    { exerciseId: "leg-press", weight: 180, reps: 8, rpe: 8 },
+    { exerciseId: "chest-press-machine", weight: 70, reps: 8, rpe: 8 },
+  ]);
+  const tuned = g9.Store.getProfile(p9.id);
+
+  check(seed(tuned, "leg-press") > beforeLeg * 1.5,
+    `a calibrated lift is seeded from its own set (${beforeLeg} → ${seed(tuned, "leg-press")} kg)`);
+  const scale = g9.Progression.calibrationScale(tuned);
+  check(scale > 1 && scale <= 1.45,
+    `strength transfers to uncalibrated lifts, but damped and capped (x${scale})`);
+  const curl = seed(tuned, "seated-db-bicep-curl", [12, 15]);
+  check(curl > beforeCurl && curl < beforeCurl * 2,
+    `so the curl moves up without pretending a leg press predicts it (${beforeCurl} → ${curl} kg)`);
+  check(seed(tuned, "assisted-pull-up-machine") < beforeAssist,
+    `and a stronger lifter is offered LESS assistance, not more (${beforeAssist} → ${seed(tuned, "assisted-pull-up-machine")} kg)`);
+
+  /* A weaker lifter than the formula assumed moves the other way. */
+  const p10 = g9.Store.createProfile({ ...baseProfile, name: "Lighter" });
+  g9.Store.updateSettings(p10.id, { trainingDays: ["mon", "thu"] });
+  g9.Store.setCalibration(p10.id, [
+    { exerciseId: "leg-press", weight: 40, reps: 10, rpe: 9 },
+    { exerciseId: "chest-press-machine", weight: 15, reps: 10, rpe: 9 },
+  ]);
+  check(g9.Progression.calibrationScale(g9.Store.getProfile(p10.id)) < 1,
+    "a lifter weaker than the formula assumed is seeded lighter, not heavier");
+
+  /* Clearing it puts the estimate back. */
+  g9.Store.setCalibration(p9.id, []);
+  check(seed(g9.Store.getProfile(p9.id), "leg-press") === beforeLeg,
+    "clearing the calibration restores the estimate exactly");
+}
+
+suite("Signed numbers keep their sign in Arabic");
+{
+  const g11 = load();
+  g11.I18n.setLang("ar");
+  /* A minus sign is a neutral character: inside a first-strong isolate with no
+     letter to anchor it, it drifts to the far end of the run and "-3.6"
+     renders as "3.6-", which is a different number to anyone reading it. */
+  const line = g11.I18n.t("profile.girthMeta", { delta: "-3.6", days: 42, weight: "" });
+  const isolated = line.match(/[\u2066\u2068]([^\u2069]*)\u2069/g) || [];
+  check(isolated.some(run => run.includes("\u2066") && run.includes("-3.6")),
+    "a digit-only run is isolated left-to-right, not first-strong");
+  check(line.indexOf("-3.6") !== -1, "so the sign stays in front of the digits");
+
+  /* Runs that do contain letters still resolve by their own first letter. */
+  const named = g11.I18n.t("engine.prog.calibrateFrom", { weight: 80, reps: 8 });
+  check(named.includes("\u2066") || named.includes("\u2068"), "lettered runs are still isolated");
+  g11.I18n.setLang("en");
+  check(!/[\u2066\u2068]/.test(g11.I18n.t("profile.girthMeta", { delta: "-3.6", days: 42, weight: "" })),
+    "and English is left entirely alone");
+}
+
+suite("The tape measure says what the scale cannot");
+{
+  const g12 = load();
+  const stamp = n => today(-n);
+  const build = (weights, waists) => {
+    const q = g12.Store.createProfile({ ...baseProfile, name: "Tape" });
+    const db = JSON.parse(g12.__storage["gymbuddy_profiles_v2"]);
+    db[q.id].weightLog = weights.map(([d, kg]) => ({ date: stamp(d), weightKg: kg }));
+    db[q.id].girthLog = waists.map(([d, cm]) => ({ date: stamp(d), waistCm: cm, hipCm: 108 }));
+    g12.__storage["gymbuddy_profiles_v2"] = JSON.stringify(db);
+    return g12.Store.getProfile(q.id);
+  };
+
+  check(g12.Store.girthTrend(build([[30, 100]], [[30, 100]])) === null,
+    "one measurement is not a trend");
+  check(g12.Store.girthTrend(build([[5, 100], [0, 100]], [[5, 100], [0, 99]])) === null,
+    "and two readings five days apart are measuring your breathing, not your waist");
+
+  /* The case the whole feature exists for: the scale has stalled, the tape
+     has not, and being told so is the difference between finishing the block
+     and abandoning it. */
+  const flat = build(
+    [[50, 114], [25, 113.9], [0, 114.1]],
+    [[50, 104], [25, 101.5], [0, 99.2]]);
+  const trend = g12.Store.girthTrend(flat);
+  check(trend && trend.waistDelta === -4.8, `waist movement is measured (${trend && trend.waistDelta} cm)`);
+  check(trend && Math.abs(trend.weightDelta) < 0.5,
+    `alongside the scale over the same window (${trend && trend.weightDelta} kg)`);
+  check(trend && trend.ratio > 0, `and the waist-to-hip ratio when hips are logged (${trend && trend.ratio})`);
+
+  const feed = g12.Coach.buildFeed(flat);
+  const recomp = feed.find(msg => msg.key && msg.key.startsWith("girth-recomp"));
+  check(!!recomp, "a flat scale with a shrinking waist is reported as the good news it is");
+  check(!feed.some(msg => msg.key && msg.key.startsWith("bw-stall")),
+    "and the stalled-scale warning stands down rather than arguing with it");
+
+  /* The reverse, which nobody volunteers. */
+  const wasting = build(
+    [[50, 114], [25, 110], [0, 108]],
+    [[50, 104], [25, 104], [0, 103.9]]);
+  check(g12.Coach.buildFeed(wasting).some(msg => msg.key && msg.key.startsWith("girth-scale-only")),
+    "weight falling while the waist holds is flagged, not celebrated");
+
+  /* And it asks for the number in the first place. */
+  const noTape = g12.Store.createProfile({ ...baseProfile, name: "NoTape" });
+  const db = JSON.parse(g12.__storage["gymbuddy_profiles_v2"]);
+  db[noTape.id].weightLog = [[21, 114], [14, 113.6], [0, 113.2]].map(([d, kg]) => ({ date: stamp(d), weightKg: kg }));
+  g12.__storage["gymbuddy_profiles_v2"] = JSON.stringify(db);
+  check(g12.Coach.buildFeed(g12.Store.getProfile(noTape.id))
+        .some(msg => msg.key && msg.key.startsWith("girth-start")),
+    "a fat-loss profile with a scale history is asked for a waist measurement");
 }
 
 /* ------------------------------------------------------------------ */

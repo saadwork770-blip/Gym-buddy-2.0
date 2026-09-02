@@ -103,6 +103,9 @@ function upgradeProfile(p) {
     coachFeed: p.coachFeed || [],
     dismissed: p.dismissed || [],
     progress: p.progress || {},     // v1 checkbox state, kept so nothing is lost
+    lastBackup: p.lastBackup || null,   // { at, sessions } — see backupStatus()
+    calibration: p.calibration || null, // { entries: [{exerciseId, weight, reps, rpe}], at }
+    girthLog: p.girthLog || [],         // waist and one other site over time
   };
 }
 
@@ -217,7 +220,7 @@ const Store = {
   startNewCycle(id, weeks) {
     const db = loadDB();
     if (!db[id]) return null;
-    db[id].meso = Periodization.newCycle(weeks || (db[id].meso && db[id].meso.weeks));
+    db[id].meso = Periodization.newCycle(weeks, db[id].meso);
     saveDB(db);
     return this.regeneratePlan(id);
   },
@@ -233,9 +236,62 @@ const Store = {
     const w = weeks || (db[id].meso && db[id].meso.weeks) || Periodization.DEFAULT_WEEKS;
     const start = new Date();
     start.setDate(start.getDate() - (w - 1) * 7);
-    db[id].meso = { startDate: start.toISOString().slice(0, 10), weeks: w };
+    db[id].meso = { startDate: start.toISOString().slice(0, 10), weeks: w,
+                    block: (db[id].meso && db[id].meso.block) || 1 };
     saveDB(db);
     return this.regeneratePlan(id);
+  },
+
+  /* ---------------- Calibration ---------------- */
+
+  /**
+   * Record what the lifter can already do on a few movements.
+   *
+   * Prescriptions the engine had merely guessed are thrown away, because that
+   * is the whole point — they were computed from the estimate this replaces.
+   * Two kinds survive: weights you set by hand, and weights on lifts you have
+   * actually trained, because a logged session outranks any estimate,
+   * calibrated or not.
+   */
+  setCalibration(id, entries) {
+    const db = loadDB();
+    if (!db[id]) return null;
+    const clean = (entries || [])
+      .filter(e => e && e.exerciseId && Number(e.weight) > 0 && Number(e.reps) > 0)
+      .map(e => ({
+        exerciseId: e.exerciseId,
+        weight: Math.round(Number(e.weight) * 100) / 100,
+        reps: Math.round(Number(e.reps)),
+        rpe: e.rpe === "" || e.rpe == null ? null : Number(e.rpe),
+      }));
+    db[id].calibration = clean.length ? { entries: clean, at: new Date().toISOString() } : null;
+
+    const trained = new Set();
+    (db[id].sessionLog || []).forEach(s => (s.sets || []).forEach(x => trained.add(x.exerciseId)));
+    const kept = {};
+    Object.entries(db[id].prescriptions || {}).forEach(([exId, rx]) => {
+      if (rx.manual || trained.has(exId)) kept[exId] = rx;
+    });
+    db[id].prescriptions = kept;
+
+    saveDB(db);
+    return this.regeneratePlan(id);
+  },
+
+  /** The lifts worth asking about: the primary compounds in the current plan. */
+  calibrationTargets(profile, limit) {
+    const plan = profile && profile.plan;
+    const out = [];
+    const seen = new Set();
+    (plan && plan.sessions ? plan.sessions : []).forEach(s => s.blocks.forEach(b => {
+      const ex = exerciseById(b.exerciseId);
+      if (!ex || seen.has(ex.id)) return;
+      if (b.role !== "primary" || ex.role !== "compound") return;
+      if (ex.inverseLoad || ex.loadType === "bodyweight" || ex.loadType === "timed") return;
+      seen.add(ex.id);
+      out.push(ex);
+    }));
+    return out.slice(0, limit || 4);
   },
 
   /* ---------------- Live sessions ---------------- */
@@ -245,17 +301,22 @@ const Store = {
    * so that mid-session edits and the readiness modifier stay stable even if
    * something else regenerates the plan underneath.
    */
-  startSession(id, dayKey, readiness) {
+  startSession(id, dayKey, readiness, asOf) {
     const profile = this.getProfile(id);
     if (!profile) return null;
     const plan = this.getPlan(id);
     const planned = (plan.sessions || []).find(s => s.dayKey === dayKey);
     if (!planned) return null;
 
-    const phase = Periodization.phaseFor(profile);
+    /* `asOf` back-dates the whole session — the mesocycle week, the layoff
+       reckoning and the prescriptions all resolve against that day rather than
+       against today. Filling in a session you did on Saturday should not be
+       told you have been away since Saturday. */
+    const when = asOf ? new Date(asOf) : new Date();
+    const phase = Periodization.phaseFor(profile, when);
     const blocks = planned.blocks.map(b => {
       const ex = exerciseById(b.exerciseId);
-      const rx = Progression.recommend({ profile, exercise: ex, phase, readiness });
+      const rx = Progression.recommend({ profile, exercise: ex, phase, readiness, today: when });
       return {
         exerciseId: b.exerciseId,
         role: b.role,
@@ -274,8 +335,8 @@ const Store = {
 
     const session = {
       id: uid("s_"),
-      date: new Date().toISOString().slice(0, 10),
-      startedAt: Date.now(),
+      date: when.toISOString().slice(0, 10),
+      startedAt: asOf ? when.getTime() : Date.now(),
       dayKey,
       templateId: planned.templateId,
       name: planned.name,
@@ -342,19 +403,29 @@ const Store = {
       durationMin: session.startedAt ? Math.round((Date.now() - session.startedAt) / 60000) : null,
       tonnage: Math.round(Progression.sessionTonnage(session)),
     };
+    /* A session that ends a real break also starts a new block. Leaving the
+       old mesocycle running would drop a returning lifter into week 3 or a
+       deload a few days after coming back, which is the opposite of what a
+       re-entry needs. Read the layoff BEFORE the new session is filed —
+       afterwards there is no gap left to see. */
+    const when = finished.date ? new Date(`${finished.date}T12:00:00`) : new Date();
+    const endedBreak = Progression.layoffState(db[id], when);
     db[id].sessionLog.push(finished);
     db[id].activeSession = null;
+    if (endedBreak && endedBreak.sessionsBack === 0 && endedBreak.gapDays >= 14) {
+      db[id].meso = Periodization.newCycle(null, db[id].meso);
+    }
     saveDB(db);
 
     // Recompute forward prescriptions with the new session in history.
     const profile = this.getProfile(id);
-    const phase = Periodization.phaseFor(profile);
+    const phase = Periodization.phaseFor(profile, when);
     const touched = [...new Set(finished.sets.filter(s => s.done).map(s => s.exerciseId))];
     const db2 = loadDB();
     touched.forEach(exId => {
       const ex = exerciseById(exId);
       if (!ex) return;
-      const rx = Progression.recommend({ profile, exercise: ex, phase });
+      const rx = Progression.recommend({ profile, exercise: ex, phase, today: when });
       db2[id].prescriptions[exId] = {
         weight: rx.weight, repLo: rx.repLo, repHi: rx.repHi, sets: rx.sets,
         action: rx.action, reason: rx.reason, delta: rx.delta,
@@ -369,6 +440,73 @@ const Store = {
   },
 
   /* ---------------- Logging & flags ---------------- */
+
+  /**
+   * Log a tape measurement.
+   *
+   * The scale is a bad instrument for the thing most people are actually
+   * asking it. It moves with water, glycogen, salt and the time of day, and
+   * over a month of lifting in a deficit it can sit perfectly still while the
+   * body underneath it changes shape. A tape around the navel does not have
+   * that problem: it goes down when fat comes off and it does not care what
+   * you ate last night. Hips are optional and give the waist-to-hip ratio,
+   * which is the half of this that is about health rather than appearance.
+   */
+  addGirthEntry(id, entry) {
+    const db = loadDB();
+    if (!db[id]) return null;
+    const waist = Number(entry && entry.waistCm);
+    const hip = Number(entry && entry.hipCm);
+    if (!(waist > 0) && !(hip > 0)) return this.getProfile(id);
+
+    const date = new Date().toISOString().slice(0, 10);
+    db[id].girthLog = db[id].girthLog || [];
+    const existing = db[id].girthLog.find(g => g.date === date) || { date };
+    if (waist > 0) existing.waistCm = Math.round(waist * 10) / 10;
+    if (hip > 0) existing.hipCm = Math.round(hip * 10) / 10;
+    if (!db[id].girthLog.includes(existing)) db[id].girthLog.push(existing);
+    db[id].girthLog.sort((a, b) => a.date.localeCompare(b.date));
+    saveDB(db);
+    return this.getProfile(id);
+  },
+
+  /**
+   * Waist movement over a window, alongside the scale over the same window, so
+   * the two can be read against each other rather than one at a time.
+   * Returns null until there are two measurements far enough apart to mean
+   * anything — a tape read twice in one week is measuring your breathing.
+   */
+  girthTrend(profile, days) {
+    const window = days || 56;
+    const log = (profile.girthLog || []).filter(g => g.waistCm > 0);
+    if (log.length < 2) return null;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - window);
+    const recent = log.filter(g => new Date(g.date) >= cutoff);
+    const use = recent.length >= 2 ? recent : log.slice(-2);
+    const first = use[0], last = use[use.length - 1];
+    const span = Math.round((new Date(last.date) - new Date(first.date)) / 86400000);
+    if (span < 10) return null;
+
+    const weights = (profile.weightLog || []).filter(w => w.weightKg > 0);
+    const near = date => {
+      let best = null, bestGap = Infinity;
+      weights.forEach(w => {
+        const gap = Math.abs(new Date(w.date) - new Date(date));
+        if (gap < bestGap) { bestGap = gap; best = w; }
+      });
+      return best && bestGap <= 10 * 86400000 ? best.weightKg : null;
+    };
+    const wFirst = near(first.date), wLast = near(last.date);
+
+    return {
+      days: span,
+      from: first.waistCm, to: last.waistCm,
+      waistDelta: Math.round((last.waistCm - first.waistCm) * 10) / 10,
+      weightDelta: wFirst != null && wLast != null
+        ? Math.round((wLast - wFirst) * 10) / 10 : null,
+      ratio: last.hipCm > 0 ? Math.round((last.waistCm / last.hipCm) * 100) / 100 : null,
+    };
+  },
 
   addWeightEntry(id, weightKg) {
     const db = loadDB();
@@ -443,6 +581,59 @@ const Store = {
     const p = this.getProfile(id);
     if (!p) return null;
     return JSON.stringify({ app: "GymBuddy", schema: 2, exportedAt: new Date().toISOString(), profile: p }, null, 2);
+  },
+
+  /** Remember that a backup was taken, so the coach can stop nagging. */
+  markBackedUp(id) {
+    const db = loadDB();
+    if (!db[id]) return null;
+    db[id].lastBackup = { at: new Date().toISOString(), sessions: (db[id].sessionLog || []).length };
+    saveDB(db);
+    return this.getProfile(id);
+  },
+
+  /**
+   * How exposed the training log currently is.
+   *
+   * Everything here lives in one browser's localStorage, which is not a
+   * promise. Safari discards site data after seven days without a visit,
+   * "clear browsing data" takes it with the cookies, and a reinstalled phone
+   * never had it. None of that is recoverable, and none of it announces
+   * itself — you find out by opening the app to an empty profile list.
+   *
+   * So the app counts what would be lost right now and says so before it is.
+   */
+  backupStatus(profile) {
+    const sessions = (profile.sessionLog || []).length;
+    const last = profile.lastBackup || null;
+    const sessionsSince = sessions - (last ? last.sessions : 0);
+    const daysSince = last
+      ? Math.floor((Date.now() - new Date(last.at).getTime()) / 86400000)
+      : null;
+    return {
+      last, sessions, sessionsSince, daysSince,
+      persisted: !!(profile.settings || {}).storagePersisted,
+      /* Roughly a fortnight of training for most people, which keeps the
+         prompt rare enough to still mean something when it appears. */
+      due: sessionsSince >= 8 || (last === null && sessions >= 6) ||
+           (daysSince != null && daysSince >= 60 && sessionsSince > 0),
+    };
+  },
+
+  /**
+   * Ask the browser to exempt this origin from routine storage eviction.
+   * Chrome grants it on engagement, Firefox prompts, Safari honours it from
+   * 15.4. It is best-effort by design, which is exactly why the export nudge
+   * above exists as well rather than instead.
+   */
+  requestPersistence(id) {
+    if (typeof navigator === "undefined" || !navigator.storage || !navigator.storage.persist) return;
+    navigator.storage.persist().then(granted => {
+      const db = loadDB();
+      if (!db[id]) return;
+      db[id].settings = { ...(db[id].settings || {}), storagePersisted: !!granted };
+      saveDB(db);
+    }).catch(() => {});
   },
 
   importProfile(json) {

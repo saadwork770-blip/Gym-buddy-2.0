@@ -117,6 +117,29 @@ UI.ready(() => {
     }
   }
 
+  /**
+   * The waist, next to the scale and on the same screen, because the useful
+   * reading is the comparison. A month where bodyweight is flat and this line
+   * is falling is a good month, and the only way anyone can see that is to
+   * have both lines in front of them.
+   */
+  function renderWaist() {
+    const log = (p.girthLog || []).filter(g => g.waistCm > 0)
+      .map(g => ({ date: g.date, value: g.waistCm }));
+    UI.lineChart(document.getElementById("waistChart"), log,
+      { color: "#f783ac", trend: true, emptyText: I18n.t("profile.girthEmpty") });
+
+    const trend = Store.girthTrend(p);
+    document.getElementById("waistMeta").textContent = trend
+      ? I18n.t("profile.girthMeta", {
+          delta: UI.fmt.signed(trend.waistDelta),
+          days: trend.days,
+          weight: trend.weightDelta == null ? "" : I18n.t("profile.girthWithWeight", {
+            delta: UI.fmt.signed(trend.weightDelta) }),
+        })
+      : I18n.t("progress.waistHint");
+  }
+
   function renderTonnage() {
     const byWeek = {};
     log.forEach(s => {
@@ -218,6 +241,7 @@ UI.ready(() => {
   renderKpis();
   renderStrength();
   renderWeight();
+  renderWaist();
   renderTonnage();
   renderAttendance();
   renderHistory();
@@ -226,6 +250,6 @@ UI.ready(() => {
   let resizeTimer = null;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { renderStrength(); renderWeight(); renderTonnage(); }, 180);
+    resizeTimer = setTimeout(() => { renderStrength(); renderWeight(); renderWaist(); renderTonnage(); }, 180);
   });
 });

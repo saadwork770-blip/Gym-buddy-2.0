@@ -98,6 +98,7 @@ UI.ready(() => {
     const plan = Store.getPlan(p.id);
     const phase = Periodization.phaseFor(p);
     const bmiVal = (p.weightKg / ((p.heightCm / 100) ** 2)).toFixed(1);
+    const backup = Store.backupStatus(p);
 
     root.innerHTML = `
       <div class="section-head">
@@ -125,10 +126,11 @@ UI.ready(() => {
               <button class="btn btn-ghost btn-sm" id="newProfileBtn" style="width:100%;">${UI.t("profile.newProfile")}</button>
             </div>
           </div>
-          <div class="card">
+          <div class="card" id="backup">
             <h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin:0 0 12px;">${UI.t("profile.backup")}</h3>
             <p class="hint" style="margin-bottom:12px;">${UI.t("profile.backupHint")}</p>
-            <button class="btn btn-ghost btn-sm" id="exportBtn" style="width:100%;">${UI.t("profile.export")}</button>
+            <p class="hint ${backup.due ? "warn-text" : ""}" style="margin-bottom:12px;">${backupLine(backup)}</p>
+            <button class="btn ${backup.due ? "btn-primary" : "btn-ghost"} btn-sm" id="exportBtn" style="width:100%;">${UI.t("profile.export")}</button>
             <label class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px;cursor:pointer;">
               ${UI.t("profile.import")}<input type="file" id="importInput" accept="application/json" hidden></label>
           </div>
@@ -145,22 +147,44 @@ UI.ready(() => {
           <div class="tabs" role="tablist">
             <button class="tab-btn active" data-tab="settings" role="tab" aria-selected="true">${UI.t("profile.tabSettings")}</button>
             <button class="tab-btn" data-tab="weight" role="tab" aria-selected="false">${UI.t("profile.tabWeight")}</button>
+            <button class="tab-btn" data-tab="calibrate" role="tab" aria-selected="false">${UI.t("profile.tabCalibrate")}</button>
             <button class="tab-btn" data-tab="cycle" role="tab" aria-selected="false">${UI.t("profile.tabCycle")}</button>
           </div>
 
           <div class="tab-panel active" id="tab-settings"><div class="card" id="settingsPanel"></div></div>
 
-          <div class="tab-panel" id="tab-weight"><div class="card">
-            <form class="weight-form" id="weightForm">
-              <div class="field"><label for="w-weight">${UI.t("profile.weightLog")}</label>
-                <input id="w-weight" type="number" min="30" max="300" step="0.1" required dir="ltr"></div>
-              <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
-            </form>
-            <canvas class="chart" id="weightChart" data-height="190" role="img"
-                    aria-label="${UI.t("progress.weightTitle")}"></canvas>
-            <table class="log-table"><thead><tr><th>${UI.t("profile.colDate")}</th><th>${UI.t("profile.colWeightKg")}</th><th>${UI.t("profile.colChange")}</th></tr></thead>
-              <tbody id="weightRows"></tbody></table>
-          </div></div>
+          <div class="tab-panel" id="tab-weight">
+            <div class="card">
+              <form class="weight-form" id="weightForm">
+                <div class="field"><label for="w-weight">${UI.t("profile.weightLog")}</label>
+                  <input id="w-weight" type="number" min="30" max="300" step="0.1" required dir="ltr"></div>
+                <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
+              </form>
+              <canvas class="chart" id="weightChart" data-height="190" role="img"
+                      aria-label="${UI.t("progress.weightTitle")}"></canvas>
+              <table class="log-table"><thead><tr><th>${UI.t("profile.colDate")}</th><th>${UI.t("profile.colWeightKg")}</th><th>${UI.t("profile.colChange")}</th></tr></thead>
+                <tbody id="weightRows"></tbody></table>
+            </div>
+
+            <div class="card" style="margin-top:14px;">
+              <h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin:0 0 10px;">${UI.t("profile.girthTitle")}</h3>
+              <p class="hint" style="margin-bottom:12px;">${UI.t("profile.girthHint")}</p>
+              <form class="weight-form" id="girthForm">
+                <div class="field"><label for="g-waist">${UI.t("profile.girthWaist")}</label>
+                  <input id="g-waist" type="number" min="40" max="200" step="0.5" dir="ltr"></div>
+                <div class="field"><label for="g-hip">${UI.t("profile.girthHip")}</label>
+                  <input id="g-hip" type="number" min="40" max="200" step="0.5" dir="ltr"></div>
+                <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
+              </form>
+              <canvas class="chart" id="girthChart" data-height="170" role="img"
+                      aria-label="${UI.t("profile.girthTitle")}"></canvas>
+              <p class="hint" id="girthMeta" style="margin-top:6px;"></p>
+              <table class="log-table"><thead><tr><th>${UI.t("profile.colDate")}</th><th>${UI.t("profile.girthWaist")}</th><th>${UI.t("profile.girthHip")}</th><th>${UI.t("profile.colChange")}</th></tr></thead>
+                <tbody id="girthRows"></tbody></table>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="tab-calibrate"><div class="card" id="calibratePanel"></div></div>
 
           <div class="tab-panel" id="tab-cycle"><div class="card" id="cyclePanel"></div></div>
         </div>
@@ -185,13 +209,118 @@ UI.ready(() => {
       document.querySelectorAll(".tab-panel").forEach(x => x.classList.remove("active"));
       btn.classList.add("active"); btn.setAttribute("aria-selected", "true");
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
-      if (btn.dataset.tab === "weight") drawWeight(p);
+      if (btn.dataset.tab === "weight") { drawWeight(p); drawGirth(p); }
     }));
 
     renderSettings(p, plan);
+    renderCalibration(p);
     renderCycle(p, phase);
     renderWeightLog(p);
+    renderGirthLog(p);
     wireBackup(p);
+
+    /* The coach links here with the tab it means in the fragment, so "Set
+       starting loads" lands on the form rather than on the page containing
+       the form. Following that link from this page is a fragment navigation
+       and does not reload anything, so the hash is watched as well as read. */
+    openTabFromHash();
+  }
+
+  function openTabFromHash() {
+    const wanted = (location.hash || "").replace("#", "");
+    const target = document.querySelector(`.tab-btn[data-tab="${wanted}"]`);
+    if (target) target.click();
+  }
+
+  /* ---------------- Calibration ---------------- */
+
+  /**
+   * Ask what the lifter can already do, rather than deducing it from their
+   * bodyweight and a three-way experience dropdown. One honest set per lift is
+   * enough, and it is the difference between a first month spent training and
+   * a first month spent watching the engine walk a bad guess into the right
+   * ballpark.
+   */
+  function renderCalibration(p) {
+    const panel = document.getElementById("calibratePanel");
+    const targets = Store.calibrationTargets(p, 4);
+    const saved = (p.calibration && p.calibration.entries) || [];
+    const entryFor = id => saved.find(e => e.exerciseId === id) || {};
+    const scale = Progression.calibrationScale(p);
+    const trained = new Set();
+    (p.sessionLog || []).forEach(s => (s.sets || []).forEach(x => trained.add(x.exerciseId)));
+
+    if (!targets.length) {
+      panel.innerHTML = `<p class="hint">${UI.t("profile.calNoPlan")}</p>`;
+      return;
+    }
+
+    panel.innerHTML = `
+      <p class="hint" style="margin-bottom:14px;">${UI.t("profile.calIntro")}</p>
+      <form id="calForm">
+        <table class="log-table cal-table">
+          <thead><tr>
+            <th>${UI.t("profile.calExercise")}</th>
+            <th>${UI.t("profile.calWeight")}</th>
+            <th>${UI.t("profile.calReps")}</th>
+            <th>${UI.t("profile.calRpe")}</th>
+          </tr></thead>
+          <tbody>
+            ${targets.map(ex => {
+              const e = entryFor(ex.id);
+              return `<tr>
+                <td>
+                  <span>${UI.esc(exName(ex.id))}</span>
+                  ${trained.has(ex.id) ? `<span class="hint"> · ${UI.t("profile.calAlreadyTrained")}</span>` : ""}
+                </td>
+                <td><input type="number" dir="ltr" min="0" max="500" step="0.5" name="w-${ex.id}"
+                           value="${e.weight != null ? e.weight : ""}" placeholder="${UI.t("common.kg")}"
+                           aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calWeight"), name: exName(ex.id) }))}"></td>
+                <td><input type="number" dir="ltr" min="1" max="30" step="1" name="r-${ex.id}"
+                           value="${e.reps != null ? e.reps : ""}" placeholder="${UI.t("common.reps")}"
+                           aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calReps"), name: exName(ex.id) }))}"></td>
+                <td><input type="number" dir="ltr" min="5" max="10" step="0.5" name="e-${ex.id}"
+                           value="${e.rpe != null ? e.rpe : ""}" placeholder="8"
+                           aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calRpe"), name: exName(ex.id) }))}"></td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+        <p class="hint" style="margin:12px 0;">${UI.t("profile.calRpeHint")}</p>
+        <div class="cal-actions">
+          <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.calSave")}</button>
+          ${saved.length ? `<button class="btn btn-ghost btn-sm" type="button" id="calClear">${UI.t("profile.calClear")}</button>` : ""}
+        </div>
+      </form>
+      <p class="hint" style="margin-top:14px;">${
+        saved.length
+          ? UI.t("profile.calStatus", {
+              count: I18n.t("common.exercisesCount", { count: saved.length }),
+              pct: Math.round(Math.abs(scale - 1) * 100),
+              direction: UI.t(scale >= 1 ? "profile.calAbove" : "profile.calBelow"),
+            })
+          : UI.t("profile.calStatusNone")}</p>`;
+
+    panel.querySelector("#calForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const data = new FormData(e.target);
+      const entries = targets.map(ex => ({
+        exerciseId: ex.id,
+        weight: data.get(`w-${ex.id}`),
+        reps: data.get(`r-${ex.id}`),
+        rpe: data.get(`e-${ex.id}`),
+      })).filter(x => Number(x.weight) > 0 && Number(x.reps) > 0);
+      Store.setCalibration(p.id, entries);
+      UI.toast(I18n.t(entries.length ? "profile.calSaved" : "profile.calCleared"));
+      render();
+    });
+
+    const clear = panel.querySelector("#calClear");
+    if (clear) clear.addEventListener("click", () => {
+      Store.setCalibration(p.id, []);
+      UI.toast(I18n.t("profile.calCleared"));
+      render();
+    });
   }
 
   /* ---------------- Settings ---------------- */
@@ -351,7 +480,7 @@ UI.ready(() => {
           const d = prev ? w.weightKg - prev.weightKg : null;
           return `<tr><td>${UI.esc(UI.fmt.date(w.date))}</td><td class="tnum">${I18n.num(w.weightKg)}</td>
             <td class="tnum" style="color:${d == null ? "var(--text-faint)" : d < 0 ? "var(--good)" : "var(--warn)"}">${
-              d == null ? "—" : UI.esc(UI.fmt.signed(d, " " + I18n.t("common.kg")))}</td></tr>`;
+              d == null ? "—" : UI.fmt.deltaCell(d, I18n.t("common.kg"))}</td></tr>`;
         }).join("")
       : `<tr><td colspan="3" class="hint">${UI.t("profile.noEntries")}</td></tr>`;
 
@@ -373,7 +502,69 @@ UI.ready(() => {
       { color: "#9775fa", trend: true, emptyText: I18n.t("progress.weightEmpty") });
   }
 
+  /* ---------------- Girth ---------------- */
+
+  /**
+   * The tape measure. It is here rather than on its own page because it only
+   * means anything read against the scale directly above it: the two together
+   * answer a question neither can answer alone.
+   */
+  function renderGirthLog(p) {
+    const log = (p.girthLog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    document.getElementById("girthRows").innerHTML = log.length
+      ? log.slice().reverse().map((g, i, arr) => {
+          const prev = arr[i + 1];
+          const d = prev && prev.waistCm && g.waistCm ? g.waistCm - prev.waistCm : null;
+          return `<tr><td>${UI.esc(UI.fmt.date(g.date))}</td>
+            <td class="tnum">${g.waistCm ? I18n.num(g.waistCm) : "—"}</td>
+            <td class="tnum">${g.hipCm ? I18n.num(g.hipCm) : "—"}</td>
+            <td class="tnum" style="color:${d == null ? "var(--text-faint)" : d < 0 ? "var(--good)" : "var(--warn)"}">${
+              d == null ? "—" : UI.fmt.deltaCell(d, I18n.t("profile.cm"))}</td></tr>`;
+        }).join("")
+      : `<tr><td colspan="4" class="hint">${UI.t("profile.noEntries")}</td></tr>`;
+
+    const trend = Store.girthTrend(p);
+    const meta = document.getElementById("girthMeta");
+    meta.textContent = trend
+      ? UI.t("profile.girthMeta", {
+          delta: UI.fmt.signed(trend.waistDelta),
+          days: trend.days,
+          weight: trend.weightDelta == null ? UI.t("profile.girthNoWeight")
+            : UI.t("profile.girthWithWeight", { delta: UI.fmt.signed(trend.weightDelta) }),
+        })
+      : UI.t("profile.girthNoTrend");
+
+    document.getElementById("girthForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const waist = document.getElementById("g-waist").value;
+      const hip = document.getElementById("g-hip").value;
+      if (!waist && !hip) return;
+      Store.addGirthEntry(p.id, { waistCm: waist, hipCm: hip });
+      UI.toast(I18n.t("profile.girthLogged"));
+      render();
+      document.querySelector('.tab-btn[data-tab="weight"]').click();
+    });
+  }
+
+  function drawGirth(p) {
+    const canvas = document.getElementById("girthChart");
+    if (!canvas) return;
+    UI.lineChart(canvas,
+      (p.girthLog || []).filter(g => g.waistCm > 0).map(g => ({ date: g.date, value: g.waistCm })),
+      { color: "#f783ac", trend: true, emptyText: I18n.t("profile.girthEmpty") });
+  }
+
   /* ---------------- Backup ---------------- */
+
+  /** One line saying exactly what a lost browser would cost right now. */
+  function backupLine(b) {
+    if (!b.sessions) return UI.t("profile.backupNothingYet");
+    if (!b.last) return UI.t("profile.backupNever", {
+      sessions: I18n.t("common.sessions", { count: b.sessions }) });
+    if (!b.sessionsSince) return UI.t("profile.backupCurrent", { days: b.daysSince });
+    return UI.t("profile.backupStale", {
+      sessions: I18n.t("common.sessions", { count: b.sessionsSince }), days: b.daysSince });
+  }
 
   function wireBackup(p) {
     document.getElementById("exportBtn").addEventListener("click", () => {
@@ -383,7 +574,9 @@ UI.ready(() => {
       a.download = `gymbuddy-${p.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
+      Store.markBackedUp(p.id);
       UI.toast(I18n.t("profile.exported"));
+      render();
     });
 
     document.getElementById("importInput").addEventListener("change", e => {
@@ -424,4 +617,5 @@ UI.ready(() => {
   }
 
   render();
+  window.addEventListener("hashchange", openTabFromHash);
 });

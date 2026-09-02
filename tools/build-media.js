@@ -5,7 +5,8 @@
 
    For each exercise it produces two files:
 
-     assets/photos/<id>.jpg   a 640px still of the start position
+     assets/photos/<id>.jpg   a 640px still, normally of the start position
+                              (see the `poster` override in media-map.json)
      assets/clips/<id>.webm   a ~1.2s looping demonstration
 
    The clip is assembled from the source's two frames — start and end position —
@@ -61,11 +62,12 @@ async function main() {
 
   let built = 0, failed = [];
   for (const id of ids) {
-    const entry = byName[MAP[id]];
+    const spec = typeof MAP[id] === "string" ? { source: MAP[id] } : MAP[id];
+    const entry = byName[spec.source];
     if (!entry || (entry.images || []).length < 2) { failed.push(`${id}: no source images`); continue; }
     try {
       const [a, b] = await Promise.all(entry.images.slice(0, 2).map(fetchImage));
-      const out = await renderFrames(page, a, b);
+      const out = await renderFrames(page, a, b, spec.poster === "end");
       fs.writeFileSync(path.join(ROOT, "assets/photos", `${id}.jpg`), out.poster);
       encodeWebm(out.frames, path.join(ROOT, "assets/clips", `${id}.webm`));
       built++;
@@ -109,8 +111,8 @@ function get(url) {
 
 /* All the image work happens inside the page: canvas gives us decode, resize,
    alpha compositing and JPEG encoding without pulling in an image library. */
-async function renderFrames(page, aB64, bB64) {
-  const result = await page.evaluate(async ({ aB64, bB64, FPS, HOLD_START, CONCENTRIC, HOLD_END, ECCENTRIC }) => {
+async function renderFrames(page, aB64, bB64, posterFromEnd) {
+  const result = await page.evaluate(async ({ aB64, bB64, posterFromEnd, FPS, HOLD_START, CONCENTRIC, HOLD_END, ECCENTRIC }) => {
     const load = src => new Promise((res, rej) => {
       const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = src;
     });
@@ -136,11 +138,16 @@ async function renderFrames(page, aB64, bB64) {
     for (let i = 0; i < HOLD_END; i++) frames.push(frame(1));
     for (let i = 1; i <= ECCENTRIC; i++) frames.push(frame(1 - ease(i / ECCENTRIC)));
 
+    /* The still is normally the start position, which is what you set up
+       into. For an isometric hold that is wrong: the "start" of a plank is
+       kneeling on the floor, which is a photograph of nothing. Those entries
+       ask for the end frame instead. */
+    const still = posterFromEnd ? b : a;
     const pv = document.createElement("canvas");
-    pv.width = 640; pv.height = Math.round(a.height * (640 / a.width));
-    pv.getContext("2d").drawImage(a, 0, 0, pv.width, pv.height);
+    pv.width = 640; pv.height = Math.round(still.height * (640 / still.width));
+    pv.getContext("2d").drawImage(still, 0, 0, pv.width, pv.height);
     return { frames, poster: pv.toDataURL("image/jpeg", 0.82).split(",")[1] };
-  }, { aB64, bB64, FPS, HOLD_START, CONCENTRIC, HOLD_END, ECCENTRIC });
+  }, { aB64, bB64, posterFromEnd: !!posterFromEnd, FPS, HOLD_START, CONCENTRIC, HOLD_END, ECCENTRIC });
 
   return {
     frames: result.frames.map(f => Buffer.from(f, "base64")),

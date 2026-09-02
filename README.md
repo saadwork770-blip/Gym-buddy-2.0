@@ -19,7 +19,12 @@ The engine does three things the static version could not:
    to the time you have.
 3. **It changes the workouts.** Stalled lifts, missing equipment, a joint that
    hurts, volume above what you can recover from — each triggers a specific,
-   explained modification that you accept or reject.
+   explained modification that you accept or reject. Between blocks it rotates
+   the program on its own, keeping your main lifts long enough to get strong at
+   them and varying the work around them.
+4. **It knows when you have been away.** Come back after five weeks and it
+   brings the loads down and the effort ceiling with them, rather than handing
+   you the bar you left with the word "increase" on it.
 
 It runs in **English and Arabic**, with full right-to-left layout — including
 the coaching prose, which is generated from your training data rather than
@@ -49,6 +54,7 @@ Four mechanisms combine:
 | **RPE autoregulation** | How hard the last session felt decides the **size** of the jump. Three sets at RPE 6.5 earns a double increment; the same reps ground out at RPE 9 earns the smallest increment the equipment has. |
 | **Effort-adjusted 1RM** | Every set becomes an estimated one-rep max using Epley plus the reps you left in reserve. One number, comparable across rep ranges — which is what plateau detection actually runs on. |
 | **Mesocycle waving** | Volume and effort ramp across loading weeks, then a scheduled deload dumps fatigue before it becomes a stall. |
+| **Detraining** | Time off costs strength, so coming back costs load. A break of eleven days or more brings the weight down on a curve — 5% at a fortnight, 25% past four months — and holds the effort ceiling down for one to three sessions while you climb back. |
 
 Details that matter in a real gym:
 
@@ -64,6 +70,20 @@ Details that matter in a real gym:
 - **Barbell work shows the plate maths** — what actually goes on each side.
 - **A weight you set yourself is not overwritten.** Manual overrides hold until
   you log a session on them; progression then resumes from your number.
+- **Coming back from a break is not "increase".** Two different gaps are read
+  separately: a *layoff*, where training stopped and real strength is gone, and
+  *movement rust*, where you kept training but this particular lift has not come
+  up for a month and only the groove is missing. The first takes a percentage
+  off and lowers the RPE ceiling; the second takes one honest step. A break of a
+  fortnight or more also restarts the mesocycle, so nobody walks back in to
+  "week 4 · deload".
+- **Starting loads can be measured instead of guessed.** Without help, the first
+  weight on every bar comes from bodyweight, sex and a three-way experience
+  dropdown whose middle option covers a lifter who benches 60 kg and one who
+  benches 110. The Profile page's **Starting loads** tab takes one honest set on
+  each main lift and seeds those from your own numbers; the ratio between what
+  you lift and what the formula predicted carries to the rest, halved and
+  clamped, because strength transfers between movements but not one for one.
 
 ### `scheduler.js` — the week
 
@@ -80,14 +100,21 @@ Four stages:
 3. **Fill the slots.** Templates are written as movement *patterns*, not fixed
    exercises. Each slot is filled with a real lift that respects your equipment,
    your pain flags and what you did last week — and every substitution comes
-   with a sentence saying why.
+   with a sentence saying why. From the second block onward the template's own
+   pick is a strong opinion rather than a veto, weighed against a per-block
+   rotation draw, how much technique the movement demands against your
+   experience, and what your goal actually needs. Each slot rotates on its own
+   staggered clock — four blocks for a main lift, three for an accessory — so a
+   new block changes about a third of the program rather than all of it, and a
+   lift you are supposed to get strong at stays put long enough to measure.
 4. **Fit the time and add cardio.** Sessions over your budget are trimmed
    finishers-first, protecting the main compounds. Cardio is dosed by goal and
    attached to training and rest days.
 
-**With four days selected and default settings, the generated plan reproduces
-the original Fitness Time program exactly, exercise for exercise.** There is a
-test that asserts it.
+**With four days selected and default settings, your first block reproduces the
+original Fitness Time program exactly, exercise for exercise.** There is a test
+that asserts it. Rotation starts from the second block: the engine has not
+earned the right to redesign a plan it has never watched you run.
 
 ### `periodization.js` — the calendar
 
@@ -159,6 +186,20 @@ a specific fix. A six-day split can otherwise stack shoulders to nearly 40 sets
 a week, which buys fatigue rather than muscle.
 
 ---
+
+## Bodyweight is a bad instrument on its own
+
+For a fat-loss goal the scale is the noisiest possible measure of whether the
+plan is working. It moves with water, glycogen, salt and the hour of the day,
+and it can sit still for a fortnight while the body underneath it changes shape
+— which is the fortnight most people decide the diet has failed and stop.
+
+So the Profile page logs a waist measurement alongside it, and optionally hips
+for the waist-to-hip ratio. The pairing is the point. The coach reports a flat
+scale with a falling waist as the good news it is and stands the stalled-scale
+warning down rather than letting two cards argue; it also flags the reverse —
+the scale falling while the waist holds — which is what an over-aggressive
+deficit looks like and which nobody volunteers.
 
 ## The exercise library
 
@@ -308,9 +349,9 @@ missed that and produced a page of false failures.
 | `program.html` | The generated week, the day picker, the mesocycle strip, weekly volume |
 | `workout.html` | The live session: readiness check-in, per-set logging, rest timer, coaching cues |
 | `coach.html` | The insight feed and the full prescription table with its reasoning |
-| `progress.html` | Estimated 1RM curves, tonnage, bodyweight, attendance, session history |
+| `progress.html` | Estimated 1RM curves, tonnage, bodyweight, waist, attendance, session history |
 | `exercises.html` | The library, plus movement pattern, joint load, pain flags and substitutions |
-| `profile.html` | Profile, training settings, bodyweight log, mesocycle, export/import |
+| `profile.html` | Profile, training settings, bodyweight and tape-measure log, starting-load calibration, mesocycle, export/import |
 
 ### The live session
 
@@ -346,16 +387,26 @@ node test/engine.test.js     # coaching engine — no dependencies
 node test/audit.js           # browser audit — needs playwright
 ```
 
-91 behavioural checks on the engine: that the four-day plan reproduces the
-source program exactly, that no prescribed load is unselectable on its
-equipment, that weekly volume never exceeds MRV at any day count, that no
+133 behavioural checks on the engine: that the four-day plan's first block
+reproduces the source program exactly, that no prescribed load is unselectable
+on its equipment, that weekly volume never exceeds MRV at any day count, that no
 session repeats an exercise under any equipment or pain configuration, that
 progression responds correctly to reps and effort, that assisted machines
 progress downward, that manual overrides survive, and that a deload is
 genuinely lighter.
 
+The later additions are held to the same standard: that five weeks away
+produces a re-entry rather than an increase and that a longer break gives back
+more, that eight blocks produce eight distinct programs while no session
+freezes for more than two blocks running, that all 61 strength exercises are
+reachable at default settings, that a beginner meets far fewer technical lifts
+in primary slots than an advanced lifter, that a calibrated lift is seeded from
+its own set while the transfer to uncalibrated lifts stays damped and capped,
+and that a flat scale with a shrinking waist is reported as good news rather
+than as a stall.
+
 The localisation checks are part of the same suite: that every English key has
-an Arabic translation and none is orphaned, that all 39 exercises have Arabic
+an Arabic translation and none is orphaned, that all 66 exercises have Arabic
 names and form cues, that Arabic picks distinct plural forms across 0/1/2/3/11/100,
 and — the one that matters most — that **a plan generated entirely in English
 renders with no English left in it after switching to Arabic**, across every
@@ -388,14 +439,21 @@ js/i18n/en.js              English strings (source of truth)
 js/i18n/ar.js              Arabic strings
 js/i18n/content.ar.js      Arabic exercise library + the plan's own guidelines
 
-js/data.js                 Exercise library, coaching metadata, volume
-                           landmarks, goal and experience profiles
+js/data/library.js         The exercise library and the source program:
+                           names, steps, tips, media paths, the four-day plan
+js/data/coaching.js        What the engine reasons about: movement patterns,
+                           load types, joint stress, muscle contribution,
+                           volume landmarks, goal and experience profiles
+js/data/labels.js          Registers the English source text and resolves
+                           deferred references into the current language
 js/templates.js            Session blueprints as pattern slots; split definitions
 js/storage.js              localStorage persistence, schema v2, v1 migration
 js/ui.js                   Page chrome, formatting, charts, toasts, modals
 
-js/engine/progression.js   Load selection: double progression, RPE, e1RM
-js/engine/scheduler.js     Split choice, day placement, slot filling, time budget
+js/engine/progression.js   Load selection: double progression, RPE, e1RM,
+                           detraining, calibration
+js/engine/scheduler.js     Split choice, day placement, slot filling and
+                           block rotation, time budget
 js/engine/periodization.js Mesocycle weeks, volume ramp and the deload
 js/engine/analysis.js      Imbalance, fatigue, rep drop-off, forecasting, ordering
 js/engine/adaptation.js    Substitutions, plateaus, volume and schedule proposals
@@ -404,11 +462,13 @@ js/engine/coach.js         Insight feed, session cues, debriefs, readiness
 js/pages/*.js              One controller per page
 
 test/harness.js            Loads the engines into Node
-test/engine.test.js        91 behavioural checks, including localisation
+test/engine.test.js        133 behavioural checks, including localisation
 test/audit.js              Browser audit: a11y, contrast, perf, XSS, responsive
 
 tools/build-media.js       Rebuilds photos and clips from free-exercise-db
 tools/media-map.json       Exercise id -> source entry
+tools/contact-sheet.js     Writes every exercise's name against its photo and
+                           clip on one page, for reviewing the media by eye
 
 assets/photos/*.jpg        Real gym photograph per exercise (66)
 assets/clips/*.webm        Silent looping demonstration per exercise (66)
@@ -422,6 +482,13 @@ assets/clips/*.webm        Silent looping demonstration per exercise (66)
   this browser's `localStorage`, on this device. No account, no server, nothing
   transmitted. The trade-off is that it does not sync between devices; the
   export/import pair on the Profile page exists so you can move it yourself.
+- **The app tells you what a lost browser would cost.** Local storage can go
+  without warning — Safari evicts site data after seven days without a visit,
+  "clear browsing data" takes it with the cookies, a new phone never had it —
+  so the Profile page says in one line how much is unsaved, and the coach raises
+  it once roughly a fortnight of training has accumulated. The app also requests
+  persistent storage on boot, which lowers the odds where the browser honours it
+  but is not a backup and does not pretend to be.
 - **v1 profiles are migrated automatically** on first load. Nothing you already
   logged is lost.
 - **Your language choice is stored locally too**, in the same browser storage as

@@ -28,6 +28,8 @@ const Coach = (function () {
     const dismissed = new Set(profile.dismissed || []);
     const msgs = [];
 
+    msgs.push(...comebackInsight(profile));
+    msgs.push(...rotationInsight(plan, phase));
     msgs.push(...phaseInsight(profile, phase));
     msgs.push(...todayInsight(profile, plan));
     msgs.push(...progressionInsights(profile, plan));
@@ -41,6 +43,9 @@ const Coach = (function () {
     msgs.push(...orderingInsights(plan));
     msgs.push(...adherenceInsights(profile));
     msgs.push(...bodyweightInsights(profile));
+    msgs.push(...girthInsights(profile));
+    msgs.push(...backupInsight(profile));
+    msgs.push(...calibrationInsight(profile));
     msgs.push(...painInsights(profile));
     msgs.push(...planWarnings(plan));
 
@@ -71,6 +76,35 @@ const Coach = (function () {
       title: I18n.m("engine.coach.phaseTitle", { label: phase.label, headline: phase.headline }),
       body: phase.detail,
       weight: 5,
+    }];
+  }
+
+  /**
+   * What changed when the block turned over.
+   * Silent substitution is how a coaching app loses an argument it never got
+   * to have: the user opens Monday, sees a different exercise, and concludes
+   * the thing is broken. Naming the swaps costs one card and settles it.
+   */
+  function rotationInsight(plan, phase) {
+    if (!plan || plan.empty || !(plan.rotated || []).length) return [];
+    if (phase.week > 2) return [];          // only worth saying while it is news
+    const shown = plan.rotated.slice(0, 5);
+    return [{
+      key: `rotation-${plan.block}`,
+      category: "periodization", severity: "info",
+      title: I18n.m("engine.coach.rotationTitle", {
+        block: plan.block,
+        count: I18n.m("common.exercisesCount", { count: plan.rotated.length }),
+      }),
+      body: I18n.m("engine.coach.rotationBody", {
+        swaps: I18n.msgList(shown.map(r => I18n.m("engine.coach.rotationLine", {
+          from: I18n.ref("ex", r.from), to: I18n.ref("ex", r.to),
+          session: I18n.ref("template", r.templateId),
+        }))),
+        more: plan.rotated.length > shown.length
+          ? I18n.m("common.andMore", { count: plan.rotated.length - shown.length }) : "",
+      }),
+      weight: 6,
     }];
   }
 
@@ -289,6 +323,84 @@ const Coach = (function () {
     }];
   }
 
+  /**
+   * Back after time off. This sits above everything else in the feed because
+   * it reframes every number underneath it: the loads are down on purpose, and
+   * a returning lifter who is not told that reads the drop as failure and
+   * loads the bar back up.
+   */
+  function comebackInsight(profile) {
+    const back = Progression.layoffState(profile);
+    if (!back) return [];
+    if (back.sessionsBack > 0) {
+      return [{
+        key: `comeback-ramp-${back.gapDays}-${back.sessionsBack}`,
+        category: "session", severity: "info",
+        title: I18n.m("engine.coach.comebackRampTitle", { n: back.sessionsBack + 1 }),
+        body: I18n.m("engine.coach.comebackRampBody", { rpe: back.rpeCap, of: back.sessions }),
+        weight: 7,
+      }];
+    }
+    return [{
+      key: `comeback-${back.gapDays}`,
+      category: "session", severity: "warn",
+      title: I18n.m("engine.coach.comebackTitle", {
+        days: I18n.m("common.daysCount", { count: back.gapDays }) }),
+      body: I18n.m("engine.coach.comebackBody", {
+        pct: Math.round(back.loss * 100), rpe: back.rpeCap,
+        sessions: I18n.m("common.sessions", { count: back.sessions }),
+      }),
+      weight: 11,
+    }];
+  }
+
+  /**
+   * Ask for real numbers while they still matter.
+   * Every uncalibrated first weight is a guess from bodyweight and a
+   * three-way dropdown, and the engine needs a session on each lift to
+   * correct it. Thirty seconds of typing skips all of that — but only if it
+   * happens before the training does, so the prompt retires itself once there
+   * is enough history to be going on with.
+   */
+  function calibrationInsight(profile) {
+    if (profile.calibration && (profile.calibration.entries || []).length) return [];
+    const logged = (profile.sessionLog || []).length;
+    if (logged >= 4) return [];      // history has taken over; the moment has passed
+    return [{
+      key: "calibrate-seeds",
+      category: "session", severity: "action",
+      title: I18n.m("engine.coach.calibrateTitle"),
+      body: I18n.m("engine.coach.calibrateBody"),
+      cta: { labelKey: "engine.coach.calibrateCta", href: "profile.html#calibrate" },
+      weight: 9,
+    }];
+  }
+
+  /**
+   * The one failure mode in this app that cannot be undone.
+   * Every other mistake here is a bad set. Losing the log is losing the
+   * training history the whole engine reasons from, and it happens silently —
+   * so the nudge names what is actually at stake rather than saying "consider
+   * backing up".
+   */
+  function backupInsight(profile) {
+    const b = Store.backupStatus(profile);
+    if (!b.due) return [];
+    return [{
+      key: `backup-${b.sessions}`,
+      category: "storage", severity: "warn",
+      title: I18n.m(b.last ? "engine.coach.backupStaleTitle" : "engine.coach.backupNeverTitle", {
+        sessions: I18n.m("common.sessions", { count: b.sessionsSince }),
+      }),
+      body: I18n.m("engine.coach.backupBody", {
+        total: I18n.m("common.sessions", { count: b.sessions }),
+        persisted: I18n.m(b.persisted ? "engine.coach.backupPersisted" : "engine.coach.backupNotPersisted"),
+      }),
+      cta: { labelKey: "engine.coach.backupCta", href: "profile.html#backup" },
+      weight: 6,
+    }];
+  }
+
   function adherenceInsights(profile) {
     // Judging attendance needs something to judge. A profile created this
     // morning has not "missed" sixteen sessions, and telling it so is both
@@ -326,6 +438,84 @@ const Coach = (function () {
    * 0.5–1% of bodyweight per week is the usual sustainable fat-loss band —
    * faster than that and you start paying for it in strength and muscle.
    */
+  /**
+   * What the tape says, and what it says that the scale cannot.
+   *
+   * The most common way a fat-loss phase gets abandoned is a fortnight where
+   * the scale does not move. Usually nothing has gone wrong — water, glycogen
+   * and a late dinner are perfectly capable of hiding a kilo of fat loss — and
+   * a waist measurement settles the argument in a way no amount of reassurance
+   * does. That is the whole reason this is here, so the first thing it does is
+   * ask for the number, and the best thing it does is report the case where
+   * the two disagree.
+   */
+  function girthInsights(profile) {
+    const trend = Store.girthTrend(profile);
+    const logged = (profile.girthLog || []).length;
+
+    /* No tape yet. Worth asking for once there is a scale history to read it
+       against, and only where the goal is one the waist actually answers. */
+    if (!trend) {
+      const cares = profile.goal === "Fat loss" || profile.goal === "General fitness";
+      if (!cares || (profile.weightLog || []).length < 3) return [];
+      return [{
+        key: `girth-start-${logged}`,
+        category: "nutrition", severity: "info",
+        title: I18n.m(logged ? "engine.coach.girthAgainTitle" : "engine.coach.girthStartTitle"),
+        body: I18n.m(logged ? "engine.coach.girthAgainBody" : "engine.coach.girthStartBody"),
+        cta: { labelKey: "engine.coach.girthCta", href: "profile.html#weight" },
+        weight: 5,
+      }];
+    }
+
+    const waist = trend.waistDelta;
+    const weight = trend.weightDelta;
+
+    /* The case worth interrupting for: the scale has stalled and the tape has
+       not. Nothing is wrong, and being told so is the difference between
+       finishing the block and quitting it. */
+    if (waist <= -1 && weight != null && Math.abs(weight) < 0.8) {
+      return [{
+        key: `girth-recomp-${trend.to}`,
+        category: "nutrition", severity: "good",
+        title: I18n.m("engine.coach.girthRecompTitle", { cm: Math.abs(waist) }),
+        body: I18n.m("engine.coach.girthRecompBody", {
+          days: trend.days, weight: Math.abs(weight),
+          from: trend.from, to: trend.to,
+        }),
+        weight: 7,
+      }];
+    }
+
+    /* The opposite case, and the one nobody volunteers: the scale is falling
+       and the waist is not. */
+    if (weight != null && weight <= -1.5 && waist >= -0.3) {
+      return [{
+        key: `girth-scale-only-${trend.to}`,
+        category: "nutrition", severity: "warn",
+        title: I18n.m("engine.coach.girthScaleOnlyTitle"),
+        body: I18n.m("engine.coach.girthScaleOnlyBody", {
+          days: trend.days, weight: Math.abs(weight), waist: trend.to,
+        }),
+        weight: 5,
+      }];
+    }
+
+    if (waist <= -1) {
+      return [{
+        key: `girth-down-${trend.to}`,
+        category: "nutrition", severity: "good",
+        title: I18n.m("engine.coach.girthDownTitle", { cm: Math.abs(waist) }),
+        body: I18n.m("engine.coach.girthDownBody", {
+          days: trend.days, from: trend.from, to: trend.to,
+          ratio: trend.ratio ? I18n.m("engine.coach.girthRatio", { ratio: trend.ratio }) : "",
+        }),
+        weight: 4,
+      }];
+    }
+    return [];
+  }
+
   function bodyweightInsights(profile) {
     const log = (profile.weightLog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
     if (log.length < 3) return [];
@@ -343,6 +533,11 @@ const Coach = (function () {
 
     if (goal === "Fat loss") {
       if (perWeek >= -0.05) {
+        /* A stalled scale is not a stalled diet if the tape is still moving.
+           Warning about it anyway, next to a card saying the waist is down
+           3 cm, reads as the app arguing with itself. */
+        const tape = Store.girthTrend(profile);
+        if (tape && tape.waistDelta <= -1) return [];
         return [{
           key: `bw-stall-${last.date}`, category: "nutrition", severity: "warn",
           title: I18n.m("engine.coach.bwStallTitle"),

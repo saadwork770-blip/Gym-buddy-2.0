@@ -115,8 +115,12 @@ const I18n = (function () {
   }
 
   const FSI = "⁨";   // First Strong Isolate
+  const LRI = "⁦";   // Left-to-Right Isolate
   const PDI = "⁩";   // Pop Directional Isolate
   const NEEDS_ISOLATE = /[0-9A-Za-z]/;
+  /* Letters — the characters the bidi algorithm calls "strong". Digits are
+     deliberately not here: they have no direction of their own. */
+  const HAS_STRONG = /[A-Za-z\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 
   function interpolate(template, params) {
     if (typeof template !== "string" || !params) return String(template == null ? "" : template);
@@ -140,8 +144,15 @@ const I18n = (function () {
          make the isolate resolve left-to-right and lay the whole Arabic phrase
          out backwards. */
       if (!isProse && LANGUAGES[current].dir === "rtl" && NEEDS_ISOLATE.test(value)
-          && !(value.startsWith(FSI) && value.endsWith(PDI))) {
-        return FSI + value + PDI;
+          && !((value.startsWith(FSI) || value.startsWith(LRI)) && value.endsWith(PDI))) {
+        /* A First Strong Isolate takes its direction from the first LETTER in
+           the run, and a value like "-3.6" or "12/12/12" has none — so it
+           inherits the paragraph's, comes out right-to-left, and the minus
+           sign drifts to the far end: "3.6-". Digit-only runs are therefore
+           isolated left-to-right explicitly. Values that do contain letters
+           still use FSI, so a Latin exercise id and an Arabic phrase each
+           resolve to their own direction. */
+        return (HAS_STRONG.test(value) ? FSI : LRI) + value + PDI;
       }
       return value;
     });
@@ -173,8 +184,8 @@ const I18n = (function () {
      Arabic sentences forever.
 
      So names are stored as references — `ref("ex", "leg-press")` — and
-     resolved at render time. The resolvers themselves live in data.js, which
-     is what knows how to turn an id into a name; this module only knows that
+     resolved at render time. The resolvers themselves live in data/labels.js,
+     which knows how to turn an id into a name; this module only knows that
      something has to be looked up. */
 
   const resolvers = {};
@@ -187,6 +198,11 @@ const I18n = (function () {
 
   /** A list of references, joined with the language's own list separator. */
   function refList(kind, values) { return { $: "__list", v: values, x: kind }; }
+
+  /** A list of whole message objects, rendered and joined as sentences. */
+  function msgList(messages) { return { $: "__msgs", v: messages }; }
+
+  resolver("__msgs", messages => (messages || []).map(m => tx(m)).join(" "));
 
   resolver("__list", (values, kind) => {
     const sep = LANGUAGES[current].dir === "rtl" ? "، " : ", ";
@@ -286,7 +302,7 @@ const I18n = (function () {
   function keys(language) { return Object.keys(dictionaries[language] || {}).sort(); }
 
   return {
-    register, t, tx, m, ref, refList, resolver, has, num, date, keys, list,
+    register, t, tx, m, ref, refList, msgList, resolver, has, num, date, keys, list,
     lang, setLang, dir, isRTL, locale, languages, onChange, detect, applyDocument,
     LANGUAGES, STORAGE_KEY,
   };
