@@ -98,6 +98,7 @@ UI.ready(() => {
     const plan = Store.getPlan(p.id);
     const phase = Periodization.phaseFor(p);
     const bmiVal = (p.weightKg / ((p.heightCm / 100) ** 2)).toFixed(1);
+    const backup = Store.backupStatus(p);
 
     root.innerHTML = `
       <div class="section-head">
@@ -125,10 +126,11 @@ UI.ready(() => {
               <button class="btn btn-ghost btn-sm" id="newProfileBtn" style="width:100%;">${UI.t("profile.newProfile")}</button>
             </div>
           </div>
-          <div class="card">
+          <div class="card" id="backup">
             <h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin:0 0 12px;">${UI.t("profile.backup")}</h3>
             <p class="hint" style="margin-bottom:12px;">${UI.t("profile.backupHint")}</p>
-            <button class="btn btn-ghost btn-sm" id="exportBtn" style="width:100%;">${UI.t("profile.export")}</button>
+            <p class="hint ${backup.due ? "warn-text" : ""}" style="margin-bottom:12px;">${backupLine(backup)}</p>
+            <button class="btn ${backup.due ? "btn-primary" : "btn-ghost"} btn-sm" id="exportBtn" style="width:100%;">${UI.t("profile.export")}</button>
             <label class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px;cursor:pointer;">
               ${UI.t("profile.import")}<input type="file" id="importInput" accept="application/json" hidden></label>
           </div>
@@ -375,6 +377,16 @@ UI.ready(() => {
 
   /* ---------------- Backup ---------------- */
 
+  /** One line saying exactly what a lost browser would cost right now. */
+  function backupLine(b) {
+    if (!b.sessions) return UI.t("profile.backupNothingYet");
+    if (!b.last) return UI.t("profile.backupNever", {
+      sessions: I18n.t("common.sessions", { count: b.sessions }) });
+    if (!b.sessionsSince) return UI.t("profile.backupCurrent", { days: b.daysSince });
+    return UI.t("profile.backupStale", {
+      sessions: I18n.t("common.sessions", { count: b.sessionsSince }), days: b.daysSince });
+  }
+
   function wireBackup(p) {
     document.getElementById("exportBtn").addEventListener("click", () => {
       const blob = new Blob([Store.exportProfile(p.id)], { type: "application/json" });
@@ -383,7 +395,9 @@ UI.ready(() => {
       a.download = `gymbuddy-${p.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
+      Store.markBackedUp(p.id);
       UI.toast(I18n.t("profile.exported"));
+      render();
     });
 
     document.getElementById("importInput").addEventListener("change", e => {

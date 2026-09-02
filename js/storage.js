@@ -103,6 +103,8 @@ function upgradeProfile(p) {
     coachFeed: p.coachFeed || [],
     dismissed: p.dismissed || [],
     progress: p.progress || {},     // v1 checkbox state, kept so nothing is lost
+    lastBackup: p.lastBackup || null,   // { at, sessions } — see backupStatus()
+    girthLog: p.girthLog || [],         // waist and one other site over time
   };
 }
 
@@ -458,6 +460,59 @@ const Store = {
     const p = this.getProfile(id);
     if (!p) return null;
     return JSON.stringify({ app: "GymBuddy", schema: 2, exportedAt: new Date().toISOString(), profile: p }, null, 2);
+  },
+
+  /** Remember that a backup was taken, so the coach can stop nagging. */
+  markBackedUp(id) {
+    const db = loadDB();
+    if (!db[id]) return null;
+    db[id].lastBackup = { at: new Date().toISOString(), sessions: (db[id].sessionLog || []).length };
+    saveDB(db);
+    return this.getProfile(id);
+  },
+
+  /**
+   * How exposed the training log currently is.
+   *
+   * Everything here lives in one browser's localStorage, which is not a
+   * promise. Safari discards site data after seven days without a visit,
+   * "clear browsing data" takes it with the cookies, and a reinstalled phone
+   * never had it. None of that is recoverable, and none of it announces
+   * itself — you find out by opening the app to an empty profile list.
+   *
+   * So the app counts what would be lost right now and says so before it is.
+   */
+  backupStatus(profile) {
+    const sessions = (profile.sessionLog || []).length;
+    const last = profile.lastBackup || null;
+    const sessionsSince = sessions - (last ? last.sessions : 0);
+    const daysSince = last
+      ? Math.floor((Date.now() - new Date(last.at).getTime()) / 86400000)
+      : null;
+    return {
+      last, sessions, sessionsSince, daysSince,
+      persisted: !!(profile.settings || {}).storagePersisted,
+      /* Roughly a fortnight of training for most people, which keeps the
+         prompt rare enough to still mean something when it appears. */
+      due: sessionsSince >= 8 || (last === null && sessions >= 6) ||
+           (daysSince != null && daysSince >= 60 && sessionsSince > 0),
+    };
+  },
+
+  /**
+   * Ask the browser to exempt this origin from routine storage eviction.
+   * Chrome grants it on engagement, Firefox prompts, Safari honours it from
+   * 15.4. It is best-effort by design, which is exactly why the export nudge
+   * above exists as well rather than instead.
+   */
+  requestPersistence(id) {
+    if (typeof navigator === "undefined" || !navigator.storage || !navigator.storage.persist) return;
+    navigator.storage.persist().then(granted => {
+      const db = loadDB();
+      if (!db[id]) return;
+      db[id].settings = { ...(db[id].settings || {}), storagePersisted: !!granted };
+      saveDB(db);
+    }).catch(() => {});
   },
 
   importProfile(json) {

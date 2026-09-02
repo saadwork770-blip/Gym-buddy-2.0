@@ -484,3 +484,12 @@ window.GymBuddyUI = UI;
    renders left-to-right and then flips, which looks broken. */
 I18n.detect();
 UI.ready(UI.mountChrome);
+
+/* Ask the browser not to evict this origin's storage on a routine cleanup.
+   Best-effort — Chrome grants it on engagement, Firefox prompts, Safari has
+   honoured it since 15.4 — which is why the Profile page still nags about
+   exports rather than treating this as a backup. */
+UI.ready(() => {
+  const active = Store.getActiveId && Store.getActiveId();
+  if (active) Store.requestPersistence(active);
+});

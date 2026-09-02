@@ -42,6 +42,7 @@ const Coach = (function () {
     msgs.push(...orderingInsights(plan));
     msgs.push(...adherenceInsights(profile));
     msgs.push(...bodyweightInsights(profile));
+    msgs.push(...backupInsight(profile));
     msgs.push(...painInsights(profile));
     msgs.push(...planWarnings(plan));
 
@@ -318,6 +319,31 @@ const Coach = (function () {
         sessions: I18n.m("common.sessions", { count: back.sessions }),
       }),
       weight: 11,
+    }];
+  }
+
+  /**
+   * The one failure mode in this app that cannot be undone.
+   * Every other mistake here is a bad set. Losing the log is losing the
+   * training history the whole engine reasons from, and it happens silently —
+   * so the nudge names what is actually at stake rather than saying "consider
+   * backing up".
+   */
+  function backupInsight(profile) {
+    const b = Store.backupStatus(profile);
+    if (!b.due) return [];
+    return [{
+      key: `backup-${b.sessions}`,
+      category: "storage", severity: "warn",
+      title: I18n.m(b.last ? "engine.coach.backupStaleTitle" : "engine.coach.backupNeverTitle", {
+        sessions: I18n.m("common.sessions", { count: b.sessionsSince }),
+      }),
+      body: I18n.m("engine.coach.backupBody", {
+        total: I18n.m("common.sessions", { count: b.sessions }),
+        persisted: I18n.m(b.persisted ? "engine.coach.backupPersisted" : "engine.coach.backupNotPersisted"),
+      }),
+      cta: { labelKey: "engine.coach.backupCta", href: "profile.html#backup" },
+      weight: 6,
     }];
   }
 
