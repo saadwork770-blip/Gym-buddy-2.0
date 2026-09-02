@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Adaptive AI coaching that picks your weights, rebuilds your split around your days, and adapts your workouts.">
+<title>GymBuddy 2.0 — Adaptive AI Coaching for Your Training Plan</title>
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">AI Coaching · Version 2.0</div>
+      <h1>Your plan, re-written every week around what you actually did.</h1>
+      <p class="lead">GymBuddy 2.0 keeps everything from version 1 — the full Fitness Time program, the exercise
+      library with real photos and animated demonstrations, the local profile — and adds a coaching engine on top.
+      It picks your next weights from the reps and effort you logged, rebuilds the split around the days you can
+      train, and swaps exercises when something stalls or starts to hurt.</p>
+      <div class="hero-actions" id="heroActions"></div>
+      <div class="hero-stats" id="heroStats"></div>
+    </div>
+    <div class="hero-card" id="heroCard"></div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">What is new in 2.0</div>
+      <h2>Four things the first version could not do</h2>
+    </div>
+    <div class="grid grid-4">
+      <div class="card feature-card">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        <h3>It picks your weights</h3>
+        <p>Double progression, RPE autoregulation and effort-adjusted 1RM tracking decide the next load — and every
+        jump is rounded to what the machine can actually select. It tells you the reasoning, with the reps and RPE
+        that produced it.</p>
+      </div>
+      <div class="card feature-card">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+        <h3>It rebuilds your week</h3>
+        <p>Tell it which days you can train and it re-chooses the split, re-orders the sessions so overlapping muscle
+        work lands as far apart as the week allows, and re-sizes each session to the time you have.</p>
+      </div>
+      <div class="card feature-card">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6"/><path d="M20 20v-6h-6"/><path d="M20 9A8 8 0 0 0 6 6L4 8"/><path d="M4 15a8 8 0 0 0 14 3l2-2"/></svg>
+        <h3>It changes the exercises</h3>
+        <p>Stalled for three sessions? Missing equipment? A joint that hurts? The coach substitutes a movement that
+        trains the same pattern, explains the swap, and leaves the decision with you.</p>
+      </div>
+      <div class="card feature-card">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <h3>It runs the session with you</h3>
+        <p>A live workout player calls the load for every set, times your rest, reads your readiness check-in, and
+        recalculates the next session's prescriptions before you have left the building.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0;">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">How the coaching actually works</div>
+      <h2>No black box</h2>
+    </div>
+    <div class="grid grid-3" id="explainGrid"></div>
+  </div>
+</section>
+
+<section style="padding-top:0;">
+  <div class="wrap">
+    <div class="disclaimer">
+      <b>What this is, and what it is not.</b> The coaching engine is a transparent rule system built on
+      well-established training principles — double progression, RPE-based autoregulation, weekly volume landmarks
+      and mesocycle periodization. It is not a medical device and it cannot see you train. Every recommendation shows
+      its reasoning so you can override it, and you should: if a load feels wrong, it is wrong. All data stays in this
+      browser's local storage — no account, no server, nothing transmitted. Photos and animated demonstrations come
+      from <b>free-exercise-db</b> (public domain, Unlicense) and are stored in this project, so the site works fully
+      offline. If an exercise causes joint pain rather than muscle fatigue, flag it in the library and see a physio —
+      not an app.
+    </div>
+  </div>
+</section>
+
+<script src="js/data.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/engine/periodization.js"></script>
+<script src="js/engine/progression.js"></script>
+<script src="js/engine/scheduler.js"></script>
+<script src="js/engine/adaptation.js"></script>
+<script src="js/engine/coach.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/pages/index.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Coaching insights, progression decisions and the reasoning behind them.">
+<title>AI Coach — GymBuddy 2.0</title>
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<section style="padding-top:40px;">
+  <div class="wrap" id="root">
+    <div class="section-head">
+      <div class="kicker">AI Coach</div>
+      <h2>What the coach is thinking</h2>
+      <p>Everything on this page is derived from what you have actually logged — the reasoning is shown with every
+      recommendation, so you can disagree with it.</p>
+    </div>
+    <div id="feed" class="coach-list"></div>
+
+    <h3 style="margin:44px 0 6px;">Next session's loads</h3>
+    <p class="hint" style="margin-bottom:16px;">Every exercise in your current plan with the weight the engine wants
+    next and why. Click a row to see the evidence, override the load, or swap the movement.</p>
+    <div class="card" style="padding:0;overflow-x:auto;"><table class="rx-table" id="rxTable"></table></div>
+  </div>
+</section>
+
+<script src="js/data.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/engine/periodization.js"></script>
+<script src="js/engine/progression.js"></script>
+<script src="js/engine/scheduler.js"></script>
+<script src="js/engine/adaptation.js"></script>
+<script src="js/engine/coach.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/pages/coach.js"></script>
+</body>
+</html>

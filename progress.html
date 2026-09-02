@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Strength trends, training volume, bodyweight and attendance analytics.">
+<title>Progress — GymBuddy 2.0</title>
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<section style="padding-top:40px;">
+  <div class="wrap" id="root">
+    <div class="section-head">
+      <div class="kicker">Analytics</div>
+      <h2>Progress</h2>
+      <p>Strength, volume, bodyweight and attendance, drawn from your session log.</p>
+    </div>
+    <div class="kpi-grid" id="kpis"></div>
+
+    <div class="chart-card">
+      <h3>Estimated 1RM</h3>
+      <p class="hint">Effort-adjusted strength estimate, comparable across rep ranges. Pick a lift to plot.</p>
+      <div class="filters" id="liftPicker" style="margin-bottom:16px;"></div>
+      <canvas class="chart" id="strengthChart" data-height="230"></canvas>
+      <div id="strengthMeta" class="hint" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:18px;" id="dualCharts">
+      <div class="chart-card">
+        <h3>Bodyweight</h3>
+        <p class="hint" id="bwMeta">Logged on the Profile page.</p>
+        <canvas class="chart" id="weightChart" data-height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Weekly training volume</h3>
+        <p class="hint">Total tonnage lifted per week — sets x reps x load.</p>
+        <canvas class="chart" id="tonnageChart" data-height="200"></canvas>
+      </div>
+    </div>
+
+    <h3 style="margin:36px 0 6px;">Attendance</h3>
+    <p class="hint" style="margin-bottom:14px;">Which days you actually train on, over the last six weeks.</p>
+    <div class="card" id="attendance"></div>
+
+    <h3 style="margin:36px 0 14px;">Session history</h3>
+    <div class="card" id="history"></div>
+  </div>
+</section>
+
+<script src="js/data.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/engine/periodization.js"></script>
+<script src="js/engine/progression.js"></script>
+<script src="js/engine/scheduler.js"></script>
+<script src="js/engine/adaptation.js"></script>
+<script src="js/engine/coach.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/pages/progress.js"></script>
+</body>
+</html>
