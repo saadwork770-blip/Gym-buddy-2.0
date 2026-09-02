@@ -199,13 +199,13 @@ section{ padding: 60px 0; }
 .ex-card:hover{ transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent-cat) 50%, var(--border)); box-shadow: var(--shadow); }
 .ex-media{
   position: relative; overflow: hidden;
-  aspect-ratio: 4/3; background: var(--bg-alt);
+  aspect-ratio: 3/2; background: var(--bg-alt);
   display:flex; align-items:center; justify-content:center;
   border-bottom:1px solid var(--border);
   color: var(--accent-cat, var(--accent));
 }
 .ex-media .ex-photo{
-  width:100%; height:100%; object-fit: cover; display:block;
+  width:100%; height:100%; object-fit: contain; display:block;
   transition: transform .25s ease;
 }
 .ex-media video.ex-photo{ transform:none; }
@@ -231,7 +231,11 @@ section{ padding: 60px 0; }
 .clip-figure{ margin:0 0 20px; }
 .clip-figure .ex-clip{
   width:100%; border-radius: var(--radius-sm); border:1px solid var(--border);
-  background: var(--card); display:block; aspect-ratio: 3/2; object-fit: cover;
+  background: var(--bg-alt); display:block; aspect-ratio: 3/2;
+  /* `contain`, not `cover`. Most sources are 3:2 and fill this exactly, but a
+     few are portrait, and cropping those to fill the box cuts the lifter's head
+     off — which is not a trade you make with a demonstration. */
+  object-fit: contain;
 }
 .clip-figure figcaption{
   margin-top:8px; font-size:.78rem; color: var(--text-faint); line-height:1.45;

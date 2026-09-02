@@ -506,7 +506,9 @@ const MEDIA_NOTES = {
   "assisted-pull-up-machine":
     "Pictured: the close-grip lat pulldown — the substitution this program lists for the assisted pull-up machine.",
   "hip-adduction-abduction":
-    "The animation cycles through both machines: hip adduction (inner thigh) and hip abduction (outer thigh).",
+    "Pictured: the abduction (outer thigh) machine. Adduction is the same machine set the other way, with the pads inside your knees instead of outside them.",
+  "machine-chest-supported-row":
+    "Pictured: a leverage high row — the same chest-supported setup, pulling from a higher angle.",
   "incline-treadmill-walk":
     "Pictured: treadmill walking. This program calls for a moderate incline rather than a flat walk.",
 };
