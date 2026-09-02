@@ -43,6 +43,7 @@ const Coach = (function () {
     msgs.push(...orderingInsights(plan));
     msgs.push(...adherenceInsights(profile));
     msgs.push(...bodyweightInsights(profile));
+    msgs.push(...girthInsights(profile));
     msgs.push(...backupInsight(profile));
     msgs.push(...calibrationInsight(profile));
     msgs.push(...painInsights(profile));
@@ -437,6 +438,84 @@ const Coach = (function () {
    * 0.5–1% of bodyweight per week is the usual sustainable fat-loss band —
    * faster than that and you start paying for it in strength and muscle.
    */
+  /**
+   * What the tape says, and what it says that the scale cannot.
+   *
+   * The most common way a fat-loss phase gets abandoned is a fortnight where
+   * the scale does not move. Usually nothing has gone wrong — water, glycogen
+   * and a late dinner are perfectly capable of hiding a kilo of fat loss — and
+   * a waist measurement settles the argument in a way no amount of reassurance
+   * does. That is the whole reason this is here, so the first thing it does is
+   * ask for the number, and the best thing it does is report the case where
+   * the two disagree.
+   */
+  function girthInsights(profile) {
+    const trend = Store.girthTrend(profile);
+    const logged = (profile.girthLog || []).length;
+
+    /* No tape yet. Worth asking for once there is a scale history to read it
+       against, and only where the goal is one the waist actually answers. */
+    if (!trend) {
+      const cares = profile.goal === "Fat loss" || profile.goal === "General fitness";
+      if (!cares || (profile.weightLog || []).length < 3) return [];
+      return [{
+        key: `girth-start-${logged}`,
+        category: "nutrition", severity: "info",
+        title: I18n.m(logged ? "engine.coach.girthAgainTitle" : "engine.coach.girthStartTitle"),
+        body: I18n.m(logged ? "engine.coach.girthAgainBody" : "engine.coach.girthStartBody"),
+        cta: { labelKey: "engine.coach.girthCta", href: "profile.html#weight" },
+        weight: 5,
+      }];
+    }
+
+    const waist = trend.waistDelta;
+    const weight = trend.weightDelta;
+
+    /* The case worth interrupting for: the scale has stalled and the tape has
+       not. Nothing is wrong, and being told so is the difference between
+       finishing the block and quitting it. */
+    if (waist <= -1 && weight != null && Math.abs(weight) < 0.8) {
+      return [{
+        key: `girth-recomp-${trend.to}`,
+        category: "nutrition", severity: "good",
+        title: I18n.m("engine.coach.girthRecompTitle", { cm: Math.abs(waist) }),
+        body: I18n.m("engine.coach.girthRecompBody", {
+          days: trend.days, weight: Math.abs(weight),
+          from: trend.from, to: trend.to,
+        }),
+        weight: 7,
+      }];
+    }
+
+    /* The opposite case, and the one nobody volunteers: the scale is falling
+       and the waist is not. */
+    if (weight != null && weight <= -1.5 && waist >= -0.3) {
+      return [{
+        key: `girth-scale-only-${trend.to}`,
+        category: "nutrition", severity: "warn",
+        title: I18n.m("engine.coach.girthScaleOnlyTitle"),
+        body: I18n.m("engine.coach.girthScaleOnlyBody", {
+          days: trend.days, weight: Math.abs(weight), waist: trend.to,
+        }),
+        weight: 5,
+      }];
+    }
+
+    if (waist <= -1) {
+      return [{
+        key: `girth-down-${trend.to}`,
+        category: "nutrition", severity: "good",
+        title: I18n.m("engine.coach.girthDownTitle", { cm: Math.abs(waist) }),
+        body: I18n.m("engine.coach.girthDownBody", {
+          days: trend.days, from: trend.from, to: trend.to,
+          ratio: trend.ratio ? I18n.m("engine.coach.girthRatio", { ratio: trend.ratio }) : "",
+        }),
+        weight: 4,
+      }];
+    }
+    return [];
+  }
+
   function bodyweightInsights(profile) {
     const log = (profile.weightLog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
     if (log.length < 3) return [];
@@ -454,6 +533,11 @@ const Coach = (function () {
 
     if (goal === "Fat loss") {
       if (perWeek >= -0.05) {
+        /* A stalled scale is not a stalled diet if the tape is still moving.
+           Warning about it anyway, next to a card saying the waist is down
+           3 cm, reads as the app arguing with itself. */
+        const tape = Store.girthTrend(profile);
+        if (tape && tape.waistDelta <= -1) return [];
         return [{
           key: `bw-stall-${last.date}`, category: "nutrition", severity: "warn",
           title: I18n.m("engine.coach.bwStallTitle"),

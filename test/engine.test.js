@@ -571,7 +571,10 @@ suite("The coaching engine speaks both languages");
   check(/[\u0600-\u06FF]/.test(arabic), "the Arabic rendering actually contains Arabic script");
   check(!/^[a-z.]+\.[a-z]/.test(arabic.trim()),
     `no raw translation key leaks into the output (got: ${arabic.slice(0, 40)}…)`);
-  check(arabic.includes("\u2068") || !/[0-9]/.test(arabic),
+  /* U+2068 first-strong for runs containing letters, U+2066 left-to-right for
+     digit-only runs like "-3.6" or "12/12/12", which have no strong character
+     to take a direction from. Either one, closed by U+2069, is correct. */
+  check(/[\u2066\u2068][^\u2069]*\u2069/.test(arabic) || !/[0-9]/.test(arabic),
     "numbers inside Arabic prose are wrapped in bidi isolates");
 
   // Whole-feed sweep: nothing should render as a dotted key.
@@ -868,6 +871,80 @@ suite("Starting weights come from your numbers when you give them");
   g9.Store.setCalibration(p9.id, []);
   check(seed(g9.Store.getProfile(p9.id), "leg-press") === beforeLeg,
     "clearing the calibration restores the estimate exactly");
+}
+
+suite("Signed numbers keep their sign in Arabic");
+{
+  const g11 = load();
+  g11.I18n.setLang("ar");
+  /* A minus sign is a neutral character: inside a first-strong isolate with no
+     letter to anchor it, it drifts to the far end of the run and "-3.6"
+     renders as "3.6-", which is a different number to anyone reading it. */
+  const line = g11.I18n.t("profile.girthMeta", { delta: "-3.6", days: 42, weight: "" });
+  const isolated = line.match(/[\u2066\u2068]([^\u2069]*)\u2069/g) || [];
+  check(isolated.some(run => run.includes("\u2066") && run.includes("-3.6")),
+    "a digit-only run is isolated left-to-right, not first-strong");
+  check(line.indexOf("-3.6") !== -1, "so the sign stays in front of the digits");
+
+  /* Runs that do contain letters still resolve by their own first letter. */
+  const named = g11.I18n.t("engine.prog.calibrateFrom", { weight: 80, reps: 8 });
+  check(named.includes("\u2066") || named.includes("\u2068"), "lettered runs are still isolated");
+  g11.I18n.setLang("en");
+  check(!/[\u2066\u2068]/.test(g11.I18n.t("profile.girthMeta", { delta: "-3.6", days: 42, weight: "" })),
+    "and English is left entirely alone");
+}
+
+suite("The tape measure says what the scale cannot");
+{
+  const g12 = load();
+  const stamp = n => today(-n);
+  const build = (weights, waists) => {
+    const q = g12.Store.createProfile({ ...baseProfile, name: "Tape" });
+    const db = JSON.parse(g12.__storage["gymbuddy_profiles_v2"]);
+    db[q.id].weightLog = weights.map(([d, kg]) => ({ date: stamp(d), weightKg: kg }));
+    db[q.id].girthLog = waists.map(([d, cm]) => ({ date: stamp(d), waistCm: cm, hipCm: 108 }));
+    g12.__storage["gymbuddy_profiles_v2"] = JSON.stringify(db);
+    return g12.Store.getProfile(q.id);
+  };
+
+  check(g12.Store.girthTrend(build([[30, 100]], [[30, 100]])) === null,
+    "one measurement is not a trend");
+  check(g12.Store.girthTrend(build([[5, 100], [0, 100]], [[5, 100], [0, 99]])) === null,
+    "and two readings five days apart are measuring your breathing, not your waist");
+
+  /* The case the whole feature exists for: the scale has stalled, the tape
+     has not, and being told so is the difference between finishing the block
+     and abandoning it. */
+  const flat = build(
+    [[50, 114], [25, 113.9], [0, 114.1]],
+    [[50, 104], [25, 101.5], [0, 99.2]]);
+  const trend = g12.Store.girthTrend(flat);
+  check(trend && trend.waistDelta === -4.8, `waist movement is measured (${trend && trend.waistDelta} cm)`);
+  check(trend && Math.abs(trend.weightDelta) < 0.5,
+    `alongside the scale over the same window (${trend && trend.weightDelta} kg)`);
+  check(trend && trend.ratio > 0, `and the waist-to-hip ratio when hips are logged (${trend && trend.ratio})`);
+
+  const feed = g12.Coach.buildFeed(flat);
+  const recomp = feed.find(msg => msg.key && msg.key.startsWith("girth-recomp"));
+  check(!!recomp, "a flat scale with a shrinking waist is reported as the good news it is");
+  check(!feed.some(msg => msg.key && msg.key.startsWith("bw-stall")),
+    "and the stalled-scale warning stands down rather than arguing with it");
+
+  /* The reverse, which nobody volunteers. */
+  const wasting = build(
+    [[50, 114], [25, 110], [0, 108]],
+    [[50, 104], [25, 104], [0, 103.9]]);
+  check(g12.Coach.buildFeed(wasting).some(msg => msg.key && msg.key.startsWith("girth-scale-only")),
+    "weight falling while the waist holds is flagged, not celebrated");
+
+  /* And it asks for the number in the first place. */
+  const noTape = g12.Store.createProfile({ ...baseProfile, name: "NoTape" });
+  const db = JSON.parse(g12.__storage["gymbuddy_profiles_v2"]);
+  db[noTape.id].weightLog = [[21, 114], [14, 113.6], [0, 113.2]].map(([d, kg]) => ({ date: stamp(d), weightKg: kg }));
+  g12.__storage["gymbuddy_profiles_v2"] = JSON.stringify(db);
+  check(g12.Coach.buildFeed(g12.Store.getProfile(noTape.id))
+        .some(msg => msg.key && msg.key.startsWith("girth-start")),
+    "a fat-loss profile with a scale history is asked for a waist measurement");
 }
 
 /* ------------------------------------------------------------------ */

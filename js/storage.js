@@ -441,6 +441,73 @@ const Store = {
 
   /* ---------------- Logging & flags ---------------- */
 
+  /**
+   * Log a tape measurement.
+   *
+   * The scale is a bad instrument for the thing most people are actually
+   * asking it. It moves with water, glycogen, salt and the time of day, and
+   * over a month of lifting in a deficit it can sit perfectly still while the
+   * body underneath it changes shape. A tape around the navel does not have
+   * that problem: it goes down when fat comes off and it does not care what
+   * you ate last night. Hips are optional and give the waist-to-hip ratio,
+   * which is the half of this that is about health rather than appearance.
+   */
+  addGirthEntry(id, entry) {
+    const db = loadDB();
+    if (!db[id]) return null;
+    const waist = Number(entry && entry.waistCm);
+    const hip = Number(entry && entry.hipCm);
+    if (!(waist > 0) && !(hip > 0)) return this.getProfile(id);
+
+    const date = new Date().toISOString().slice(0, 10);
+    db[id].girthLog = db[id].girthLog || [];
+    const existing = db[id].girthLog.find(g => g.date === date) || { date };
+    if (waist > 0) existing.waistCm = Math.round(waist * 10) / 10;
+    if (hip > 0) existing.hipCm = Math.round(hip * 10) / 10;
+    if (!db[id].girthLog.includes(existing)) db[id].girthLog.push(existing);
+    db[id].girthLog.sort((a, b) => a.date.localeCompare(b.date));
+    saveDB(db);
+    return this.getProfile(id);
+  },
+
+  /**
+   * Waist movement over a window, alongside the scale over the same window, so
+   * the two can be read against each other rather than one at a time.
+   * Returns null until there are two measurements far enough apart to mean
+   * anything — a tape read twice in one week is measuring your breathing.
+   */
+  girthTrend(profile, days) {
+    const window = days || 56;
+    const log = (profile.girthLog || []).filter(g => g.waistCm > 0);
+    if (log.length < 2) return null;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - window);
+    const recent = log.filter(g => new Date(g.date) >= cutoff);
+    const use = recent.length >= 2 ? recent : log.slice(-2);
+    const first = use[0], last = use[use.length - 1];
+    const span = Math.round((new Date(last.date) - new Date(first.date)) / 86400000);
+    if (span < 10) return null;
+
+    const weights = (profile.weightLog || []).filter(w => w.weightKg > 0);
+    const near = date => {
+      let best = null, bestGap = Infinity;
+      weights.forEach(w => {
+        const gap = Math.abs(new Date(w.date) - new Date(date));
+        if (gap < bestGap) { bestGap = gap; best = w; }
+      });
+      return best && bestGap <= 10 * 86400000 ? best.weightKg : null;
+    };
+    const wFirst = near(first.date), wLast = near(last.date);
+
+    return {
+      days: span,
+      from: first.waistCm, to: last.waistCm,
+      waistDelta: Math.round((last.waistCm - first.waistCm) * 10) / 10,
+      weightDelta: wFirst != null && wLast != null
+        ? Math.round((wLast - wFirst) * 10) / 10 : null,
+      ratio: last.hipCm > 0 ? Math.round((last.waistCm / last.hipCm) * 100) / 100 : null,
+    };
+  },
+
   addWeightEntry(id, weightKg) {
     const db = loadDB();
     if (!db[id]) return null;

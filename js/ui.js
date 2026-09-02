@@ -212,6 +212,19 @@ const UI = (function () {
       const r = Math.round(n * 10) / 10;
       return `${r > 0 ? "+" : ""}${I18n.num(r)}${unit || ""}`;
     },
+    /**
+     * A signed number with its unit, as HTML, for a table cell.
+     * "-1.2 kg" in an Arabic table renders as "kg 1.2-" if it is handed over
+     * as one string: the sign is a neutral character, so it drifts to the far
+     * end of the RTL run and ends up trailing the digits. Isolating the number
+     * keeps the sign attached to it while the unit still sits where Arabic
+     * wants it.
+     */
+    deltaCell(n, unit) {
+      const r = Math.round(n * 10) / 10;
+      const num = `${r > 0 ? "+" : ""}${I18n.num(r)}`;
+      return `<span dir="ltr">${esc(num)}</span>&nbsp;${esc(unit || "")}`;
+    },
     date(iso) { return I18n.date(iso); },
     relDate(iso) {
       const days = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -332,6 +345,21 @@ const UI = (function () {
   /**
    * Line chart with optional trend line. `series` is [{date, value}].
    */
+  /** Greedy word wrap against a measured width, for canvas text. */
+  function wrapText(ctx, text, maxWidth) {
+    const words = String(text || "").split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    const lines = [];
+    let line = words[0];
+    for (let i = 1; i < words.length; i++) {
+      const next = `${line} ${words[i]}`;
+      if (ctx.measureText(next).width <= maxWidth) line = next;
+      else { lines.push(line); line = words[i]; }
+    }
+    lines.push(line);
+    return lines;
+  }
+
   function lineChart(canvas, series, opts) {
     const o = opts || {};
     const { ctx, w, h } = prepCanvas(canvas);
@@ -341,8 +369,14 @@ const UI = (function () {
     const dim = CSSVAR("--text-faint") || "#6b7280";
 
     if (!series || series.length < 2) {
+      /* Canvas does not wrap, and an empty-state sentence is long enough to
+         run off the side of a narrow chart card and get clipped mid-word. */
       ctx.fillStyle = dim; ctx.font = "13px system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(o.emptyText || I18n.t("progress.notEnough"), w / 2, h / 2);
+      const lines = wrapText(ctx, o.emptyText || I18n.t("progress.notEnough"), w - 24);
+      const lead = 17;
+      lines.forEach((line, i) => {
+        ctx.fillText(line, w / 2, h / 2 - ((lines.length - 1) * lead) / 2 + i * lead);
+      });
       ctx.textAlign = "left";
       return;
     }

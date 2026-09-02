@@ -153,17 +153,36 @@ UI.ready(() => {
 
           <div class="tab-panel active" id="tab-settings"><div class="card" id="settingsPanel"></div></div>
 
-          <div class="tab-panel" id="tab-weight"><div class="card">
-            <form class="weight-form" id="weightForm">
-              <div class="field"><label for="w-weight">${UI.t("profile.weightLog")}</label>
-                <input id="w-weight" type="number" min="30" max="300" step="0.1" required dir="ltr"></div>
-              <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
-            </form>
-            <canvas class="chart" id="weightChart" data-height="190" role="img"
-                    aria-label="${UI.t("progress.weightTitle")}"></canvas>
-            <table class="log-table"><thead><tr><th>${UI.t("profile.colDate")}</th><th>${UI.t("profile.colWeightKg")}</th><th>${UI.t("profile.colChange")}</th></tr></thead>
-              <tbody id="weightRows"></tbody></table>
-          </div></div>
+          <div class="tab-panel" id="tab-weight">
+            <div class="card">
+              <form class="weight-form" id="weightForm">
+                <div class="field"><label for="w-weight">${UI.t("profile.weightLog")}</label>
+                  <input id="w-weight" type="number" min="30" max="300" step="0.1" required dir="ltr"></div>
+                <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
+              </form>
+              <canvas class="chart" id="weightChart" data-height="190" role="img"
+                      aria-label="${UI.t("progress.weightTitle")}"></canvas>
+              <table class="log-table"><thead><tr><th>${UI.t("profile.colDate")}</th><th>${UI.t("profile.colWeightKg")}</th><th>${UI.t("profile.colChange")}</th></tr></thead>
+                <tbody id="weightRows"></tbody></table>
+            </div>
+
+            <div class="card" style="margin-top:14px;">
+              <h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin:0 0 10px;">${UI.t("profile.girthTitle")}</h3>
+              <p class="hint" style="margin-bottom:12px;">${UI.t("profile.girthHint")}</p>
+              <form class="weight-form" id="girthForm">
+                <div class="field"><label for="g-waist">${UI.t("profile.girthWaist")}</label>
+                  <input id="g-waist" type="number" min="40" max="200" step="0.5" dir="ltr"></div>
+                <div class="field"><label for="g-hip">${UI.t("profile.girthHip")}</label>
+                  <input id="g-hip" type="number" min="40" max="200" step="0.5" dir="ltr"></div>
+                <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
+              </form>
+              <canvas class="chart" id="girthChart" data-height="170" role="img"
+                      aria-label="${UI.t("profile.girthTitle")}"></canvas>
+              <p class="hint" id="girthMeta" style="margin-top:6px;"></p>
+              <table class="log-table"><thead><tr><th>${UI.t("profile.colDate")}</th><th>${UI.t("profile.girthWaist")}</th><th>${UI.t("profile.girthHip")}</th><th>${UI.t("profile.colChange")}</th></tr></thead>
+                <tbody id="girthRows"></tbody></table>
+            </div>
+          </div>
 
           <div class="tab-panel" id="tab-calibrate"><div class="card" id="calibratePanel"></div></div>
 
@@ -190,13 +209,14 @@ UI.ready(() => {
       document.querySelectorAll(".tab-panel").forEach(x => x.classList.remove("active"));
       btn.classList.add("active"); btn.setAttribute("aria-selected", "true");
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
-      if (btn.dataset.tab === "weight") drawWeight(p);
+      if (btn.dataset.tab === "weight") { drawWeight(p); drawGirth(p); }
     }));
 
     renderSettings(p, plan);
     renderCalibration(p);
     renderCycle(p, phase);
     renderWeightLog(p);
+    renderGirthLog(p);
     wireBackup(p);
 
     /* The coach links here with the tab it means in the fragment, so "Set
@@ -460,7 +480,7 @@ UI.ready(() => {
           const d = prev ? w.weightKg - prev.weightKg : null;
           return `<tr><td>${UI.esc(UI.fmt.date(w.date))}</td><td class="tnum">${I18n.num(w.weightKg)}</td>
             <td class="tnum" style="color:${d == null ? "var(--text-faint)" : d < 0 ? "var(--good)" : "var(--warn)"}">${
-              d == null ? "—" : UI.esc(UI.fmt.signed(d, " " + I18n.t("common.kg")))}</td></tr>`;
+              d == null ? "—" : UI.fmt.deltaCell(d, I18n.t("common.kg"))}</td></tr>`;
         }).join("")
       : `<tr><td colspan="3" class="hint">${UI.t("profile.noEntries")}</td></tr>`;
 
@@ -480,6 +500,58 @@ UI.ready(() => {
     if (!canvas) return;
     UI.lineChart(canvas, (p.weightLog || []).map(w => ({ date: w.date, value: w.weightKg })),
       { color: "#9775fa", trend: true, emptyText: I18n.t("progress.weightEmpty") });
+  }
+
+  /* ---------------- Girth ---------------- */
+
+  /**
+   * The tape measure. It is here rather than on its own page because it only
+   * means anything read against the scale directly above it: the two together
+   * answer a question neither can answer alone.
+   */
+  function renderGirthLog(p) {
+    const log = (p.girthLog || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    document.getElementById("girthRows").innerHTML = log.length
+      ? log.slice().reverse().map((g, i, arr) => {
+          const prev = arr[i + 1];
+          const d = prev && prev.waistCm && g.waistCm ? g.waistCm - prev.waistCm : null;
+          return `<tr><td>${UI.esc(UI.fmt.date(g.date))}</td>
+            <td class="tnum">${g.waistCm ? I18n.num(g.waistCm) : "—"}</td>
+            <td class="tnum">${g.hipCm ? I18n.num(g.hipCm) : "—"}</td>
+            <td class="tnum" style="color:${d == null ? "var(--text-faint)" : d < 0 ? "var(--good)" : "var(--warn)"}">${
+              d == null ? "—" : UI.fmt.deltaCell(d, I18n.t("profile.cm"))}</td></tr>`;
+        }).join("")
+      : `<tr><td colspan="4" class="hint">${UI.t("profile.noEntries")}</td></tr>`;
+
+    const trend = Store.girthTrend(p);
+    const meta = document.getElementById("girthMeta");
+    meta.textContent = trend
+      ? UI.t("profile.girthMeta", {
+          delta: UI.fmt.signed(trend.waistDelta),
+          days: trend.days,
+          weight: trend.weightDelta == null ? UI.t("profile.girthNoWeight")
+            : UI.t("profile.girthWithWeight", { delta: UI.fmt.signed(trend.weightDelta) }),
+        })
+      : UI.t("profile.girthNoTrend");
+
+    document.getElementById("girthForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const waist = document.getElementById("g-waist").value;
+      const hip = document.getElementById("g-hip").value;
+      if (!waist && !hip) return;
+      Store.addGirthEntry(p.id, { waistCm: waist, hipCm: hip });
+      UI.toast(I18n.t("profile.girthLogged"));
+      render();
+      document.querySelector('.tab-btn[data-tab="weight"]').click();
+    });
+  }
+
+  function drawGirth(p) {
+    const canvas = document.getElementById("girthChart");
+    if (!canvas) return;
+    UI.lineChart(canvas,
+      (p.girthLog || []).filter(g => g.waistCm > 0).map(g => ({ date: g.date, value: g.waistCm })),
+      { color: "#f783ac", trend: true, emptyText: I18n.t("profile.girthEmpty") });
   }
 
   /* ---------------- Backup ---------------- */

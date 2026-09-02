@@ -28,11 +28,16 @@
       <div id="strengthMeta" class="hint" style="margin-top:12px;"></div>
     </div>
 
-    <div class="grid" style="grid-template-columns:1fr 1fr;gap:18px;" id="dualCharts">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;" id="dualCharts">
       <div class="chart-card">
         <h3 data-i18n="progress.weightTitle">Bodyweight</h3>
         <p class="hint" id="bwMeta" data-i18n="progress.weightHint"></p>
         <canvas class="chart" id="weightChart" data-height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3 data-i18n="progress.waistTitle">Waist</h3>
+        <p class="hint" id="waistMeta" data-i18n="progress.waistHint"></p>
+        <canvas class="chart" id="waistChart" data-height="200"></canvas>
       </div>
       <div class="chart-card">
         <h3 data-i18n="progress.tonnageTitle">Weekly training volume</h3>
