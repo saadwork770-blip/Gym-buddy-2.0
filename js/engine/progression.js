@@ -290,19 +290,26 @@ const Progression = (function () {
    * hard on the very next session once real data exists.
    */
   function seedWeight(exercise, profile, repRange) {
-    const meta = exercise;
-    if (!meta.startCoef) return 0;
-    const bw = Number(profile.weightKg) || 80;
-    const level = LEVEL_PROFILES[profile.level] || LEVEL_PROFILES["Some experience"];
-    // Coefficients are calibrated against an average adult male frame; scale
-    // for a lighter/female frame so the seed is not systematically too heavy.
-    const sexScale = (profile.sex === "Female") ? 0.72 : 1;
-    let raw = bw * meta.startCoef * level.strengthScale * sexScale;
-    if (meta.inverseLoad) {
-      // Assisted machines: the stack is help. A heavier, less experienced
-      // lifter needs MORE assistance, so the coefficient runs the other way.
-      raw = bw * meta.startCoef * (2 - level.strengthScale) * sexScale;
+    if (!exercise.startCoef) return 0;
+    const increments = profile.settings && profile.settings.increments;
+    const measured = calibrationFor(profile, exercise.id);
+
+    /* Measured beats estimated. If the lifter told us what they actually did
+       on this movement, convert that set straight to the target rep range —
+       no bodyweight coefficient, no experience multiplier, and only a token
+       haircut, because there is nothing here to be cautious about. */
+    if (measured && !exercise.inverseLoad &&
+        exercise.loadType !== "bodyweight" && exercise.loadType !== "timed") {
+      const e1rm = estimate1RM(
+        effectiveLoad(measured.weight, exercise, profile.weightKg), measured.reps,
+        measured.rpe == null ? 8 : measured.rpe);
+      const midReps = repRange ? (repRange[0] + repRange[1]) / 2 : 10;
+      let load = loadForReps(e1rm, midReps, 8);
+      if (exercise.unilateral && exercise.loadType === "dumbbell") load /= 2;
+      return roundToIncrement(load * 0.97, exercise.loadType, increments);
     }
+
+    let raw = seedBaseLoad(exercise, profile, calibrationScale(profile));
 
     /* The coefficients describe a load for roughly 10 reps. A strength block
        asking for 4–6 needs a heavier bar and a 15-rep accessory needs a
@@ -310,7 +317,7 @@ const Progression = (function () {
        every goal the same number. Assisted machines are skipped — the
        relationship runs backwards there and the extra precision is not worth
        the risk of over-assisting. */
-    if (repRange && !meta.inverseLoad && meta.loadType !== "bodyweight" && meta.loadType !== "timed") {
+    if (repRange && !exercise.inverseLoad && exercise.loadType !== "bodyweight" && exercise.loadType !== "timed") {
       const midReps = (repRange[0] + repRange[1]) / 2;
       if (Math.abs(midReps - 10) > 0.5) {
         const impliedE1RM = raw * (1 + (10 + 2) / 30);       // 10 reps @ RPE 8
@@ -320,7 +327,88 @@ const Progression = (function () {
 
     // A deliberate 10% haircut: the first session is a feel-out, and starting
     // too light costs one session while starting too heavy can cost weeks.
-    return roundToIncrement(raw * 0.9, meta.loadType, profile.settings && profile.settings.increments);
+    return roundToIncrement(raw * 0.9, exercise.loadType, increments);
+  }
+
+  /* ---------------------------------------------------------------------
+     Calibration
+     ---------------------------------------------------------------------
+     Without it, the first weight on every bar comes from bodyweight, sex and
+     a three-way experience dropdown. That is a reasonable guess and it is
+     still wrong for most people: "some experience" covers a lifter who has
+     benched 60 kg for two years and one who has benched 110 kg. Being wrong
+     costs a session or two per exercise while double progression corrects it,
+     and until then the only way to fix it is to override every lift by hand.
+
+     So the app can just ask. Tell it one honest set on a few lifts — weight,
+     reps, roughly how hard it was — and two things happen: those exercises are
+     seeded from your own numbers rather than a coefficient, and the ratio
+     between what you lift and what the formula expected becomes a personal
+     correction applied to everything else you have not calibrated.
+     --------------------------------------------------------------------- */
+
+  /* How far a calibrated lift is allowed to move the lifts you did NOT
+     calibrate, and by how much. Strength transfers between movements, but not
+     one for one: somebody who leg-presses far more than the formula expects is
+     usually a bit above it on curls, not 80% above. So the measured ratio is
+     halved before it is applied elsewhere and then clamped, which is enough to
+     stop a seed being obviously wrong without pretending one lift predicts
+     another. The lifts that were calibrated use their own numbers directly and
+     are not touched by any of this. */
+  const CALIBRATION_TRANSFER = 0.5;
+  const CALIBRATION_MIN = 0.7, CALIBRATION_MAX = 1.45;
+
+  /** The uncalibrated 10-rep working load the coefficients describe. */
+  function seedBaseLoad(exercise, profile, scale) {
+    const bw = Number(profile.weightKg) || 80;
+    const level = LEVEL_PROFILES[profile.level] || LEVEL_PROFILES["Some experience"];
+    // Coefficients are calibrated against an average adult male frame; scale
+    // for a lighter/female frame so the seed is not systematically too heavy.
+    const sexScale = (profile.sex === "Female") ? 0.72 : 1;
+    const s = scale == null || !(scale > 0) ? 1 : scale;
+    if (exercise.inverseLoad) {
+      // Assisted machines: the stack is help. A heavier, less experienced
+      // lifter needs MORE assistance, so both multipliers run the other way.
+      return bw * exercise.startCoef * (2 - level.strengthScale) * sexScale / s;
+    }
+    return bw * exercise.startCoef * level.strengthScale * sexScale * s;
+  }
+
+  /** The calibration entry for one exercise, if the lifter gave us one. */
+  function calibrationFor(profile, exerciseId) {
+    const entries = (profile && profile.calibration && profile.calibration.entries) || [];
+    return entries.find(e => e.exerciseId === exerciseId &&
+                             Number(e.weight) > 0 && Number(e.reps) > 0) || null;
+  }
+
+  /**
+   * How far the lifter's real strength sits from what the formula expected,
+   * as a single multiplier for every exercise they did NOT calibrate.
+   *
+   * The median rather than the mean: one lift being unusual — a bad shoulder,
+   * or a movement they have simply practised more than the rest — should not
+   * drag every other starting weight with it.
+   */
+  function calibrationScale(profile) {
+    const entries = (profile && profile.calibration && profile.calibration.entries) || [];
+    const ratios = [];
+    entries.forEach(e => {
+      const ex = exerciseById(e.exerciseId);
+      if (!ex || !ex.startCoef) return;
+      if (ex.inverseLoad || ex.loadType === "bodyweight" || ex.loadType === "timed") return;
+      const observed = estimate1RM(
+        effectiveLoad(e.weight, ex, profile.weightKg), e.reps, e.rpe == null ? 8 : e.rpe);
+      const predicted = seedBaseLoad(ex, profile, 1) * (1 + 12 / 30);   // 10 reps @ RPE 8
+      if (!(observed > 0) || !(predicted > 0)) return;
+      ratios.push(observed / predicted);
+    });
+    if (!ratios.length) return 1;
+    ratios.sort((a, b) => a - b);
+    const half = ratios.length / 2;
+    const median = ratios.length % 2 ? ratios[Math.floor(half)]
+                                     : (ratios[half - 1] + ratios[half]) / 2;
+    const damped = 1 + (median - 1) * CALIBRATION_TRANSFER;
+    return Math.min(CALIBRATION_MAX, Math.max(CALIBRATION_MIN, Math.round(damped * 100) / 100));
   }
 
   /* ---------------------------------------------------------------------
@@ -406,14 +494,26 @@ const Progression = (function () {
     /* ---- No history: calibrate ---- */
     if (!last) {
       const seed = prior && prior.weight ? prior.weight : seedWeight(exercise, profile, [repLo, repHi]);
+      const measured = calibrationFor(profile, exercise.id);
+      const scaled = !measured && calibrationScale(profile) !== 1;
+      const key = prior && prior.weight ? "engine.prog.calibrateCarry"
+                : measured               ? "engine.prog.calibrateMeasured"
+                : scaled                 ? "engine.prog.calibrateScaled"
+                :                          "engine.prog.calibrateNew";
       return finish({
         ...base,
         weight: seed,
         action: "calibrate",
         delta: 0,
-        confidence: "low",
-        reason: I18n.m(prior && prior.weight ? "engine.prog.calibrateCarry" : "engine.prog.calibrateNew",
-                       { load: I18n.ref("load", seed, exercise.id) }),
+        confidence: measured ? "high" : scaled ? "medium" : "low",
+        reason: I18n.m(key, {
+          load: I18n.ref("load", seed, exercise.id),
+          from: measured ? I18n.m("engine.prog.calibrateFrom",
+            { weight: measured.weight, reps: measured.reps }) : "",
+          pct: Math.round(Math.abs(calibrationScale(profile) - 1) * 100),
+          direction: I18n.m(calibrationScale(profile) > 1
+            ? "engine.prog.calibrateAbove" : "engine.prog.calibrateBelow"),
+        }),
       }, ctx, phase);
     }
 
@@ -719,5 +819,6 @@ const Progression = (function () {
     historyFor, sessionBest1RM, strengthSeries, strengthTrend, effectiveLoad,
     seedWeight, recommend, readinessModifier, fmtLoad, sessionTonnage, signed, ACTIONS,
     daysSince, detrainingFor, layoffState, returnState,
+    calibrationFor, calibrationScale, seedBaseLoad,
   };
 })();

@@ -147,6 +147,7 @@ UI.ready(() => {
           <div class="tabs" role="tablist">
             <button class="tab-btn active" data-tab="settings" role="tab" aria-selected="true">${UI.t("profile.tabSettings")}</button>
             <button class="tab-btn" data-tab="weight" role="tab" aria-selected="false">${UI.t("profile.tabWeight")}</button>
+            <button class="tab-btn" data-tab="calibrate" role="tab" aria-selected="false">${UI.t("profile.tabCalibrate")}</button>
             <button class="tab-btn" data-tab="cycle" role="tab" aria-selected="false">${UI.t("profile.tabCycle")}</button>
           </div>
 
@@ -163,6 +164,8 @@ UI.ready(() => {
             <table class="log-table"><thead><tr><th>${UI.t("profile.colDate")}</th><th>${UI.t("profile.colWeightKg")}</th><th>${UI.t("profile.colChange")}</th></tr></thead>
               <tbody id="weightRows"></tbody></table>
           </div></div>
+
+          <div class="tab-panel" id="tab-calibrate"><div class="card" id="calibratePanel"></div></div>
 
           <div class="tab-panel" id="tab-cycle"><div class="card" id="cyclePanel"></div></div>
         </div>
@@ -191,9 +194,113 @@ UI.ready(() => {
     }));
 
     renderSettings(p, plan);
+    renderCalibration(p);
     renderCycle(p, phase);
     renderWeightLog(p);
     wireBackup(p);
+
+    /* The coach links here with the tab it means in the fragment, so "Set
+       starting loads" lands on the form rather than on the page containing
+       the form. Following that link from this page is a fragment navigation
+       and does not reload anything, so the hash is watched as well as read. */
+    openTabFromHash();
+  }
+
+  function openTabFromHash() {
+    const wanted = (location.hash || "").replace("#", "");
+    const target = document.querySelector(`.tab-btn[data-tab="${wanted}"]`);
+    if (target) target.click();
+  }
+
+  /* ---------------- Calibration ---------------- */
+
+  /**
+   * Ask what the lifter can already do, rather than deducing it from their
+   * bodyweight and a three-way experience dropdown. One honest set per lift is
+   * enough, and it is the difference between a first month spent training and
+   * a first month spent watching the engine walk a bad guess into the right
+   * ballpark.
+   */
+  function renderCalibration(p) {
+    const panel = document.getElementById("calibratePanel");
+    const targets = Store.calibrationTargets(p, 4);
+    const saved = (p.calibration && p.calibration.entries) || [];
+    const entryFor = id => saved.find(e => e.exerciseId === id) || {};
+    const scale = Progression.calibrationScale(p);
+    const trained = new Set();
+    (p.sessionLog || []).forEach(s => (s.sets || []).forEach(x => trained.add(x.exerciseId)));
+
+    if (!targets.length) {
+      panel.innerHTML = `<p class="hint">${UI.t("profile.calNoPlan")}</p>`;
+      return;
+    }
+
+    panel.innerHTML = `
+      <p class="hint" style="margin-bottom:14px;">${UI.t("profile.calIntro")}</p>
+      <form id="calForm">
+        <table class="log-table cal-table">
+          <thead><tr>
+            <th>${UI.t("profile.calExercise")}</th>
+            <th>${UI.t("profile.calWeight")}</th>
+            <th>${UI.t("profile.calReps")}</th>
+            <th>${UI.t("profile.calRpe")}</th>
+          </tr></thead>
+          <tbody>
+            ${targets.map(ex => {
+              const e = entryFor(ex.id);
+              return `<tr>
+                <td>
+                  <span>${UI.esc(exName(ex.id))}</span>
+                  ${trained.has(ex.id) ? `<span class="hint"> · ${UI.t("profile.calAlreadyTrained")}</span>` : ""}
+                </td>
+                <td><input type="number" dir="ltr" min="0" max="500" step="0.5" name="w-${ex.id}"
+                           value="${e.weight != null ? e.weight : ""}" placeholder="${UI.t("common.kg")}"
+                           aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calWeight"), name: exName(ex.id) }))}"></td>
+                <td><input type="number" dir="ltr" min="1" max="30" step="1" name="r-${ex.id}"
+                           value="${e.reps != null ? e.reps : ""}" placeholder="${UI.t("common.reps")}"
+                           aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calReps"), name: exName(ex.id) }))}"></td>
+                <td><input type="number" dir="ltr" min="5" max="10" step="0.5" name="e-${ex.id}"
+                           value="${e.rpe != null ? e.rpe : ""}" placeholder="8"
+                           aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calRpe"), name: exName(ex.id) }))}"></td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+        <p class="hint" style="margin:12px 0;">${UI.t("profile.calRpeHint")}</p>
+        <div class="cal-actions">
+          <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.calSave")}</button>
+          ${saved.length ? `<button class="btn btn-ghost btn-sm" type="button" id="calClear">${UI.t("profile.calClear")}</button>` : ""}
+        </div>
+      </form>
+      <p class="hint" style="margin-top:14px;">${
+        saved.length
+          ? UI.t("profile.calStatus", {
+              count: I18n.t("common.exercisesCount", { count: saved.length }),
+              pct: Math.round(Math.abs(scale - 1) * 100),
+              direction: UI.t(scale >= 1 ? "profile.calAbove" : "profile.calBelow"),
+            })
+          : UI.t("profile.calStatusNone")}</p>`;
+
+    panel.querySelector("#calForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const data = new FormData(e.target);
+      const entries = targets.map(ex => ({
+        exerciseId: ex.id,
+        weight: data.get(`w-${ex.id}`),
+        reps: data.get(`r-${ex.id}`),
+        rpe: data.get(`e-${ex.id}`),
+      })).filter(x => Number(x.weight) > 0 && Number(x.reps) > 0);
+      Store.setCalibration(p.id, entries);
+      UI.toast(I18n.t(entries.length ? "profile.calSaved" : "profile.calCleared"));
+      render();
+    });
+
+    const clear = panel.querySelector("#calClear");
+    if (clear) clear.addEventListener("click", () => {
+      Store.setCalibration(p.id, []);
+      UI.toast(I18n.t("profile.calCleared"));
+      render();
+    });
   }
 
   /* ---------------- Settings ---------------- */
@@ -438,4 +545,5 @@ UI.ready(() => {
   }
 
   render();
+  window.addEventListener("hashchange", openTabFromHash);
 });

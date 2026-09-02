@@ -890,3 +890,15 @@ canvas.chart{ width:100%; display:block; }
   }
   a { color: #000; text-decoration: none; }
 }
+
+/* Calibration table: four tight columns of numbers, and they have to stay
+   usable on a phone, so the inputs shrink rather than the table scrolling. */
+.cal-table td{ vertical-align: middle; }
+.cal-table input{ width:100%; min-width:56px; padding:6px 8px; font-size:.82rem;
+  background:var(--bg-alt); color:var(--text); border:1px solid var(--line); border-radius:8px; }
+.cal-table th:not(:first-child), .cal-table td:not(:first-child){ width:22%; }
+.cal-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+@media (max-width: 520px){
+  .cal-table th:first-child, .cal-table td:first-child{ font-size:.78rem; }
+  .cal-table input{ min-width:44px; padding:5px 6px; }
+}

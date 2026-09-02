@@ -44,6 +44,7 @@ const Coach = (function () {
     msgs.push(...adherenceInsights(profile));
     msgs.push(...bodyweightInsights(profile));
     msgs.push(...backupInsight(profile));
+    msgs.push(...calibrationInsight(profile));
     msgs.push(...painInsights(profile));
     msgs.push(...planWarnings(plan));
 
@@ -349,6 +350,28 @@ const Coach = (function () {
         sessions: I18n.m("common.sessions", { count: back.sessions }),
       }),
       weight: 11,
+    }];
+  }
+
+  /**
+   * Ask for real numbers while they still matter.
+   * Every uncalibrated first weight is a guess from bodyweight and a
+   * three-way dropdown, and the engine needs a session on each lift to
+   * correct it. Thirty seconds of typing skips all of that — but only if it
+   * happens before the training does, so the prompt retires itself once there
+   * is enough history to be going on with.
+   */
+  function calibrationInsight(profile) {
+    if (profile.calibration && (profile.calibration.entries || []).length) return [];
+    const logged = (profile.sessionLog || []).length;
+    if (logged >= 4) return [];      // history has taken over; the moment has passed
+    return [{
+      key: "calibrate-seeds",
+      category: "session", severity: "action",
+      title: I18n.m("engine.coach.calibrateTitle"),
+      body: I18n.m("engine.coach.calibrateBody"),
+      cta: { labelKey: "engine.coach.calibrateCta", href: "profile.html#calibrate" },
+      weight: 9,
     }];
   }
 

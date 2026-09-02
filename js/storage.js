@@ -104,6 +104,7 @@ function upgradeProfile(p) {
     dismissed: p.dismissed || [],
     progress: p.progress || {},     // v1 checkbox state, kept so nothing is lost
     lastBackup: p.lastBackup || null,   // { at, sessions } — see backupStatus()
+    calibration: p.calibration || null, // { entries: [{exerciseId, weight, reps, rpe}], at }
     girthLog: p.girthLog || [],         // waist and one other site over time
   };
 }
@@ -239,6 +240,58 @@ const Store = {
                     block: (db[id].meso && db[id].meso.block) || 1 };
     saveDB(db);
     return this.regeneratePlan(id);
+  },
+
+  /* ---------------- Calibration ---------------- */
+
+  /**
+   * Record what the lifter can already do on a few movements.
+   *
+   * Prescriptions the engine had merely guessed are thrown away, because that
+   * is the whole point — they were computed from the estimate this replaces.
+   * Two kinds survive: weights you set by hand, and weights on lifts you have
+   * actually trained, because a logged session outranks any estimate,
+   * calibrated or not.
+   */
+  setCalibration(id, entries) {
+    const db = loadDB();
+    if (!db[id]) return null;
+    const clean = (entries || [])
+      .filter(e => e && e.exerciseId && Number(e.weight) > 0 && Number(e.reps) > 0)
+      .map(e => ({
+        exerciseId: e.exerciseId,
+        weight: Math.round(Number(e.weight) * 100) / 100,
+        reps: Math.round(Number(e.reps)),
+        rpe: e.rpe === "" || e.rpe == null ? null : Number(e.rpe),
+      }));
+    db[id].calibration = clean.length ? { entries: clean, at: new Date().toISOString() } : null;
+
+    const trained = new Set();
+    (db[id].sessionLog || []).forEach(s => (s.sets || []).forEach(x => trained.add(x.exerciseId)));
+    const kept = {};
+    Object.entries(db[id].prescriptions || {}).forEach(([exId, rx]) => {
+      if (rx.manual || trained.has(exId)) kept[exId] = rx;
+    });
+    db[id].prescriptions = kept;
+
+    saveDB(db);
+    return this.regeneratePlan(id);
+  },
+
+  /** The lifts worth asking about: the primary compounds in the current plan. */
+  calibrationTargets(profile, limit) {
+    const plan = profile && profile.plan;
+    const out = [];
+    const seen = new Set();
+    (plan && plan.sessions ? plan.sessions : []).forEach(s => s.blocks.forEach(b => {
+      const ex = exerciseById(b.exerciseId);
+      if (!ex || seen.has(ex.id)) return;
+      if (b.role !== "primary" || ex.role !== "compound") return;
+      if (ex.inverseLoad || ex.loadType === "bodyweight" || ex.loadType === "timed") return;
+      seen.add(ex.id);
+      out.push(ex);
+    }));
+    return out.slice(0, limit || 4);
   },
 
   /* ---------------- Live sessions ---------------- */

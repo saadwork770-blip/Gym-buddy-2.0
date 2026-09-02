@@ -818,6 +818,58 @@ suite("Experience and goal change which exercises you are given");
     "no amount of rotation puts an isolation exercise in a primary slot");
 }
 
+suite("Starting weights come from your numbers when you give them");
+{
+  const g9 = load();
+  const p9 = g9.Store.createProfile(baseProfile);      // 114 kg, "some experience"
+  g9.Store.updateSettings(p9.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const seed = (profile, id, range) =>
+    g9.Progression.seedWeight(g9.exerciseById(id), profile, range || [8, 12]);
+
+  const guessed = g9.Store.getProfile(p9.id);
+  const beforeLeg = seed(guessed, "leg-press");
+  const beforeCurl = seed(guessed, "seated-db-bicep-curl", [12, 15]);
+  const beforeAssist = seed(guessed, "assisted-pull-up-machine");
+  check(g9.Progression.calibrationScale(guessed) === 1, "an uncalibrated profile is left alone");
+
+  const targets = g9.Store.calibrationTargets(guessed, 4).map(e => e.id);
+  check(targets.length >= 3 && targets.includes("leg-press"),
+    `the lifts it asks about are the main ones in the plan (${targets.join(", ")})`);
+
+  /* A lifter who is a long way stronger than the formula assumed. */
+  g9.Store.setCalibration(p9.id, [
+    { exerciseId: "leg-press", weight: 180, reps: 8, rpe: 8 },
+    { exerciseId: "chest-press-machine", weight: 70, reps: 8, rpe: 8 },
+  ]);
+  const tuned = g9.Store.getProfile(p9.id);
+
+  check(seed(tuned, "leg-press") > beforeLeg * 1.5,
+    `a calibrated lift is seeded from its own set (${beforeLeg} → ${seed(tuned, "leg-press")} kg)`);
+  const scale = g9.Progression.calibrationScale(tuned);
+  check(scale > 1 && scale <= 1.45,
+    `strength transfers to uncalibrated lifts, but damped and capped (x${scale})`);
+  const curl = seed(tuned, "seated-db-bicep-curl", [12, 15]);
+  check(curl > beforeCurl && curl < beforeCurl * 2,
+    `so the curl moves up without pretending a leg press predicts it (${beforeCurl} → ${curl} kg)`);
+  check(seed(tuned, "assisted-pull-up-machine") < beforeAssist,
+    `and a stronger lifter is offered LESS assistance, not more (${beforeAssist} → ${seed(tuned, "assisted-pull-up-machine")} kg)`);
+
+  /* A weaker lifter than the formula assumed moves the other way. */
+  const p10 = g9.Store.createProfile({ ...baseProfile, name: "Lighter" });
+  g9.Store.updateSettings(p10.id, { trainingDays: ["mon", "thu"] });
+  g9.Store.setCalibration(p10.id, [
+    { exerciseId: "leg-press", weight: 40, reps: 10, rpe: 9 },
+    { exerciseId: "chest-press-machine", weight: 15, reps: 10, rpe: 9 },
+  ]);
+  check(g9.Progression.calibrationScale(g9.Store.getProfile(p10.id)) < 1,
+    "a lifter weaker than the formula assumed is seeded lighter, not heavier");
+
+  /* Clearing it puts the estimate back. */
+  g9.Store.setCalibration(p9.id, []);
+  check(seed(g9.Store.getProfile(p9.id), "leg-press") === beforeLeg,
+    "clearing the calibration restores the estimate exactly");
+}
+
 /* ------------------------------------------------------------------ */
 
 console.log("");
