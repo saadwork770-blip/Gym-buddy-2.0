@@ -1198,10 +1198,10 @@ const EXPANSION_META = {
   "push-up":                 { pattern: "horizontal_push", loadType: "bodyweight",    role: "compound",  fatigue: 2, contribution: { chest: 1, shoulders: 0.5, arms: 0.5, core: 0.25 }, jointStress: ["shoulder", "elbow"], startCoef: 0,    unilateral: false },
   "cable-crossover":         { pattern: "chest_iso",       loadType: "cable_stack",   role: "isolation", fatigue: 2, contribution: { chest: 1, shoulders: 0.25 },           jointStress: ["shoulder"],                     startCoef: 0.12, unilateral: true },
   "arnold-press":            { pattern: "vertical_push",   loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { shoulders: 1, arms: 0.5, chest: 0.25 },jointStress: ["shoulder", "elbow"],            startCoef: 0.10, unilateral: true },
-  "dips-triceps":            { pattern: "vertical_push",   loadType: "bodyweight",    role: "compound",  fatigue: 3, contribution: { arms: 1, chest: 0.5, shoulders: 0.5 }, jointStress: ["shoulder", "elbow"],            startCoef: 0,    unilateral: false },
+  "dips-triceps":            { pattern: "triceps_iso",     loadType: "bodyweight",    role: "compound",  fatigue: 3, contribution: { arms: 1, chest: 0.5, shoulders: 0.5 }, jointStress: ["shoulder", "elbow"],            startCoef: 0,    unilateral: false },
   "pull-up":                 { pattern: "vertical_pull",   loadType: "bodyweight",    role: "compound",  fatigue: 3, contribution: { back: 1, arms: 0.5, shoulders: 0.25 }, jointStress: ["shoulder", "elbow"],            startCoef: 0,    unilateral: false },
   "chin-up":                 { pattern: "vertical_pull",   loadType: "bodyweight",    role: "compound",  fatigue: 3, contribution: { back: 1, arms: 0.75, shoulders: 0.25 },jointStress: ["shoulder", "elbow"],            startCoef: 0,    unilateral: false },
-  "straight-arm-pulldown":   { pattern: "vertical_pull",   loadType: "cable_stack",   role: "isolation", fatigue: 2, contribution: { back: 1 },                             jointStress: ["shoulder"],                     startCoef: 0.16, unilateral: false },
+  "straight-arm-pulldown":   { pattern: "rear_delt",        loadType: "cable_stack",   role: "isolation", fatigue: 2, contribution: { back: 1 },                             jointStress: ["shoulder"],                     startCoef: 0.16, unilateral: false },
   "bent-over-barbell-row":   { pattern: "horizontal_pull", loadType: "barbell",       role: "compound",  fatigue: 4, contribution: { back: 1, arms: 0.5, shoulders: 0.25 }, jointStress: ["lower_back", "shoulder", "elbow"], startCoef: 0.40, unilateral: false },
   "one-arm-db-row":          { pattern: "horizontal_pull", loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { back: 1, arms: 0.5 },                  jointStress: ["shoulder", "elbow"],            startCoef: 0.22, unilateral: true },
   "t-bar-row":               { pattern: "horizontal_pull", loadType: "barbell",       role: "compound",  fatigue: 4, contribution: { back: 1, arms: 0.5, shoulders: 0.25 }, jointStress: ["lower_back", "shoulder"],       startCoef: 0.35, unilateral: false },
@@ -1225,7 +1225,7 @@ const SUPPLEMENTARY_META = {
   "seated-db-shoulder-press":     { pattern: "vertical_push",   loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { shoulders: 1, arms: 0.5, chest: 0.25 }, jointStress: ["shoulder", "elbow"], startCoef: 0.11, unilateral: true },
   "machine-chest-supported-row":  { pattern: "horizontal_pull", loadType: "machine_stack", role: "compound",  fatigue: 3, contribution: { back: 1, arms: 0.5, shoulders: 0.25 },  jointStress: ["shoulder", "elbow"], startCoef: 0.34, unilateral: false },
   "db-romanian-deadlift":         { pattern: "hinge",           loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { legs: 1, glutes: 1, back: 0.25 },        jointStress: ["hip", "lower_back"], startCoef: 0.15, unilateral: true },
-  "back-extension":               { pattern: "hinge",           loadType: "bodyweight",    role: "isolation", fatigue: 2, contribution: { glutes: 1, legs: 0.5, back: 0.5 },       jointStress: ["hip"],               startCoef: 0,    unilateral: false },
+  "back-extension":               { pattern: "glute_iso",       loadType: "bodyweight",    role: "isolation", fatigue: 2, contribution: { glutes: 1, legs: 0.5, back: 0.5 },       jointStress: ["hip"],               startCoef: 0,    unilateral: false },
   "goblet-squat":                 { pattern: "squat",           loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { legs: 1, glutes: 0.5, core: 0.25 },      jointStress: ["knee", "hip"],       startCoef: 0.18, unilateral: false },
   "hammer-curl":                  { pattern: "biceps_iso",      loadType: "dumbbell",      role: "isolation", fatigue: 1, contribution: { arms: 1 },                               jointStress: ["elbow"],             startCoef: 0.09, unilateral: true },
   "cable-lateral-raise":          { pattern: "lateral_raise",   loadType: "cable_stack",   role: "isolation", fatigue: 1, contribution: { shoulders: 1 },                          jointStress: ["shoulder"],          startCoef: 0.06, unilateral: true },
@@ -1336,6 +1336,46 @@ const LEVEL_PROFILES = {
   "Some experience":  { id: "intermediate", strengthScale: 1.00, progressionMultiplier: 1.00, rpeCap: 8.5, maxSetsPerSession: 22 },
   "Experienced":      { id: "advanced",     strengthScale: 1.25, progressionMultiplier: 0.75, rpeCap: 9.5, maxSetsPerSession: 26 },
 };
+
+/* ============================================================================
+   How much technique a movement asks for
+   ----------------------------------------------------------------------------
+   Not difficulty, and not a ranking of how good an exercise is — a fixed-path
+   machine and a barbell squat can train the same muscle equally well. What
+   this scores is how much of the result depends on doing it right:
+
+     1 — fixed path, or trivially learnable. Machines, cables, most isolation.
+     2 — free weight with real balance and set-up, but forgiving when it goes
+         wrong. Dumbbell presses, goblet squats, chin-ups.
+     3 — loaded spine, and a technique that fails badly rather than gently.
+         Barbell squats, hinges, standing presses.
+
+   A beginner training alone is better served by two months of tier 1 and 2
+   before the plan starts handing them tier 3, and an experienced lifter is
+   badly served by a program made entirely of machines. Only the exceptions are
+   listed; everything else falls out of the equipment and the role.
+   ============================================================================ */
+
+const EX_SKILL = {
+  "barbell-back-squat": 3, "front-squat": 3, "barbell-deadlift": 3,
+  "romanian-deadlift": 3, "good-morning": 3, "bent-over-barbell-row": 3,
+  "t-bar-row": 2,                    // chest-supported or braced, far kinder on the back
+  "barbell-hip-thrust": 2,           // heavy, but the spine is not the limiter
+  "smith-machine-incline-press": 1,  // fixed path — a machine with a bar on it
+  "barbell-bench-press": 2,          // forgiving with a spotter or safety pins
+  "pull-up": 2, "chin-up": 2, "dips-triceps": 2,
+  "bulgarian-split-squat": 2, "walking-lunges": 2,
+  "ab-roller": 2,                    // easy to do, easy to do to your lower back
+};
+
+/** Technique demand for one exercise, 1–3. See EX_SKILL above. */
+function exerciseSkill(ex) {
+  if (!ex) return 1;
+  if (EX_SKILL[ex.id]) return EX_SKILL[ex.id];
+  if (ex.loadType === "barbell") return ex.role === "compound" ? 3 : 2;
+  if (ex.loadType === "dumbbell" || ex.loadType === "bodyweight") return ex.role === "compound" ? 2 : 1;
+  return 1;
+}
 
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_LABELS = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };

@@ -188,6 +188,11 @@ const I18n = (function () {
   /** A list of references, joined with the language's own list separator. */
   function refList(kind, values) { return { $: "__list", v: values, x: kind }; }
 
+  /** A list of whole message objects, rendered and joined as sentences. */
+  function msgList(messages) { return { $: "__msgs", v: messages }; }
+
+  resolver("__msgs", messages => (messages || []).map(m => tx(m)).join(" "));
+
   resolver("__list", (values, kind) => {
     const sep = LANGUAGES[current].dir === "rtl" ? "، " : ", ";
     return (values || []).map(v => resolveRef({ $: kind, v })).join(sep);
@@ -286,7 +291,7 @@ const I18n = (function () {
   function keys(language) { return Object.keys(dictionaries[language] || {}).sort(); }
 
   return {
-    register, t, tx, m, ref, refList, resolver, has, num, date, keys, list,
+    register, t, tx, m, ref, refList, msgList, resolver, has, num, date, keys, list,
     lang, setLang, dir, isRTL, locale, languages, onChange, detect, applyDocument,
     LANGUAGES, STORAGE_KEY,
   };

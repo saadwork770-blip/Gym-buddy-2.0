@@ -29,6 +29,7 @@ const Coach = (function () {
     const msgs = [];
 
     msgs.push(...comebackInsight(profile));
+    msgs.push(...rotationInsight(plan, phase));
     msgs.push(...phaseInsight(profile, phase));
     msgs.push(...todayInsight(profile, plan));
     msgs.push(...progressionInsights(profile, plan));
@@ -73,6 +74,35 @@ const Coach = (function () {
       title: I18n.m("engine.coach.phaseTitle", { label: phase.label, headline: phase.headline }),
       body: phase.detail,
       weight: 5,
+    }];
+  }
+
+  /**
+   * What changed when the block turned over.
+   * Silent substitution is how a coaching app loses an argument it never got
+   * to have: the user opens Monday, sees a different exercise, and concludes
+   * the thing is broken. Naming the swaps costs one card and settles it.
+   */
+  function rotationInsight(plan, phase) {
+    if (!plan || plan.empty || !(plan.rotated || []).length) return [];
+    if (phase.week > 2) return [];          // only worth saying while it is news
+    const shown = plan.rotated.slice(0, 5);
+    return [{
+      key: `rotation-${plan.block}`,
+      category: "periodization", severity: "info",
+      title: I18n.m("engine.coach.rotationTitle", {
+        block: plan.block,
+        count: I18n.m("common.exercisesCount", { count: plan.rotated.length }),
+      }),
+      body: I18n.m("engine.coach.rotationBody", {
+        swaps: I18n.msgList(shown.map(r => I18n.m("engine.coach.rotationLine", {
+          from: I18n.ref("ex", r.from), to: I18n.ref("ex", r.to),
+          session: I18n.ref("template", r.templateId),
+        }))),
+        more: plan.rotated.length > shown.length
+          ? I18n.m("common.andMore", { count: plan.rotated.length - shown.length }) : "",
+      }),
+      weight: 6,
     }];
   }
 

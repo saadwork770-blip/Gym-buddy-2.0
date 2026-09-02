@@ -37,7 +37,7 @@ const EXPORTS = [
   "I18n", "Analysis", "exerciseById", "exercisesForDay", "exercisesByPattern", "templateOverlap",
   "exName", "exSteps", "exTips", "muscleLabel", "patternLabel", "loadTypeLabel",
   "dayLabel", "dayShort", "jointLabel", "templateName", "splitName", "splitRationale",
-  "EXERCISES", "SPLITS", "SESSION_TEMPLATES", "VOLUME_LANDMARKS", "PATTERNS",
+  "EXERCISES", "SPLITS", "SESSION_TEMPLATES", "VOLUME_LANDMARKS", "PATTERNS", "exerciseSkill",
   "MUSCLE_LABELS", "GOAL_PROFILES", "LEVEL_PROFILES", "LOAD_TYPES", "PROGRAM",
   "DAY_KEYS", "DAY_LABELS", "DAY_SHORT",
 ];

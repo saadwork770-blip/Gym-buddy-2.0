@@ -219,7 +219,7 @@ const Store = {
   startNewCycle(id, weeks) {
     const db = loadDB();
     if (!db[id]) return null;
-    db[id].meso = Periodization.newCycle(weeks || (db[id].meso && db[id].meso.weeks));
+    db[id].meso = Periodization.newCycle(weeks, db[id].meso);
     saveDB(db);
     return this.regeneratePlan(id);
   },
@@ -235,7 +235,8 @@ const Store = {
     const w = weeks || (db[id].meso && db[id].meso.weeks) || Periodization.DEFAULT_WEEKS;
     const start = new Date();
     start.setDate(start.getDate() - (w - 1) * 7);
-    db[id].meso = { startDate: start.toISOString().slice(0, 10), weeks: w };
+    db[id].meso = { startDate: start.toISOString().slice(0, 10), weeks: w,
+                    block: (db[id].meso && db[id].meso.block) || 1 };
     saveDB(db);
     return this.regeneratePlan(id);
   },
@@ -359,7 +360,7 @@ const Store = {
     db[id].sessionLog.push(finished);
     db[id].activeSession = null;
     if (endedBreak && endedBreak.sessionsBack === 0 && endedBreak.gapDays >= 14) {
-      db[id].meso = Periodization.newCycle(db[id].meso && db[id].meso.weeks);
+      db[id].meso = Periodization.newCycle(null, db[id].meso);
     }
     saveDB(db);
 

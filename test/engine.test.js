@@ -714,6 +714,110 @@ suite("A lift that rotated out of the block restarts slightly below where it lef
   check(other.action !== "comeback", "the lift trained all along is untouched");
 }
 
+suite("The program varies across blocks instead of repeating itself forever");
+{
+  const g6 = load();
+  const p6 = g6.Store.createProfile(baseProfile);
+  g6.Store.updateSettings(p6.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const prof = g6.Store.getProfile(p6.id);
+  const at = block => g6.Scheduler.buildPlan(prof, {
+    phase: { ...g6.Periodization.phaseFor(prof), block } });
+  const sig = plan => plan.sessions.map(s => s.blocks.map(b => b.exerciseId).join(",")).join("|");
+
+  const plans = [1, 2, 3, 4, 5, 6, 7, 8].map(at);
+  const distinct = new Set(plans.map(sig)).size;
+  check(distinct >= 6, `eight blocks produce ${distinct} distinct programs, not one`);
+
+  /* Rotation is staggered on purpose — a block where every exercise is
+     unfamiliar is a block of bad sets and no comparable data — so a session
+     standing still for one turnover is correct. What would be wrong is a
+     session that never moves, or one that freezes for half a year. */
+  const runs = plans[0].sessions.map(() => ({ longest: 0, current: 0, changes: 0 }));
+  for (let i = 0; i < plans.length - 1; i++) {
+    plans[i].sessions.forEach((s, j) => {
+      const before = new Set(s.blocks.map(b => b.exerciseId));
+      const changed = plans[i + 1].sessions[j].blocks.filter(id => !before.has(id.exerciseId)).length;
+      const r = runs[j];
+      if (changed) { r.changes++; r.current = 0; }
+      else { r.current++; r.longest = Math.max(r.longest, r.current); }
+    });
+  }
+  check(runs.every(r => r.changes >= 2),
+    `every session rotates more than once across eight blocks (${runs.map(r => r.changes).join("/")} changes)`);
+  check(runs.every(r => r.longest <= 2),
+    `and none of them stands still for more than two blocks running (longest freeze: ${Math.max(...runs.map(r => r.longest))})`);
+
+  const churn = [2, 3, 4, 5, 6, 7, 8].map(b => at(b).rotated.length);
+  check(churn.every(n => n >= 2 && n <= 14),
+    `each block changes some of the program but not all of it (${churn.join(", ")} of 24)`);
+
+  /* The first block is the program you were handed. The engine earns the right
+     to redesign it by watching you run it, not before. */
+  const first = at(1).sessions.find(s => s.templateId === "upper_a").blocks.map(b => b.exerciseId);
+  check(first[0] === "chest-press-machine" && first[1] === "lat-pulldown-wide",
+    "block 1 is still the source plan, unrotated");
+}
+
+suite("Every exercise in the library can actually be programmed");
+{
+  const g7 = load();
+  const reached = new Set();
+  [["mon", "wed", "fri"], ["mon", "tue", "thu", "fri"],
+   ["mon", "tue", "wed", "thu", "fri"], ["mon", "thu"]].forEach(days => {
+    ["New to training", "Some experience", "Experienced"].forEach(level => {
+      ["Fat loss", "Muscle gain", "Strength", "General fitness"].forEach(goal => {
+        const q = g7.Store.createProfile({ ...baseProfile, level, goal });
+        g7.Store.updateSettings(q.id, { trainingDays: days });
+        const pr = g7.Store.getProfile(q.id);
+        for (let b = 1; b <= 12; b++) {
+          g7.Scheduler.buildPlan(pr, { phase: { ...g7.Periodization.phaseFor(pr), block: b } })
+            .sessions.forEach(s => s.blocks.forEach(x => reached.add(x.exerciseId)));
+        }
+      });
+    });
+  });
+  const strength = g7.EXERCISES.filter(e => e.muscle !== "cardio");
+  const missing = strength.filter(e => !reached.has(e.id));
+  check(missing.length === 0,
+    `all ${strength.length} strength exercises are reachable at default settings${missing.length ? " — missing: " + missing.map(e => e.id).join(", ") : ""}`);
+}
+
+suite("Experience and goal change which exercises you are given");
+{
+  const g8 = load();
+  const survey = (level, goal) => {
+    const q = g8.Store.createProfile({ ...baseProfile, level, goal });
+    g8.Store.updateSettings(q.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+    const pr = g8.Store.getProfile(q.id);
+    let primary = 0, technical = 0, barbell = 0, isoPrimary = 0;
+    for (let b = 1; b <= 8; b++) {
+      g8.Scheduler.buildPlan(pr, { phase: { ...g8.Periodization.phaseFor(pr), block: b } })
+        .sessions.forEach(s => s.blocks.forEach(x => {
+          const ex = g8.exerciseById(x.exerciseId);
+          if (ex.loadType === "barbell") barbell++;
+          if (x.role !== "primary") return;
+          primary++;
+          if (g8.exerciseSkill(ex) === 3) technical++;
+          if (ex.role === "isolation") isoPrimary++;
+        }));
+    }
+    return { pctTechnical: Math.round(technical / primary * 100), barbell, isoPrimary };
+  };
+
+  const novice = survey("New to training", "Fat loss");
+  const veteran = survey("Experienced", "Fat loss");
+  check(veteran.pctTechnical > novice.pctTechnical + 15,
+    `a beginner meets far fewer technical lifts in primary slots (${novice.pctTechnical}% vs ${veteran.pctTechnical}%)`);
+
+  const strength = survey("Experienced", "Strength");
+  const hypertrophy = survey("Experienced", "Muscle gain");
+  check(strength.barbell > hypertrophy.barbell,
+    `a strength goal earns more barbell work (${strength.barbell} vs ${hypertrophy.barbell} selections)`);
+
+  check(novice.isoPrimary === 0 && veteran.isoPrimary === 0,
+    "no amount of rotation puts an isolation exercise in a primary slot");
+}
+
 /* ------------------------------------------------------------------ */
 
 console.log("");

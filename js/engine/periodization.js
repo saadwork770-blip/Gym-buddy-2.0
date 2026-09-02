@@ -14,7 +14,15 @@ const Periodization = (function () {
 
   const DEFAULT_WEEKS = 4;   // 3 loading weeks + 1 deload
 
-  /** Which mesocycle week a date falls in, counting from the cycle start. */
+  /**
+   * Which mesocycle week a date falls in, counting from the cycle start.
+   *
+   * `cycle` counts blocks since the current start date; `block` is the one that
+   * never goes backwards. Starting a new cycle, or coming back from a layoff,
+   * resets the start date and therefore the cycle — but the block number keeps
+   * climbing, which is what exercise rotation is keyed to. Without that, every
+   * press of "start a new block" would hand back the same block.
+   */
   function weekIndex(profile, date) {
     const meso = (profile && profile.meso) || {};
     const weeks = meso.weeks || DEFAULT_WEEKS;
@@ -22,7 +30,8 @@ const Periodization = (function () {
     const now = date ? new Date(date) : new Date();
     const elapsedWeeks = Math.floor((startOfWeek(now) - startOfWeek(start)) / (7 * 86400000));
     const idx = ((elapsedWeeks % weeks) + weeks) % weeks;
-    return { week: idx + 1, weeks, cycle: Math.floor(elapsedWeeks / weeks) + 1 };
+    const cycle = Math.floor(elapsedWeeks / weeks) + 1;
+    return { week: idx + 1, weeks, cycle, block: (meso.block || 1) + (cycle - 1) };
   }
 
   function startOfWeek(d) {
@@ -41,7 +50,7 @@ const Periodization = (function () {
    *   rpeCap         — how close to failure this week is allowed to get
    */
   function phaseFor(profile, date) {
-    let { week, weeks, cycle } = weekIndex(profile, date);
+    let { week, weeks, cycle, block } = weekIndex(profile, date);
 
     /* Somebody who has not trained in a fortnight is not mid-mesocycle any
        more, whatever the calendar says. Greeting them with "week 4 · deload"
@@ -57,7 +66,7 @@ const Periodization = (function () {
 
     if (isDeload) {
       return {
-        week, weeks, cycle, returning, type: "deload",
+        week, weeks, cycle, block, returning, type: "deload",
         label: I18n.t("engine.phase.labelDeload", { week }),
         volumeScale: 0.55, intensityScale: 0.9, setBonus: 0, volumeRamp: 0, rpeCap: 6.5,
         headline: I18n.t("engine.phase.deload.headline"),
@@ -76,7 +85,7 @@ const Periodization = (function () {
     const intense = loadingWeek >= 3;
     const copyKey = loadingWeek === 1 ? "w1" : loadingWeek === 2 ? "w2" : "w3";
     return {
-      week, weeks, cycle, returning,
+      week, weeks, cycle, block, returning,
       type: intense ? "intensification" : "accumulation",
       label: I18n.t(intense ? "engine.phase.labelIntensification" : "engine.phase.labelAccumulation", { week }),
       volumeScale: 1, intensityScale: 1 + (loadingWeek - 1) * 0.1, setBonus, volumeRamp,
@@ -86,9 +95,18 @@ const Periodization = (function () {
     };
   }
 
-  /** Start (or restart) a mesocycle from today. */
-  function newCycle(weeks) {
-    return { startDate: new Date().toISOString().slice(0, 10), weeks: weeks || DEFAULT_WEEKS };
+  /**
+   * Start (or restart) a mesocycle from today, carrying the block counter
+   * forward from whatever came before so exercise rotation keeps moving.
+   */
+  function newCycle(weeks, previous) {
+    const prev = previous || {};
+    const prevBlock = prev.block || 1;
+    return {
+      startDate: new Date().toISOString().slice(0, 10),
+      weeks: weeks || prev.weeks || DEFAULT_WEEKS,
+      block: previous ? prevBlock + 1 : prevBlock,
+    };
   }
 
   /** The whole block laid out, for the calendar strip in the UI. */

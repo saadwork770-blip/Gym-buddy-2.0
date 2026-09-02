@@ -146,6 +146,155 @@ const Scheduler = (function () {
     return new Set(Object.values(flags).filter(Boolean));
   }
 
+  /* ------------------------------------------------------------------
+     Scoring a candidate for a slot
+     ------------------------------------------------------------------
+     The old version gave the template's own pick +100 against a rotation
+     bonus worth at most 2.45, which is not a preference, it is a decision
+     already made. Eight blocks of training produced one plan, half the
+     library was unreachable at default settings, and a beginner and an
+     advanced lifter were handed the same six machines.
+
+     What the numbers mean now:
+
+       BLOCK 1 is the program you were given, exactly. It is not the engine's
+       place to redesign a plan on day one, and "the app changed my workout
+       before I ran it once" is how people stop trusting a coach. So the
+       template's pick still wins outright the first time through.
+
+       FROM BLOCK 2 the template's pick is a strong opinion (+18) rather than
+       a veto, and three things can outvote it: a per-block rotation draw
+       (0–20), how well the movement suits the lifter's experience (−22..+16)
+       and their goal (−18..+19). Whatever won the slot last block is pushed
+       down hard, so something genuinely changes rather than the same
+       arrangement being re-derived.
+
+     The structural terms — a compound in a primary slot, a joint you have
+     flagged — stay large enough that no amount of rotation can turn a
+     primary slot into an arm exercise or put you back on a lift that hurts.
+     ------------------------------------------------------------------ */
+
+  const PREFER_FIRST_BLOCK = 100;   // block 1 reproduces the source plan
+  const PREFER_LATER       = 18;    // afterwards, a strong opinion in a main slot
+  const PREFER_LATER_MINOR = 10;    // and a lighter one in an accessory slot
+  const ROTATION_RANGE     = 20;    // per-block variation, enough to outvote it
+  const VARIETY_TOLERANCE  = 16;    // how much fit a change of scenery may cost
+
+  /* How long a slot holds its exercise before rotating, in blocks.
+     Your main squat is not supposed to change every month — you are supposed
+     to get stronger at it, which takes longer than one block and needs an
+     unbroken history to measure it against. Calf raises carry no such
+     obligation. Each slot also gets its own offset in the cycle, so a new
+     block changes about a third of the program rather than all of it at
+     once: a week where every single exercise is unfamiliar is a week of bad
+     sets and no comparable data. */
+  const ROTATION_PERIOD = { primary: 4, secondary: 3, accessory: 3, finisher: 3 };
+
+  /** A stable 0..ROTATION_RANGE draw for one exercise in one rotation era. */
+  function rotationDraw(exerciseId, era, salt) {
+    return (hashString(`${exerciseId}|${era}|${salt}`) % 1000) / 1000 * ROTATION_RANGE;
+  }
+
+  /**
+   * Where a slot sits in its own rotation cycle.
+   *   era      — increments once per period; the draw is fixed inside one era,
+   *              so the exercise genuinely holds rather than being re-rolled
+   *              every block and happening to land on the same answer.
+   *   due      — this block is the era boundary for this slot: if the same
+   *              exercise would win again, move it on.
+   */
+  function rotationClock(key, role, block) {
+    const period = ROTATION_PERIOD[role] || 3;
+    const offset = hashString(key) % period;          // stagger the slots
+    const tick = (block - 1) + offset;
+    return { era: Math.floor(tick / period), due: block > 1 && tick % period === 0 };
+  }
+
+  /**
+   * How well a movement suits the lifter's experience.
+   * A beginner training alone should not meet a barbell back squat in week
+   * one; an experienced lifter should not be handed a program made entirely
+   * of fixed-path machines. See exerciseSkill() for what the tiers mean.
+   */
+  function levelFit(ex, levelId) {
+    const skill = exerciseSkill(ex);
+    if (levelId === "beginner")  return skill === 1 ? 10 : skill === 2 ? 0 : -22;
+    if (levelId === "advanced")  return skill === 1 ? -14 : skill === 2 ? 6 : 16;
+    return skill === 1 ? 2 : skill === 2 ? 7 : 2;      // intermediate
+  }
+
+  /**
+   * How well a movement serves the goal.
+   * Strength is built on loaded compounds; hypertrophy tolerates — and often
+   * prefers — stable movements you can take close to failure safely; fat loss
+   * favours work that moves a lot of muscle per minute.
+   */
+  function goalFit(ex, goalId, slotRole) {
+    let score = 0;
+    /* A primary slot is where the load is meant to climb, and you cannot put
+       2.5 kg on a press-up. Bodyweight compounds still belong there when they
+       are genuinely hard — a pull-up survives this easily on the structural
+       bonus — but they should not take the slot off a loadable lift purely on
+       a rotation draw. */
+    const unloadable = ex.loadType === "bodyweight" || ex.loadType === "timed";
+    if (unloadable && slotRole === "primary") score -= 8;
+
+    if (goalId === "strength") {
+      if (ex.role === "compound") score += 5;
+      if (ex.loadType === "barbell") score += 14;
+      if (ex.loadType === "machine_stack" && ex.role === "isolation") score -= 4;
+      if (unloadable) score -= 6;              // no way to add a kilo next week
+    } else if (goalId === "hypertrophy") {
+      if (ex.loadType === "cable_stack" || ex.loadType === "machine_stack") score += 3;
+      if (ex.role === "isolation" && slotRole !== "primary") score += 3;
+    } else if (goalId === "fat_loss") {
+      if (ex.role === "compound") score += 4;
+      if ((ex.contribution ? Object.keys(ex.contribution).length : 1) >= 3) score += 2;
+    }
+    return score;
+  }
+
+  function scoreCandidate(ex, slot, ctx, pain, era) {
+    const { profile, usedInWeek, block } = ctx;
+    const level = LEVEL_PROFILES[profile.level] || LEVEL_PROFILES["Some experience"];
+    const goal = GOAL_PROFILES[profile.goal] || GOAL_PROFILES["General fitness"];
+    const first = (block || 1) <= 1;
+    let score = 0;
+
+    if (ex.id === slot.prefer) {
+      /* The template's opinion counts for less in the slots it matters least
+         in. Which press you do is a decision; which of four cable movements
+         finishes your triceps is a preference. */
+      score += first ? PREFER_FIRST_BLOCK
+             : slot.role === "primary" ? PREFER_LATER : PREFER_LATER_MINOR;
+    }
+
+    if (!first) score += rotationDraw(ex.id, era, ctx.variationSeed);
+
+    score += levelFit(ex, level.id);
+    score += goalFit(ex, goal.id, slot.role);
+
+    /* A slot exists to train something specific. A candidate whose primary
+       muscle differs from the slot's own pick is a legitimate option — a
+       straight-arm pulldown belongs in an upper-back slot — but it is a
+       change of subject, not an equal, so it takes the slot occasionally
+       rather than a quarter of the time. */
+    const prefEx = exerciseById(slot.prefer);
+    if (prefEx && ex.muscle !== prefEx.muscle) score -= 5;
+
+    // Structure: these have to outweigh everything above, because no amount of
+    // rotation should turn a primary slot into an arm exercise.
+    if (ex.role === "compound" && slot.role === "primary") score += 30;
+    if (ex.role === "isolation" && slot.role === "accessory") score += 8;
+    if (ex.role === "isolation" && slot.role === "primary") score -= 20;
+
+    if (usedInWeek && usedInWeek.has(ex.id)) score -= 12;   // variety across the week
+    if (ex.hasMedia === false) score -= 4;                  // photo + clip entries first
+    score -= (ex.jointStress || []).filter(j => pain.has(j)).length * 40;
+
+    return score;
+  }
+
   /**
    * Pick the best exercise for a slot.
    * Preference order: the plan's original choice, then anything else sharing
@@ -157,6 +306,7 @@ const Scheduler = (function () {
    */
   function chooseExercise(slot, ctx) {
     const { profile, usedInSession, usedInWeek, variationSeed, templateId } = ctx;
+    const block = ctx.block || 1;
     const settings = profile.settings || {};
     const excluded = new Set((profile.flags && profile.flags.excluded) || []);
     const pain = painJoints(profile);
@@ -206,26 +356,24 @@ const Scheduler = (function () {
       return true;
     }
 
-    const scored = viable.map(ex => {
-      let score = 0;
-      if (ex.id === slot.prefer) score += 100;                    // the plan's own pick
-      if (usedInWeek.has(ex.id)) score -= 12;                     // prefer variety across the week
-      if (ex.hasMedia === false) score -= 4;                      // photo+GIF entries first
-      // These have to outweigh the variety penalty above: in a gym missing
-      // half its equipment, "we already used this compound on Monday" is not
-      // a good enough reason to put an isolation movement in a primary slot.
-      if (ex.role === "compound" && slot.role === "primary") score += 20;
-      if (ex.role === "isolation" && slot.role === "accessory") score += 8;
-      // Soft avoidance of joints you have flagged elsewhere.
-      const hits = (ex.jointStress || []).filter(j => pain.has(j)).length;
-      score -= hits * 40;
-      // Deterministic per-cycle rotation so variation is stable within a block
-      // but changes between blocks, instead of reshuffling on every render.
-      score += ((hashString(ex.id + variationSeed) % 7) * 0.35);
-      return { ex, score };
-    }).sort((a, b) => b.score - a.score);
+    const key = `${templateId}:${slot.pattern}`;
+    const clock = rotationClock(key, slot.role, block);
+    const scored = viable
+      .map(ex => ({ ex, score: scoreCandidate(ex, slot, ctx, pain, clock.era) }))
+      .sort((a, b) => b.score - a.score || (a.ex.id < b.ex.id ? -1 : 1));
 
-    const winner = scored[0].ex;
+    /* Rotation, stated as a rule rather than as a fudge factor: when a slot
+       reaches the end of its cycle and the same exercise would win it again,
+       take the next option — unless that option is a long way worse, because a
+       plan that swaps your bench press for a press-up in the name of variety
+       is not varied, it is just worse. The previous block's pick is the real
+       one, replayed rather than inferred. */
+    let winner = scored[0].ex;
+    const lastBlock = ((ctx.previousPicks || {}).last || {})[key];
+    if (clock.due && winner.id === lastBlock && scored.length > 1) {
+      const alt = scored.find(c => c.ex.id !== winner.id);
+      if (alt && scored[0].score - alt.score <= VARIETY_TOLERANCE) winner = alt.ex;
+    }
     if (widened) {
       return {
         exercise: winner,
@@ -368,6 +516,36 @@ const Scheduler = (function () {
      ------------------------------------------------------------------ */
 
   /**
+   * Replay slot selection from block one and return what the two blocks
+   * before `block` put in each slot, keyed `templateId:pattern`.
+   *
+   * Each block's rotation depends on the block before it, so there is no
+   * shortcut: guessing the previous block from a single un-rotated rebuild
+   * produces a plan that quietly repeats itself, which is the bug this
+   * replaces. Selection alone is cheap enough to make the honest version free.
+   */
+  function picksBefore(profile, phase, block) {
+    if (!block || block <= 1) return { last: {}, before: {} };
+    const settings = profile.settings || {};
+    let dayKeys = DAY_KEYS.filter(d => (settings.trainingDays || []).includes(d)).slice(0, 6);
+    if (!dayKeys.length) return { last: {}, before: {} };
+    const { split } = chooseSplit({ ...profile, settings: { ...settings, trainingDays: dayKeys } });
+    const placed = placeSessions(split, dayKeys);
+
+    let history = { last: {}, before: {} };
+    for (let b = 1; b < block; b++) {
+      const pass = buildPlan(profile, {
+        phase: { ...phase, block: b }, picksOnly: true, previousPicks: history, split, placed });
+      const next = {};
+      (pass.sessions || []).forEach(s => s.blocks.forEach(x => {
+        next[`${s.templateId}:${x.pattern}`] = x.exerciseId;
+      }));
+      history = { last: next, before: history.last };
+    }
+    return history;
+  }
+
+  /**
    * Build a full week. Pure function of the profile — nothing is written to
    * storage here, so the UI can preview a plan for settings you have not
    * committed to yet.
@@ -390,9 +568,29 @@ const Scheduler = (function () {
       dayKeys = dayKeys.slice(0, 6);
     }
 
-    const { split, forced } = chooseSplit({ ...profile, settings: { ...settings, trainingDays: dayKeys } });
-    const placed = placeSessions(split, dayKeys);
-    const variationSeed = String((profile.meso && profile.meso.startDate) || "seed") + ":" + (phase.cycle || 1);
+    /* Stages 1 and 2 do not depend on the block, so the replay below hands
+       them in rather than making every replayed block re-run an exhaustive
+       720-arrangement search that can only produce the same answer. */
+    const { split, forced } = options.split
+      ? { split: options.split, forced: false }
+      : chooseSplit({ ...profile, settings: { ...settings, trainingDays: dayKeys } });
+    const placed = options.placed || placeSessions(split, dayKeys);
+    /* Rotation is keyed to the block number, which only ever climbs, and
+       salted with the split so changing your training days reshuffles the
+       variations rather than keeping the same ones under new names. */
+    const block = phase.block || 1;
+    const variationSeed = split.id || "seed";
+
+    /* What the previous block actually put in each slot.
+       It has to be what the user really saw, not an approximation: each block's
+       choice depends on the one before it, so the chain is replayed from block
+       one. `picksOnly` runs slot selection alone — no prescriptions, no cardio,
+       no time budget — which is what makes replaying a couple of years of
+       blocks cost less than a millisecond. Nothing is stored, so it stays
+       correct when the equipment list, the goal or the training days changed
+       somewhere in the middle. */
+    const previousPicks = options.picksOnly ? (options.previousPicks || { last: {}, before: {} })
+                        : picksBefore(profile, phase, block);
 
     const usedInWeek = new Set();
     const sessions = placed.map((slotDay, i) => {
@@ -402,11 +600,18 @@ const Scheduler = (function () {
       const notes = [];
 
       template.slots.forEach(slot => {
-        const { exercise, note } = chooseExercise(slot, { profile, usedInSession, usedInWeek, variationSeed, templateId: template.id });
+        const { exercise, note } = chooseExercise(slot, {
+          profile, usedInSession, usedInWeek, variationSeed,
+          templateId: template.id, block, previousPicks });
         if (note) notes.push(note);
         if (!exercise) return;
         usedInSession.add(exercise.id);
         usedInWeek.add(exercise.id);
+
+        if (options.picksOnly) {
+          blocks.push({ exerciseId: exercise.id, pattern: slot.pattern, role: slot.role });
+          return;
+        }
 
         const rx = Progression.recommend({ profile, exercise, phase });
         blocks.push({
@@ -429,6 +634,10 @@ const Scheduler = (function () {
         });
       });
 
+      if (options.picksOnly) {
+        return { dayKey: slotDay.dayKey, templateId: template.id, blocks, notes: [] };
+      }
+
       const cardioEx = pickCardio(profile, i);
       const session = {
         dayKey: slotDay.dayKey,
@@ -449,6 +658,8 @@ const Scheduler = (function () {
       session.totalSets = session.blocks.reduce((s, b) => s + b.sets, 0);
       return session;
     });
+
+    if (options.picksOnly) return { picksOnly: true, sessions };
 
     /* Rest days, with a cardio suggestion if the user wants one. */
     const restDays = DAY_KEYS.filter(d => !dayKeys.includes(d)).map((d, i) => {
@@ -508,10 +719,21 @@ const Scheduler = (function () {
       }));
     }});
 
+    /* What this block changed, so the app can say so plainly. A program that
+       quietly swaps your exercises is indistinguishable from a broken one. */
+    const rotated = [];
+    sessions.forEach(s => s.blocks.forEach(b => {
+      const before = (previousPicks.last || {})[`${s.templateId}:${b.pattern}`];
+      if (before && before !== b.exerciseId) {
+        rotated.push({ templateId: s.templateId, pattern: b.pattern, from: before, to: b.exerciseId });
+      }
+    }));
+
     return {
       empty: false,
       generatedAt: new Date().toISOString(),
       splitId: split.id,
+      block, rotated,
       /* Only the structural part of the phase is stored. The labels and copy
          are re-derived at render time so they follow the current language. */
       phaseWeek: phase.week, phaseType: phase.type,
