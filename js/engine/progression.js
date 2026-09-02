@@ -62,6 +62,12 @@ const Progression = (function () {
     return Math.round(w * 100) / 100;
   }
 
+  /** "+1.4" / "-0.6" — a signed number for prose, in the current locale. */
+  function signed(value) {
+    const v = Math.round(Number(value) * 100) / 100;
+    return `${v > 0 ? "+" : ""}${I18n.num(v)}`;
+  }
+
   /** Reps in reserve implied by a reported RPE (RPE 8 = 2 reps left). */
   function rirFromRpe(rpe) {
     if (rpe == null || isNaN(rpe)) return 2;
@@ -221,14 +227,15 @@ const Progression = (function () {
      The recommendation
      --------------------------------------------------------------------- */
 
+  /* Tone only — the visible label comes from `action.*` in the dictionaries. */
   const ACTIONS = {
-    calibrate:  { label: "Calibrating",   tone: "neutral" },
-    increase:   { label: "Load up",       tone: "good" },
-    add_reps:   { label: "Add reps",      tone: "good" },
-    hold:       { label: "Repeat",        tone: "neutral" },
-    reduce:     { label: "Back off",      tone: "warn" },
-    deload:     { label: "Deload",        tone: "warn" },
-    stall_break:{ label: "Break a stall", tone: "warn" },
+    calibrate:   { tone: "info" },
+    increase:    { tone: "good" },
+    add_reps:    { tone: "good" },
+    hold:        { tone: "neutral" },
+    reduce:      { tone: "warn" },
+    deload:      { tone: "warn" },
+    stall_break: { tone: "warn" },
   };
 
   /**
@@ -291,7 +298,7 @@ const Progression = (function () {
         manual: true,
         delta: 0,
         confidence: "high",
-        reason: `You set this weight yourself (${fmtLoad(prior.weight, exercise)}), so the coach is leaving it alone. Log a session on it and normal progression picks up from your number — or hand it back to the coach from this row.`,
+        reason: I18n.m("engine.prog.manual", { load: I18n.ref("load", prior.weight, exercise.id) }),
       }, ctx, phase);
     }
 
@@ -304,9 +311,8 @@ const Progression = (function () {
         action: "calibrate",
         delta: 0,
         confidence: "low",
-        reason: prior && prior.weight
-          ? `Carrying over ${fmtLoad(seed, exercise)} from your saved starting load. Log this session and the coach takes over from here.`
-          : `First time on this one. ${fmtLoad(seed, exercise)} is a conservative estimate from your bodyweight and experience level — treat it as a feel-out set, stop at RPE 7, and the coach will correct it precisely next session.`,
+        reason: I18n.m(prior && prior.weight ? "engine.prog.calibrateCarry" : "engine.prog.calibrateNew",
+                       { load: I18n.ref("load", seed, exercise.id) }),
       }, ctx, phase);
     }
 
@@ -345,7 +351,11 @@ const Progression = (function () {
         action: "deload",
         delta: Math.round((w - topWeight) * 100) / 100,
         confidence: "high",
-        reason: `Planned deload (week ${phase.week}). ${fmtLoad(topWeight, exercise)} comes down to ${fmtLoad(w, exercise)} and volume drops to ${Math.round(phase.volumeScale * 100)}%, so accumulated fatigue clears. This is scheduled recovery, not a step backwards — you come back into week 1 fresher and stronger.`,
+        reason: I18n.m("engine.prog.deload", {
+          week: phase.week,
+          from: I18n.ref("load", topWeight, exercise.id), to: I18n.ref("load", w, exercise.id),
+          pct: Math.round(phase.volumeScale * 100),
+        }),
       }, ctx, phase);
     }
 
@@ -362,24 +372,36 @@ const Progression = (function () {
         action: "stall_break",
         confidence: "high",
         delta: Math.round((w - topWeight) * 100) / 100,
-        reason: `${exercise.name} has not moved for ${base.stalls + 1} sessions${trend.slopePerWeek != null ? ` (estimated 1RM trend ${trend.slopePerWeek >= 0 ? "+" : ""}${trend.slopePerWeek} kg/week)` : ""}. Rather than grinding the same weight again, drop to ${fmtLoad(w, exercise)} and rebuild with clean reps — a short step back is the fastest way through a stall. The Coach tab can also swap in a variation if this repeats.`,
+        reason: I18n.m("engine.prog.stallBreak", {
+          name: I18n.ref("ex", exercise.id),
+          count: base.stalls + 1,
+          trend: trend.slopePerWeek != null
+            ? I18n.m("engine.prog.stallTrend", { slope: signed(trend.slopePerWeek) }) : "",
+          to: I18n.ref("load", w, exercise.id),
+        }),
       }, ctx, phase);
     }
 
     /* ---- Bodyweight / timed work progresses in reps or seconds ---- */
     if (exercise.loadType === "bodyweight" || exercise.loadType === "timed") {
-      const unitWord = exercise.loadType === "timed" ? "seconds" : "reps";
+      const timed = exercise.loadType === "timed";
+      const unitKey = timed ? "engine.prog.unitSeconds" : "engine.prog.unitReps";
       if (hitTop) {
-        const newHi = priorRange.hi + (exercise.loadType === "timed" ? 10 : 2);
-        const newLo = priorRange.lo + (exercise.loadType === "timed" ? 10 : 2);
+        const step = timed ? 10 : 2;
+        const newHi = priorRange.hi + step;
+        const newLo = priorRange.lo + step;
         return finish({
           ...base, weight: 0, repLo: newLo, repHi: newHi, action: "increase", delta: 0, confidence: "high",
-          reason: `You cleared ${priorRange.hi} ${unitWord} on every set. Target moves up to ${newLo}–${newHi} ${unitWord}. Once that feels easy, add external load instead of chasing endless ${unitWord}.`,
+          reason: I18n.m("engine.prog.bodyweightUp", {
+            hi: priorRange.hi, lo: newLo, newHi, unit: I18n.m(unitKey) }),
         }, ctx, phase);
       }
       return finish({
         ...base, weight: 0, repLo: priorRange.lo, repHi: priorRange.hi, action: "add_reps", delta: 0, confidence: "medium",
-        reason: `Stay at ${priorRange.lo}–${priorRange.hi} ${unitWord} and add one more ${exercise.loadType === "timed" ? "5 seconds" : "rep"} per set than last time.`,
+        reason: I18n.m("engine.prog.bodyweightHold", {
+          lo: priorRange.lo, hi: priorRange.hi, unit: I18n.m(unitKey),
+          increment: I18n.m(timed ? "engine.prog.incrementSeconds" : "engine.prog.incrementRep"),
+        }),
       }, ctx, phase);
     }
 
@@ -391,12 +413,19 @@ const Progression = (function () {
         const drop = Math.round((topWeight - w) * 100) / 100;
         return finish({
           ...base, weight: w, action: "reduce", delta: Math.round((w - topWeight) * 100) / 100, confidence: "high",
-          reason: `Last time you got ${reps.join("/")} at ${fmtLoad(topWeight, exercise)} against a ${priorRange.lo}–${priorRange.hi} target, averaging RPE ${base.evidence.avgRpe}. That is over the useful effort ceiling. Coming down ${Math.abs(drop)} kg to ${fmtLoad(w, exercise)} puts you back inside the range where reps actually accumulate.`,
+          reason: I18n.m("engine.prog.reduce", {
+            reps: reps.join("/"), from: I18n.ref("load", topWeight, exercise.id),
+            lo: priorRange.lo, hi: priorRange.hi, rpe: base.evidence.avgRpe,
+            drop: Math.abs(drop), to: I18n.ref("load", w, exercise.id),
+          }),
         }, ctx, phase);
       }
       return finish({
         ...base, weight: topWeight, action: "hold", stalls: base.stalls + 1, delta: 0, confidence: "medium",
-        reason: `You came up short of ${priorRange.lo} reps on at least one set (${reps.join("/")}) but the effort was manageable${base.evidence.avgRpe ? ` at RPE ${base.evidence.avgRpe}` : ""}. Same weight again — the fix here is set-up and control, not a lighter load.`,
+        reason: I18n.m("engine.prog.holdShort", {
+          lo: priorRange.lo, reps: reps.join("/"),
+          rpe: base.evidence.avgRpe ? I18n.m("engine.prog.holdShortRpe", { rpe: base.evidence.avgRpe }) : "",
+        }),
       }, ctx, phase);
     }
 
@@ -411,9 +440,10 @@ const Progression = (function () {
       // Autoregulation: how hard it felt sets the size of the jump.
       let effortNote = "";
       if (avgRpe != null) {
-        if (avgRpe <= 6.5)      { step *= 2.0; effortNote = ` You averaged RPE ${base.evidence.avgRpe} — that is a long way from failure, so this is a double jump rather than the usual single step.`; }
-        else if (avgRpe <= 7.5) { step *= 1.4; effortNote = ` RPE ${base.evidence.avgRpe} says there was room left, so the jump is slightly larger than standard.`; }
-        else if (avgRpe >= 9)   { step = exercise.loadSpec.increment; effortNote = ` RPE ${base.evidence.avgRpe} means you earned every rep, so this is the smallest honest jump on this equipment.`; }
+        const rpe = base.evidence.avgRpe;
+        if (avgRpe <= 6.5)      { step *= 2.0; effortNote = I18n.m("engine.prog.effortVeryEasy", { rpe }); }
+        else if (avgRpe <= 7.5) { step *= 1.4; effortNote = I18n.m("engine.prog.effortEasy", { rpe }); }
+        else if (avgRpe >= 9)   { step = exercise.loadSpec.increment; effortNote = I18n.m("engine.prog.effortHard", { rpe }); }
       }
       // Never jump more than 10% in one go — but never less than the smallest
       // increment the equipment actually has, or a light dumbbell lift would
@@ -422,7 +452,7 @@ const Progression = (function () {
 
       const w = roundToIncrement(topWeight + (inverse ? -step : step), exercise.loadType, increments);
       const realDelta = Math.round((w - topWeight) * 100) / 100;
-      const direction = inverse ? "less assistance" : "more weight";
+      const direction = I18n.m(inverse ? "engine.prog.directionLess" : "engine.prog.directionMore");
       return finish({
         ...base,
         weight: w,
@@ -430,7 +460,10 @@ const Progression = (function () {
         delta: realDelta,
         stalls: 0,
         confidence: avgRpe != null ? "high" : "medium",
-        reason: `You hit the top of the range on every set — ${reps.join("/")} at ${fmtLoad(topWeight, exercise)}.${effortNote} Double progression says load goes up: ${fmtLoad(w, exercise)} (${realDelta > 0 ? "+" : ""}${Math.abs(realDelta)} kg ${direction}). Expect reps to drop back toward ${repLo} — that is the point, and you climb again from there.`,
+        reason: I18n.m("engine.prog.increase", {
+          reps: reps.join("/"), from: I18n.ref("load", topWeight, exercise.id), effort: effortNote,
+          to: I18n.ref("load", w, exercise.id), delta: Math.abs(realDelta), direction, lo: repLo,
+        }),
       }, ctx, phase);
     }
 
@@ -443,7 +476,12 @@ const Progression = (function () {
       delta: 0,
       stalls: base.stalls,
       confidence: "high",
-      reason: `${fmtLoad(topWeight, exercise)} is landing inside the ${priorRange.lo}–${priorRange.hi} window (${reps.join("/")}${base.evidence.avgRpe ? `, RPE ${base.evidence.avgRpe}` : ""}). Keep the load and beat last session by one rep — aim for ${nextRepTarget}+ on every set. Load only moves once all ${base.sets} sets reach ${priorRange.hi}.`,
+      reason: I18n.m("engine.prog.addReps", {
+        load: I18n.ref("load", topWeight, exercise.id), lo: priorRange.lo, hi: priorRange.hi,
+        reps: reps.join("/"),
+        rpe: base.evidence.avgRpe ? I18n.m("engine.prog.addRepsRpe", { rpe: base.evidence.avgRpe }) : "",
+        target: nextRepTarget, sets: base.sets,
+      }),
     }, ctx, phase);
   }
 
@@ -470,7 +508,7 @@ const Progression = (function () {
         const adj = roundToIncrement(rx.weight * (ex.inverseLoad ? 2 - mod.loadScale : mod.loadScale),
                                      rx.loadType, profile.settings && profile.settings.increments);
         if (adj !== rx.weight) {
-          rx.readinessAdjusted = { from: rx.weight, to: adj, note: mod.note };
+          rx.readinessAdjusted = { from: rx.weight, to: adj, noteKey: mod.noteKey };
           rx.weight = adj;
         }
       }
@@ -490,11 +528,11 @@ const Progression = (function () {
    * lighter, shorter session preserves the habit and still drives adaptation.
    */
   function readinessModifier(score) {
-    if (score >= 85) return { loadScale: 1,     setDelta: 0,  rpeCap: 10,  note: "Green light — full prescription." };
-    if (score >= 70) return { loadScale: 1,     setDelta: 0,  rpeCap: 9,   note: "Normal readiness — run the plan as written." };
-    if (score >= 55) return { loadScale: 0.95,  setDelta: 0,  rpeCap: 8.5, note: "Slightly under-recovered — 5% off the load, same volume." };
-    if (score >= 40) return { loadScale: 0.90,  setDelta: -1, rpeCap: 8,   note: "Under-recovered — 10% off the load and one set fewer per exercise." };
-    return               { loadScale: 0.80,  setDelta: -1, rpeCap: 7,   note: "Low readiness — this is a technique and blood-flow session. 20% off, cap the effort, and get out." };
+    if (score >= 85) return { loadScale: 1,    setDelta: 0,  rpeCap: 10,  noteKey: "engine.readiness.green" };
+    if (score >= 70) return { loadScale: 1,    setDelta: 0,  rpeCap: 9,   noteKey: "engine.readiness.normal" };
+    if (score >= 55) return { loadScale: 0.95, setDelta: 0,  rpeCap: 8.5, noteKey: "engine.readiness.slight" };
+    if (score >= 40) return { loadScale: 0.90, setDelta: -1, rpeCap: 8,   noteKey: "engine.readiness.under" };
+    return                  { loadScale: 0.80, setDelta: -1, rpeCap: 7,   noteKey: "engine.readiness.low" };
   }
 
   /**
@@ -513,12 +551,13 @@ const Progression = (function () {
 
   /** Human-readable load, aware of assisted machines and bodyweight moves. */
   function fmtLoad(weight, exercise) {
-    if (!exercise) return `${weight} kg`;
-    if (exercise.loadType === "bodyweight") return "bodyweight";
-    if (exercise.loadType === "timed") return `${weight || 0} sec`;
-    if (exercise.inverseLoad) return `${weight} kg assist`;
-    if (exercise.unilateral && exercise.loadType === "dumbbell") return `${weight} kg per hand`;
-    return `${weight} kg`;
+    const n = I18n.num(weight);
+    if (!exercise) return I18n.t("engine.prog.loadKg", { n });
+    if (exercise.loadType === "bodyweight") return I18n.t("engine.prog.loadBodyweight");
+    if (exercise.loadType === "timed") return I18n.t("engine.prog.loadSeconds", { n: I18n.num(weight || 0) });
+    if (exercise.inverseLoad) return I18n.t("engine.prog.loadAssist", { n });
+    if (exercise.unilateral && exercise.loadType === "dumbbell") return I18n.t("engine.prog.loadPerHand", { n });
+    return I18n.t("engine.prog.loadKg", { n });
   }
 
   /** Total tonnage (kg lifted) for a completed session — a volume proxy. */
@@ -535,6 +574,6 @@ const Progression = (function () {
   return {
     roundToIncrement, adjustedLoad, rirFromRpe, estimate1RM, loadForReps, plateBreakdown,
     historyFor, sessionBest1RM, strengthSeries, strengthTrend, effectiveLoad,
-    seedWeight, recommend, readinessModifier, fmtLoad, sessionTonnage, ACTIONS,
+    seedWeight, recommend, readinessModifier, fmtLoad, sessionTonnage, signed, ACTIONS,
   };
 })();

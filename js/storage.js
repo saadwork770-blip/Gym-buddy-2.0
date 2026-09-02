@@ -39,7 +39,7 @@ function saveDB(db) {
     // Quota is the realistic failure here (a very long session log).
     console.error("GymBuddy: could not save to local storage —", e);
     if (typeof window !== "undefined" && window.GymBuddyUI) {
-      window.GymBuddyUI.toast("Could not save — this browser's storage is full.", "error");
+      window.GymBuddyUI.toast(I18n.t("errors.storageFull"), "error");
     }
   }
 }
@@ -263,7 +263,7 @@ const Store = {
       dayKey,
       templateId: planned.templateId,
       name: planned.name,
-      phaseLabel: phase.label,
+      phaseWeek: phase.week,
       readiness: readiness || null,
       blocks,
       sets: [],                    // filled as the user logs
@@ -308,8 +308,19 @@ const Store = {
     const db = loadDB();
     if (!db[id]) return null;
 
+    /* Store the record, not the narrative.
+       The live session carries each block's coaching reason, warm-up ramp and
+       evidence snapshot — all of it re-derivable, and all of it dead weight
+       once the session is filed. Keeping it cost about 2 KB per session, which
+       is what fills a 5 MB storage quota after a couple of years of training.
+       What stays is what the history view and the progression engine read. */
     const finished = {
       ...session,
+      blocks: (session.blocks || []).map(b => ({
+        exerciseId: b.exerciseId, role: b.role,
+        sets: b.sets, repLo: b.repLo, repHi: b.repHi,
+        weight: b.weight, rpeCap: b.rpeCap, action: b.action,
+      })),
       completed: true,
       finishedAt: Date.now(),
       durationMin: session.startedAt ? Math.round((Date.now() - session.startedAt) / 60000) : null,
@@ -421,7 +432,7 @@ const Store = {
   importProfile(json) {
     const parsed = JSON.parse(json);
     const incoming = parsed.profile || parsed;
-    if (!incoming || !incoming.name) throw new Error("That file does not look like a GymBuddy export.");
+    if (!incoming || !incoming.name) throw new Error(I18n.t("errors.badExport"));
     const db = loadDB();
     const id = uid();
     db[id] = upgradeProfile({ ...incoming, id, createdAt: incoming.createdAt || Date.now() });

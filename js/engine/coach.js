@@ -63,7 +63,7 @@ const Coach = (function () {
       key: `phase-${phase.cycle}-${phase.week}`,
       category: "periodization",
       severity: phase.type === "deload" ? "warn" : "info",
-      title: `${phase.label} — ${phase.headline}`,
+      title: I18n.m("engine.coach.phaseTitle", { label: phase.label, headline: phase.headline }),
       body: phase.detail,
       weight: 5,
     }];
@@ -80,8 +80,8 @@ const Coach = (function () {
       return [{
         key: `today-done-${new Date().toISOString().slice(0, 10)}`,
         category: "session", severity: "good",
-        title: "Session logged for today",
-        body: "Your next prescriptions have already been recalculated from what you just lifted — open the Program tab to see what changed.",
+        title: I18n.m("engine.coach.todayDoneTitle"),
+        body: I18n.m("engine.coach.todayDoneBody"),
         weight: 9,
       }];
     }
@@ -90,8 +90,8 @@ const Coach = (function () {
       return [{
         key: `today-rest-${todayKey}`,
         category: "session", severity: "info",
-        title: `${DAY_LABELS[todayKey]} is a rest day`,
-        body: rest ? rest.suggestion : "No session scheduled today. Recovery is when the adaptation actually happens.",
+        title: I18n.m("engine.coach.todayRestTitle", { day: I18n.ref("day", todayKey) }),
+        body: rest ? rest.suggestion : I18n.m("engine.coach.todayRestFallback"),
         weight: 8,
       }];
     }
@@ -99,9 +99,13 @@ const Coach = (function () {
     return [{
       key: `today-${todayKey}-${session.templateId}`,
       category: "session", severity: "action",
-      title: `${session.name} today — about ${session.estMinutes} minutes`,
-      body: `${session.totalSets} working sets across ${session.blocks.length} exercises${increases ? `, and ${increases} of them ${increases === 1 ? "has" : "have"} earned a weight increase` : ""}. Start the session and the coach will call the load and the rest period for every set.`,
-      cta: { label: "Start session", href: `workout.html?day=${todayKey}` },
+      title: I18n.m("engine.coach.todayTitle", {
+        name: I18n.ref("template", session.templateId), minutes: session.estMinutes }),
+      body: I18n.m("engine.coach.todayBody", {
+        sets: session.totalSets, exercises: session.blocks.length,
+        increases: increases ? I18n.m("engine.coach.todayIncreases", { count: increases }) : "",
+      }),
+      cta: { labelKey: "engine.coach.todayCta", href: `workout.html?day=${todayKey}` },
       weight: 10,
     }];
   }
@@ -121,16 +125,26 @@ const Coach = (function () {
     const top = changes.slice(0, 6);
     const lines = top.map(c => {
       const ev = c.block.evidence;
-      const from = ev ? ev.weight : null;
-      return `• ${c.exercise.name}: ${from != null ? `${from} → ` : ""}${Progression.fmtLoad(c.block.weight, c.exercise)}${ev ? ` (last: ${ev.reps.join("/")} reps${ev.avgRpe ? ` @ RPE ${ev.avgRpe}` : ""})` : ""}`;
+      return I18n.m("engine.coach.progLine", {
+        name: I18n.ref("ex", c.exercise.id),
+        from: ev ? I18n.m("engine.coach.progArrowed", { weight: ev.weight }) : "",
+        to: I18n.ref("load", c.block.weight, c.exercise.id),
+        evidence: ev ? I18n.m("engine.coach.progEvidence", {
+          reps: ev.reps.join("/"),
+          rpe: ev.avgRpe ? I18n.m("engine.coach.progEvidenceRpe", { rpe: ev.avgRpe }) : "",
+        }) : "",
+      });
     });
+    const overflow = changes.length - top.length;
 
     return [{
       key: `prog-${changes.map(c => c.exercise.id + c.block.weight).join("|").slice(0, 60)}`,
       category: "progression",
       severity: "good",
-      title: `${changes.length} lift${changes.length === 1 ? "" : "s"} moving up this week`,
-      body: `You earned these by hitting the top of the rep range with reps to spare:\n${lines.join("\n")}${changes.length > top.length ? `\n…and ${changes.length - top.length} more.` : ""}`,
+      title: I18n.m("engine.coach.progTitle", { count: changes.length }),
+      body: I18n.m("engine.coach.progBody", {
+        lines: { $: "__lines", v: lines, x: overflow },
+      }),
       weight: 7,
     }];
   }
@@ -142,10 +156,17 @@ const Coach = (function () {
         key: `plateau-${p.exerciseId}`,
         category: "plateau",
         severity: "warn",
-        title: `${p.exercise.name} has stalled`,
-        body: `${p.sessions} logged sessions and the estimated 1RM trend is ${p.trend.slopePerWeek != null ? `${p.trend.slopePerWeek >= 0 ? "+" : ""}${p.trend.slopePerWeek} kg/week` : "flat"}. The engine has already cut the load to rebuild from, but if it stalls again the exercise itself is the problem rather than the weight on it.${alt ? ` ${alt.exercise.name} is the closest substitute: ${alt.why.charAt(0).toLowerCase()}${alt.why.slice(1)}` : ""}`,
+        title: I18n.m("engine.coach.plateauTitle", { name: I18n.ref("ex", p.exerciseId) }),
+        body: I18n.m("engine.coach.plateauBody", {
+          sessions: p.sessions,
+          trend: p.trend.slopePerWeek != null
+            ? I18n.m("engine.coach.plateauTrendValue", { slope: Progression.signed(p.trend.slopePerWeek) })
+            : I18n.m("engine.coach.plateauTrendFlat"),
+          alt: alt ? I18n.m("engine.coach.plateauAlt", {
+                 name: I18n.ref("ex", alt.exercise.id), why: alt.why }) : "",
+        }),
         apply: alt ? { type: "swap_exercise", templateId: null, pattern: p.exercise.pattern, toId: alt.exercise.id, fromId: p.exerciseId } : null,
-        applyLabel: alt ? `Swap in ${alt.exercise.name}` : null,
+        applyLabel: alt ? I18n.m("engine.coach.plateauSwapLabel", { name: I18n.ref("ex", alt.exercise.id) }) : null,
         weight: 6,
       };
     });
@@ -164,16 +185,19 @@ const Coach = (function () {
       out.push({
         key: `adh-good-${a.done}`,
         category: "adherence", severity: "good",
-        title: `${a.pct}% attendance over the last 4 weeks`,
-        body: `${a.done} of ${a.expected} scheduled sessions done${streak > 1 ? `, ${streak} weeks in a row` : ""}. Consistency at this level is what makes the load numbers on the other tabs mean anything.`,
+        title: I18n.m("engine.coach.adhGoodTitle", { pct: a.pct }),
+        body: I18n.m("engine.coach.adhGoodBody", {
+          done: a.done, expected: a.expected,
+          streak: streak > 1 ? I18n.m("engine.coach.adhGoodStreak", { count: streak }) : "",
+        }),
         weight: 3,
       });
     } else if (a.expected >= 8 && a.pct < 55) {
       out.push({
         key: `adh-low-${a.done}`,
         category: "adherence", severity: "warn",
-        title: `Only ${a.done} of ${a.expected} sessions in the last 4 weeks`,
-        body: `A program you attend half the time is not the program you designed. Before changing anything about the training itself, it is worth trimming the schedule to days you will genuinely make — check the schedule suggestions below.`,
+        title: I18n.m("engine.coach.adhLowTitle", { done: a.done, expected: a.expected }),
+        body: I18n.m("engine.coach.adhLowBody"),
         weight: 4,
       });
     }
@@ -204,23 +228,29 @@ const Coach = (function () {
       if (perWeek >= -0.05) {
         return [{
           key: `bw-stall-${last.date}`, category: "nutrition", severity: "warn",
-          title: "Bodyweight is not moving",
-          body: `Over the last ${Math.round(days)} days your weight has gone ${dir === "flat" ? "nowhere" : `${dir} ${abs} kg/week`}. Training is doing its job — the log shows that — but fat loss is decided by the calorie balance around it. This app does not track food, and it is not going to pretend it can fix that from here.`,
+          title: I18n.m("engine.coach.bwStallTitle"),
+          body: I18n.m("engine.coach.bwStallBody", {
+            days: Math.round(days),
+            direction: dir === "flat"
+              ? I18n.m("engine.coach.bwStallNowhere")
+              : I18n.m("engine.coach.bwStallDir", {
+                  dir: I18n.m(dir === "down" ? "engine.coach.bwDirDown" : "engine.coach.bwDirUp"), amount: abs }),
+          }),
           weight: 4,
         }];
       }
       if (pctPerWeek < -1.2) {
         return [{
           key: `bw-fast-${last.date}`, category: "nutrition", severity: "warn",
-          title: `Losing ${abs} kg/week — faster than the useful range`,
-          body: `That is about ${Math.abs(pctPerWeek).toFixed(1)}% of bodyweight per week, above the 0.5–1% band where strength is generally preserved. If your working weights start sliding on the Progress tab, that is the cost showing up. Slowing the rate usually keeps more muscle.`,
+          title: I18n.m("engine.coach.bwFastTitle", { amount: abs }),
+          body: I18n.m("engine.coach.bwFastBody", { pct: Math.abs(pctPerWeek).toFixed(1) }),
           weight: 4,
         }];
       }
       return [{
         key: `bw-good-${last.date}`, category: "nutrition", severity: "good",
-        title: `Down ${abs} kg/week — right in the band`,
-        body: `${Math.abs(pctPerWeek).toFixed(1)}% of bodyweight per week sits inside the 0.5–1% range where fat comes off while strength holds. Keep the load progressions honest and this is exactly what you want to see.`,
+        title: I18n.m("engine.coach.bwGoodTitle", { amount: abs }),
+        body: I18n.m("engine.coach.bwGoodBody", { pct: Math.abs(pctPerWeek).toFixed(1) }),
         weight: 3,
       }];
     }
@@ -228,8 +258,8 @@ const Coach = (function () {
     if (goal === "Muscle gain" && perWeek <= 0.02) {
       return [{
         key: `bw-nogain-${last.date}`, category: "nutrition", severity: "info",
-        title: "Bodyweight is flat on a muscle-gain goal",
-        body: `Weight has moved ${abs} kg/week over the last ${Math.round(days)} days. Beginners can gain muscle without gaining weight for a while, but if the working loads on the Progress tab also flatten out, the limiting factor is food rather than programming.`,
+        title: I18n.m("engine.coach.bwNoGainTitle"),
+        body: I18n.m("engine.coach.bwNoGainBody", { amount: abs, days: Math.round(days) }),
         weight: 3,
       }];
     }
@@ -243,8 +273,11 @@ const Coach = (function () {
     return [{
       key: `pain-${entries.map(e => e.join(":")).join("|")}`,
       category: "health", severity: "warn",
-      title: `${entries.length} exercise${entries.length === 1 ? "" : "s"} flagged for joint pain`,
-      body: `${entries.map(([exId, joint]) => `${(exerciseById(exId) || {}).name || exId} (${joint.replace("_", " ")})`).join(", ")}. The scheduler is routing around ${entries.length === 1 ? "it" : "them"} and filling the slot with a movement that spares that joint. Clear the flag from the exercise page once it settles — and if pain persists past a couple of weeks, that is a question for a physio, not a training app.`,
+      title: I18n.m("engine.coach.painTitle", { count: entries.length }),
+      body: I18n.m("engine.coach.painBody", {
+        list: { $: "__painList", v: entries },
+        them: I18n.m(entries.length === 1 ? "engine.coach.painThemOne" : "engine.coach.painThemMany"),
+      }),
       weight: 5,
     }];
   }
@@ -252,9 +285,9 @@ const Coach = (function () {
   function planWarnings(plan) {
     if (!plan || !plan.warnings || !plan.warnings.length) return [];
     return plan.warnings.map((w, i) => ({
-      key: `warn-${i}-${w.slice(0, 24)}`,
+      key: `warn-${i}-${(w && w.k) || String(w).slice(0, 24)}`,
       category: "plan", severity: "info",
-      title: "Plan adjustment",
+      title: I18n.m("engine.coach.warnTitle"),
       body: w,
       weight: 2,
     }));
@@ -275,27 +308,32 @@ const Coach = (function () {
     const isLast = setIndex === block.sets - 1;
 
     if (isFirst) {
-      if (block.action === "increase") return `First set at the new weight. Expect it to feel heavier — target ${block.repLo}+ reps and stop with ${Math.round(10 - block.rpeCap)} in the tank.`;
-      if (block.action === "calibrate") return `Feel-out set. Pick a weight you could do ${block.repHi + 3} times and stop at ${block.repHi}. The coach corrects from here.`;
-      if (block.action === "deload") return `Deload set — this should feel easy and it is meant to. Move well, stop early.`;
-      return `Target ${block.repLo}–${block.repHi} reps, capped at RPE ${block.rpeCap}.`;
+      if (block.action === "increase")  return I18n.t("engine.coach.cueFirstIncrease", { lo: block.repLo, rir: Math.round(10 - block.rpeCap) });
+      if (block.action === "calibrate") return I18n.t("engine.coach.cueFirstCalibrate", { plus: block.repHi + 3, hi: block.repHi });
+      if (block.action === "deload")    return I18n.t("engine.coach.cueFirstDeload");
+      return I18n.t("engine.coach.cueFirstDefault", { lo: block.repLo, hi: block.repHi, rpeCap: block.rpeCap });
     }
 
     const lastSet = done[done.length - 1];
+    const remaining = block.sets - done.length;
     if (lastSet && lastSet.rpe != null && lastSet.rpe >= 9.5 && !isLast) {
-      return `That was RPE ${lastSet.rpe} with ${block.sets - done.length} set${block.sets - done.length === 1 ? "" : "s"} to go. Take an extra 30 seconds of rest, or drop 5% — grinding the rest out at that effort costs more than it buys.`;
+      return I18n.t("engine.coach.cueTooHard", { rpe: lastSet.rpe, remaining });
     }
     if (lastSet && lastSet.reps >= block.repHi && lastSet.rpe != null && lastSet.rpe <= 7) {
-      return `${lastSet.reps} reps at RPE ${lastSet.rpe} — you have room. Match or beat that this set; you have earned a jump next session.`;
+      return I18n.t("engine.coach.cueRoomLeft", { reps: lastSet.reps, rpe: lastSet.rpe });
     }
-    if (isLast) return `Last set. Everything left goes here — take it one rep past comfortable, stopping at RPE ${block.rpeCap}.`;
-    return `Set ${setIndex + 1} of ${block.sets}. Match ${lastSet ? `${lastSet.reps} reps` : `${block.repLo}–${block.repHi}`}, same control.`;
+    if (isLast) return I18n.t("engine.coach.cueLast", { rpeCap: block.rpeCap });
+    return I18n.t("engine.coach.cueDefault", {
+      n: setIndex + 1, total: block.sets,
+      target: lastSet ? I18n.t("engine.coach.cueTargetReps", { reps: lastSet.reps })
+                      : I18n.t("engine.coach.cueTargetRange", { lo: block.repLo, hi: block.repHi }),
+    });
   }
 
   /** End-of-session summary, written from what actually got logged. */
   function sessionDebrief(profile, session) {
     const logged = (session.sets || []).filter(s => s.done);
-    if (!logged.length) return { headline: "Nothing logged", lines: [], tonnage: 0 };
+    if (!logged.length) return { headline: I18n.t("engine.coach.debriefNothing"), lines: [], tonnage: 0 };
 
     const tonnage = Math.round(Progression.sessionTonnage(session));
     const byExercise = {};
@@ -311,22 +349,22 @@ const Coach = (function () {
       const previousBest = history.reduce((m, p) => Math.max(m, p.e1rm), 0);
       if (best > previousBest && previousBest > 0) {
         prs++;
-        lines.push({ kind: "pr", text: `${ex.name}: estimated 1RM up to ${best} kg, past your previous best of ${previousBest} kg.` });
+        lines.push({ kind: "pr", text: I18n.t("engine.coach.debriefPrLine", { name: I18n.ref("ex", exId), best, previous: previousBest }) });
       }
       const block = (session.blocks || []).find(b => b.exerciseId === exId);
       if (block) {
         const allTop = sets.every(s => s.reps >= block.repHi);
-        if (allTop) lines.push({ kind: "next", text: `${ex.name}: every set at ${block.repHi}+ reps — the load goes up next session.` });
-        const avgRpe = sets.filter(s => s.rpe != null);
-        if (avgRpe.length && avgRpe.every(s => s.rpe >= 9.5)) {
-          lines.push({ kind: "warn", text: `${ex.name}: every set at RPE 9.5+. That is above the productive ceiling for this phase — the next prescription pulls the load back.` });
+        if (allTop) lines.push({ kind: "next", text: I18n.t("engine.coach.debriefNextLine", { name: I18n.ref("ex", exId), hi: block.repHi }) });
+        const rated = sets.filter(s => s.rpe != null);
+        if (rated.length && rated.every(s => s.rpe >= 9.5)) {
+          lines.push({ kind: "warn", text: I18n.t("engine.coach.debriefWarnLine", { name: I18n.ref("ex", exId) }) });
         }
       }
     });
 
     const headline = prs
-      ? `${prs} personal best${prs === 1 ? "" : "s"} in that session`
-      : logged.length >= 12 ? "Solid session logged" : "Session logged";
+      ? I18n.t("engine.coach.debriefPr", { count: prs })
+      : I18n.t(logged.length >= 12 ? "engine.coach.debriefSolid" : "engine.coach.debriefLogged");
 
     return { headline, lines, tonnage, setsLogged: logged.length };
   }
@@ -336,10 +374,10 @@ const Coach = (function () {
      ------------------------------------------------------------------ */
 
   const READINESS_QUESTIONS = [
-    { id: "sleep",     label: "Sleep last night",  low: "Barely slept",   high: "Slept great",     weight: 0.30 },
-    { id: "soreness",  label: "Muscle soreness",   low: "Very sore",      high: "No soreness",     weight: 0.25 },
-    { id: "energy",    label: "Energy right now",  low: "Running on empty", high: "Full of beans", weight: 0.25 },
-    { id: "stress",    label: "Stress load",       low: "Overwhelmed",    high: "Calm",            weight: 0.20 },
+    { id: "sleep",    weight: 0.30 },
+    { id: "soreness", weight: 0.25 },
+    { id: "energy",   weight: 0.25 },
+    { id: "stress",   weight: 0.20 },
   ];
 
   /** Weighted 1–5 answers → a 0–100 readiness score plus what it will do. */
@@ -353,7 +391,7 @@ const Coach = (function () {
     });
     const score = weightSum ? Math.round((total / weightSum) * 100) : 70;
     const mod = Progression.readinessModifier(score);
-    return { ...answers, score, note: mod.note, loadScale: mod.loadScale, setDelta: mod.setDelta };
+    return { ...answers, score, noteKey: mod.noteKey, loadScale: mod.loadScale, setDelta: mod.setDelta };
   }
 
   /* ------------------------------------------------------------------

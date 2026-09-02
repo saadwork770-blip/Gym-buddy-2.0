@@ -47,30 +47,26 @@ const Periodization = (function () {
     if (isDeload) {
       return {
         week, weeks, cycle, type: "deload",
-        label: `Week ${week} · Deload`,
+        label: I18n.t("engine.phase.labelDeload", { week }),
         volumeScale: 0.55, intensityScale: 0.9, setBonus: 0, rpeCap: 6.5,
-        headline: "Planned recovery week",
-        detail: "Sets drop to just over half, loads come down about 10%, and nothing goes near failure. This is where the fatigue you have built up over the last three weeks actually clears — skipping it is how a good block turns into a stall.",
+        headline: I18n.t("engine.phase.deload.headline"),
+        detail: I18n.t("engine.phase.deload.detail"),
       };
     }
 
     const loadingWeek = week;                        // 1..weeks-1
     const setBonus = loadingWeek >= 3 ? 1 : 0;
-    const rpeCap = 7.5 + (loadingWeek - 1) * 0.5;    // 7.5 → 8.0 → 8.5
-    const labels = ["Accumulation", "Accumulation", "Intensification"];
+    const rpeCap = Math.min(9, 7.5 + (loadingWeek - 1) * 0.5);   // 7.5 → 8.0 → 8.5
+    const intense = loadingWeek >= 3;
+    const copyKey = loadingWeek === 1 ? "w1" : loadingWeek === 2 ? "w2" : "w3";
     return {
-      week, weeks, cycle, type: loadingWeek >= 3 ? "intensification" : "accumulation",
-      label: `Week ${week} · ${labels[Math.min(loadingWeek - 1, labels.length - 1)]}`,
+      week, weeks, cycle,
+      type: intense ? "intensification" : "accumulation",
+      label: I18n.t(intense ? "engine.phase.labelIntensification" : "engine.phase.labelAccumulation", { week }),
       volumeScale: 1, intensityScale: 1 + (loadingWeek - 1) * 0.1, setBonus,
-      rpeCap: Math.min(9, rpeCap),
-      headline: loadingWeek === 1 ? "Fresh week — rebuild the groove"
-              : loadingWeek === 2 ? "Volume week — add reps, not ego"
-              : "Peak week — heaviest loads of the block",
-      detail: loadingWeek === 1
-        ? "Coming off a deload, everything should feel easy. Stay at RPE 7.5 and bank clean reps; the load will climb on its own over the next fortnight."
-        : loadingWeek === 2
-        ? "Effort ceiling moves to RPE 8. Chase the top of every rep range — this is the week that earns next week's weight jumps."
-        : `Hardest week of the block: an extra hard set on the compounds and an RPE ${Math.min(9, rpeCap)} ceiling. Push here, then take the deload that follows.`,
+      rpeCap,
+      headline: I18n.t(`engine.phase.${copyKey}.headline`),
+      detail: I18n.t(`engine.phase.${copyKey}.detail`, { rpe: rpeCap }),
     };
   }
 
@@ -90,7 +86,9 @@ const Periodization = (function () {
         week: w,
         current: w === current,
         type: isDeload ? "deload" : (w >= 3 ? "intensification" : "accumulation"),
-        label: isDeload ? "Deload" : (w >= 3 ? "Peak" : `Build ${w}`),
+        label: isDeload ? I18n.t("engine.phase.weekLabel.deload")
+             : w >= 3   ? I18n.t("engine.phase.weekLabel.peak")
+             :            I18n.t("engine.phase.weekLabel.build", { n: w }),
       };
     });
   }

@@ -17,6 +17,10 @@ const ROOT = path.join(__dirname, "..");
 /* Load order matters: the engines reference each other at call time, but
    data.js and templates.js must be evaluated first. */
 const FILES = [
+  "js/i18n.js",
+  "js/i18n/en.js",
+  "js/i18n/ar.js",
+  "js/i18n/content.ar.js",
   "js/data.js",
   "js/templates.js",
   "js/engine/periodization.js",
@@ -29,7 +33,9 @@ const FILES = [
 
 const EXPORTS = [
   "Store", "Scheduler", "Progression", "Periodization", "Coach", "Adaptation",
-  "exerciseById", "exercisesForDay", "exercisesByPattern", "templateOverlap",
+  "I18n", "exerciseById", "exercisesForDay", "exercisesByPattern", "templateOverlap",
+  "exName", "exSteps", "exTips", "muscleLabel", "patternLabel", "loadTypeLabel",
+  "dayLabel", "dayShort", "jointLabel", "templateName", "splitName", "splitRationale",
   "EXERCISES", "SPLITS", "SESSION_TEMPLATES", "VOLUME_LANDMARKS", "PATTERNS",
   "MUSCLE_LABELS", "GOAL_PROFILES", "LEVEL_PROFILES", "LOAD_TYPES", "PROGRAM",
   "DAY_KEYS", "DAY_LABELS", "DAY_SHORT",
@@ -47,7 +53,10 @@ function load() {
   };
 
   const out = {};
-  const sandbox = vm.createContext({ __out: out, localStorage, console, window: undefined });
+  const sandbox = vm.createContext({
+    __out: out, localStorage, console, window: undefined,
+    Intl, Date, Math, JSON, navigator: { languages: ["en"] },
+  });
   const source = FILES.map(f => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n");
   // `const` at script top level does not land on the context object, so the
   // names are copied across explicitly once everything has evaluated.

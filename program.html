@@ -4,45 +4,48 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Your adaptive weekly training program, rebuilt around the days you can train.">
-<title>Your Program — GymBuddy 2.0</title>
+<title data-i18n="program.metaTitle">Your Program — GymBuddy 2.0</title>
 <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
+<main id="main">
 <section style="padding-top:40px;">
   <div class="wrap" id="root">
     <div class="section-head">
-      <div class="kicker" id="pKicker">Adaptive program</div>
-      <h2 id="pTitle">This week</h2>
+      <div class="kicker" data-i18n="program.kicker">Adaptive program</div>
+      <h2 data-i18n="program.title">This week</h2>
       <p id="pIntro"></p>
     </div>
     <div id="phaseBanner"></div>
     <div id="phaseStrip" class="phase-strip"></div>
 
-    <h3 style="margin:34px 0 6px;">Which days can you train?</h3>
-    <p class="hint" style="margin-bottom:14px;">Pick the days you can realistically get to the gym. The coach re-chooses
-    the split, re-orders the sessions so overlapping muscle work lands as far apart as possible, and re-sizes every
-    session to fit.</p>
+    <h3 style="margin:34px 0 6px;" data-i18n="program.daysQuestion">Which days can you train?</h3>
+<p class="hint" style="margin-bottom:14px;" data-i18n="program.daysHint"></p>
     <div class="day-picker" id="dayPicker"></div>
     <div class="picker-summary" id="pickerSummary"></div>
 
     <div id="splitNote"></div>
     <div id="warnings"></div>
 
-    <h3 style="margin:34px 0 16px;">Your week</h3>
+    <h3 style="margin:34px 0 16px;" data-i18n="program.yourWeek">Your week</h3>
     <div class="session-grid" id="sessionGrid"></div>
 
-    <h3 style="margin:40px 0 6px;">Weekly volume</h3>
-    <p class="hint" style="margin-bottom:16px;">Hard sets per muscle per week, counted against the ranges most people
-    grow in. The shaded band is the productive zone; the red line is roughly the most you can recover from.</p>
+    <h3 style="margin:40px 0 6px;" data-i18n="program.weeklyVolume">Weekly volume</h3>
+<p class="hint" style="margin-bottom:16px;" data-i18n="program.volumeHint"></p>
     <div class="card" id="volumeCard"></div>
 
-    <h3 style="margin:40px 0 14px;">Guidelines from your plan</h3>
+    <h3 style="margin:40px 0 14px;" data-i18n="program.guidelines">Guidelines from your plan</h3>
     <div class="guideline-grid" id="guidelines"></div>
   </div>
 </section>
+</main>
 
+<script src="js/i18n.js"></script>
+<script src="js/i18n/en.js"></script>
+<script src="js/i18n/ar.js"></script>
+<script src="js/i18n/content.ar.js"></script>
 <script src="js/data.js"></script>
 <script src="js/templates.js"></script>
 <script src="js/engine/periodization.js"></script>

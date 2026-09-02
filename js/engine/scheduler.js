@@ -175,7 +175,7 @@ const Scheduler = (function () {
         return {
           exercise: ov,
           note: ov.id === slot.prefer ? null
-            : `${ov.name} is in this slot because you chose it — it stays until you swap it back.`,
+            : I18n.m("engine.sched.subChosen", { name: I18n.ref("ex", ov.id) }),
         };
       }
     }
@@ -196,7 +196,7 @@ const Scheduler = (function () {
     let viable = pool.filter(ex => usable(ex));
     let widened = false;
     if (!viable.length) { viable = sameMuscle.filter(ex => usable(ex)); widened = true; }
-    if (!viable.length) return { exercise: null, note: reasonSlotDropped(slot, prefEx, profile) };
+    if (!viable.length) return { exercise: null, note: reasonSlotDropped(slot) };
 
     function usable(ex) {
       if (excluded.has(ex.id)) return false;
@@ -229,7 +229,8 @@ const Scheduler = (function () {
     if (widened) {
       return {
         exercise: winner,
-        note: `The ${PATTERNS[slot.pattern].toLowerCase()} slot is covered by ${winner.name} this week — no exercise in that exact pattern is available under your current equipment and pain settings, so the coach kept the muscle group and changed the pattern.`,
+        note: I18n.m("engine.sched.slotWidened", {
+          pattern: I18n.ref("pattern", slot.pattern), name: I18n.ref("ex", winner.id) }),
       };
     }
     let note = null;
@@ -243,19 +244,20 @@ const Scheduler = (function () {
     const settings = profile.settings || {};
     const pain = painJoints(profile);
     const excluded = new Set((profile.flags && profile.flags.excluded) || []);
-    if (excluded.has(original.id))
-      return `${replacement.name} replaces ${original.name} — you removed that one from your library.`;
+    const to = I18n.ref("ex", replacement.id), from = I18n.ref("ex", original.id);
+    if (excluded.has(original.id)) return I18n.m("engine.sched.subExcluded", { to, from });
     if ((original.jointStress || []).some(j => pain.has(j))) {
       const joint = (original.jointStress || []).find(j => pain.has(j));
-      return `${replacement.name} replaces ${original.name} — you flagged ${joint.replace("_", " ")} pain, and this keeps the same ${PATTERNS[original.pattern].toLowerCase()} work with less load through that joint.`;
+      return I18n.m("engine.sched.subPain", {
+        to, from, joint: I18n.ref("joint", joint), pattern: I18n.ref("pattern", original.pattern) });
     }
     if (!equipmentAvailable(original, settings))
-      return `${replacement.name} replaces ${original.name} — ${(LOAD_TYPES[original.loadType] || {}).label || "that equipment"} is marked unavailable at your gym.`;
-    return `${replacement.name} covers the ${PATTERNS[original.pattern].toLowerCase()} slot this block — rotating variations keeps the stimulus fresh without changing what the session trains.`;
+      return I18n.m("engine.sched.subEquipment", { to, from, equipment: I18n.ref("loadType", original.loadType) });
+    return I18n.m("engine.sched.subRotation", { to, pattern: I18n.ref("pattern", original.pattern) });
   }
 
-  function reasonSlotDropped(slot, prefEx, profile) {
-    return `The ${PATTERNS[slot.pattern].toLowerCase()} slot is empty this week: every option either needs equipment you marked unavailable or loads a joint you flagged as painful. Re-enable equipment in Settings, or clear the pain flag once it settles.`;
+  function reasonSlotDropped(slot) {
+    return I18n.m("engine.sched.slotDropped", { pattern: I18n.ref("pattern", slot.pattern) });
   }
 
   function hashString(str) {
@@ -381,10 +383,10 @@ const Scheduler = (function () {
     let dayKeys = (settings.trainingDays || []).filter(d => DAY_KEYS.includes(d));
     dayKeys = DAY_KEYS.filter(d => dayKeys.includes(d));       // canonical Mon→Sun order
     if (!dayKeys.length) {
-      return { empty: true, warnings: ["No training days selected yet — pick the days you can get to the gym and the coach will build the week around them."] };
+      return { empty: true, warnings: [I18n.m("engine.sched.noDays")] };
     }
     if (dayKeys.length > 6) {
-      warnings.push("Seven training days leaves no recovery day. The coach has built six sessions and left your longest gap as a rest day — add it back only if you are keeping sessions genuinely easy.");
+      warnings.push(I18n.m("engine.sched.sevenDays"));
       dayKeys = dayKeys.slice(0, 6);
     }
 
@@ -430,20 +432,14 @@ const Scheduler = (function () {
       const cardioEx = pickCardio(profile, i);
       const session = {
         dayKey: slotDay.dayKey,
-        dayLabel: DAY_LABELS[slotDay.dayKey],
         type: "training",
         templateId: template.id,
-        name: template.name,
-        short: template.short,
-        emphasis: template.emphasis,
         gapToNext: slotDay.gapToNext,
         blocks,
         notes,
         cardio: cardioEx ? {
           exerciseId: cardioEx.id,
-          name: cardioEx.name,
           minutes: Math.round(goal.cardioMinutes.training * (phase.type === "deload" ? 0.7 : 1)),
-          intensity: goal.cardioIntensity,
         } : null,
       };
 
@@ -460,12 +456,14 @@ const Scheduler = (function () {
       const ex = wantCardio ? pickCardio(profile, i + 3) : null;
       return {
         dayKey: d,
-        dayLabel: DAY_LABELS[d],
         type: "rest",
         suggestion: wantCardio && ex
-          ? `${goal.cardioMinutes.rest} min ${ex.name.toLowerCase()} — ${goal.cardioIntensity}. Optional, and it should leave you fresher than it found you.`
-          : "Full rest. Recovery is when the adaptation actually happens.",
-        cardio: wantCardio && ex ? { exerciseId: ex.id, name: ex.name, minutes: goal.cardioMinutes.rest, intensity: goal.cardioIntensity } : null,
+          ? I18n.m("engine.sched.restCardio", {
+              minutes: goal.cardioMinutes.rest, name: I18n.ref("ex", ex.id),
+              intensity: I18n.m(`goal.cardioIntensity.${goal.cardioIntensityKey}`),
+            })
+          : I18n.m("engine.sched.restFull"),
+        cardio: wantCardio && ex ? { exerciseId: ex.id, minutes: goal.cardioMinutes.rest } : null,
       };
     });
 
@@ -475,7 +473,10 @@ const Scheduler = (function () {
        isolation work first so the main compounds keep their volume. */
     const ceilingCuts = enforceVolumeCeiling(sessions);
     if (ceilingCuts.length) {
-      warnings.push(`Weekly volume was over what most people recover from, so the coach trimmed ${ceilingCuts.length} set${ceilingCuts.length === 1 ? "" : "s"} from isolation work: ${ceilingCuts.map(c => c.name).join(", ")}. Sets past that ceiling buy fatigue, not muscle.`);
+      warnings.push(I18n.m("engine.sched.ceilingCut", {
+        count: ceilingCuts.length,
+        names: I18n.refList("ex", ceilingCuts.map(c => c.exerciseId)),
+      }));
     }
 
     // Set counts moved, so the time estimates have to be recomputed.
@@ -490,15 +491,20 @@ const Scheduler = (function () {
     const volumeReport = auditVolume(volume, goal);
 
     sessions.forEach(s => { if (s.trimmed && s.trimmed.length) {
-      warnings.push(`${s.name} was trimmed to fit your ${settings.sessionMinutes || 60}-minute session limit: ${s.trimmed.map(id => (exerciseById(id) || {}).name || id).join(", ")} dropped. Raise the time budget in Settings to keep them.`);
+      warnings.push(I18n.m("engine.sched.trimmed", {
+        session: I18n.ref("template", s.templateId),
+        minutes: settings.sessionMinutes || 75,
+        dropped: I18n.refList("ex", s.trimmed),
+      }));
     }});
 
     return {
       empty: false,
       generatedAt: new Date().toISOString(),
       splitId: split.id,
-      splitName: split.name,
-      splitRationale: split.rationale,
+      /* Only the structural part of the phase is stored. The labels and copy
+         are re-derived at render time so they follow the current language. */
+      phaseWeek: phase.week, phaseType: phase.type,
       splitForced: forced,
       dayCount: dayKeys.length,
       trainingDays: dayKeys,
@@ -537,11 +543,11 @@ const Scheduler = (function () {
       candidates.sort((a, b) => (b.iso - a.iso) || (b.block.sets - a.block.sets));
       const victim = candidates[0];
       victim.block.sets -= 1;
-      cuts.push({ name: victim.ex.name, muscle: over.muscle });
+      cuts.push({ exerciseId: victim.ex.id, muscle: over.muscle });
     }
-    // Collapse repeats so the warning reads "Lateral Raise" once, not four times.
+    // Collapse repeats so the warning names each exercise once, not four times.
     const seen = new Set();
-    return cuts.filter(c => (seen.has(c.name) ? false : (seen.add(c.name), true)));
+    return cuts.filter(c => (seen.has(c.exerciseId) ? false : (seen.add(c.exerciseId), true)));
   }
 
   /** Hard sets per muscle per week, counted through the contribution table. */
@@ -564,24 +570,13 @@ const Scheduler = (function () {
   function auditVolume(volume, goal) {
     return Object.entries(VOLUME_LANDMARKS).map(([muscle, lm]) => {
       const sets = volume[muscle] || 0;
-      let status, message;
-      if (sets < lm.mv) {
-        status = "under";
-        message = `${sets} sets is below the ${lm.mv}-set maintenance floor — this muscle is being left behind.`;
-      } else if (sets < lm.mev) {
-        status = "maintenance";
-        message = `${sets} sets maintains what you have but is under the ${lm.mev}-set threshold where growth usually starts.`;
-      } else if (sets <= lm.mav) {
-        status = "optimal";
-        message = `${sets} sets sits in the productive ${lm.mev}–${lm.mav} range.`;
-      } else if (sets <= lm.mrv) {
-        status = "high";
-        message = `${sets} sets is high but recoverable — fine for a few weeks, watch your recovery.`;
-      } else {
-        status = "excessive";
-        message = `${sets} sets is past the ${lm.mrv}-set ceiling most people can recover from. Quality will drop before results improve.`;
-      }
-      return { muscle, label: MUSCLE_LABELS[muscle] || muscle, sets, status, message, landmarks: lm };
+      const status = sets < lm.mv ? "under"
+                   : sets < lm.mev ? "maintenance"
+                   : sets <= lm.mav ? "optimal"
+                   : sets <= lm.mrv ? "high"
+                   : "excessive";
+      const message = I18n.m(`engine.sched.volume.${status}`, { sets, mv: lm.mv, mev: lm.mev, mav: lm.mav, mrv: lm.mrv });
+      return { muscle, sets, status, message, landmarks: lm };
     });
   }
 
@@ -594,14 +589,13 @@ const Scheduler = (function () {
     const plan = buildPlan(shadow);
     if (plan.empty) return plan;
     return {
-      splitName: plan.splitName,
-      splitRationale: plan.splitRationale,
+      splitId: plan.splitId,
       dayCount: plan.dayCount,
       sessionsPerWeek: plan.sessions.length,
       avgMinutes: Math.round(plan.sessions.reduce((s, x) => s + x.totalMinutes, 0) / plan.sessions.length),
       volume: plan.volume,
       volumeReport: plan.volumeReport,
-      sessions: plan.sessions.map(s => ({ dayKey: s.dayKey, name: s.name, totalSets: s.totalSets, estMinutes: s.estMinutes })),
+      sessions: plan.sessions.map(s => ({ dayKey: s.dayKey, templateId: s.templateId, totalSets: s.totalSets, estMinutes: s.estMinutes })),
     };
   }
 

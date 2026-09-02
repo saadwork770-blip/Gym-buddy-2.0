@@ -14,11 +14,11 @@ UI.ready(() => {
   let query = "";
 
   const EXTRA_FILTERS = [
-    { id: "all",       label: "Everything" },
-    { id: "inplan",    label: "In my plan" },
-    { id: "compound",  label: "Compounds" },
-    { id: "isolation", label: "Isolation" },
-    { id: "flagged",   label: "Flagged / excluded" },
+    { id: "all", key: "library.filterAll" },
+    { id: "inplan", key: "library.filterInPlan" },
+    { id: "compound", key: "library.filterCompound" },
+    { id: "isolation", key: "library.filterIsolation" },
+    { id: "flagged", key: "library.filterFlagged" },
   ];
 
   function planExerciseIds() {
@@ -31,10 +31,11 @@ UI.ready(() => {
   function buildFilters() {
     document.getElementById("muscleFilters").innerHTML =
       ["all", ...Object.keys(MUSCLE_LABELS)].map(m =>
-        `<button class="chip ${m === activeMuscle ? "active" : ""}" data-muscle="${m}">${
-          m === "all" ? "All muscle groups" : MUSCLE_LABELS[m]}</button>`).join("");
+        `<button class="chip ${m === activeMuscle ? "active" : ""}" data-muscle="${m}"
+          aria-pressed="${m === activeMuscle}">${UI.t(m === "all" ? "library.allMuscles" : `muscle.${m}`)}</button>`).join("");
     document.getElementById("extraFilters").innerHTML =
-      EXTRA_FILTERS.map(f => `<button class="chip ${f.id === activeExtra ? "active" : ""}" data-extra="${f.id}">${f.label}</button>`).join("");
+      EXTRA_FILTERS.map(f => `<button class="chip ${f.id === activeExtra ? "active" : ""}" data-extra="${f.id}"
+        aria-pressed="${f.id === activeExtra}">${UI.t(f.key)}</button>`).join("");
 
     document.querySelectorAll("[data-muscle]").forEach(c =>
       c.addEventListener("click", () => { activeMuscle = c.dataset.muscle; buildFilters(); render(); }));
@@ -48,26 +49,26 @@ UI.ready(() => {
     const excluded = ctx.excluded.has(ex.id);
     const inPlan = ctx.inPlan.has(ex.id);
     const media = ex.hasMedia === false
-      ? `<span class="icon-fallback" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${ICONS[ex.icon] || ""}</span>
-         <span class="play-badge">Diagram</span>`
-      : `<img class="ex-photo" src="${photoFor(ex.id)}" alt="${UI.esc(ex.name)}" loading="lazy"
+      ? `<span class="icon-fallback" aria-hidden="true" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${ICONS[ex.icon] || ""}</span>
+         <span class="play-badge">${UI.t("library.badgeDiagram")}</span>`
+      : `<img class="ex-photo" src="${photoFor(ex.id)}" alt="${UI.esc(exName(ex.id))}" loading="lazy" decoding="async"
               data-photo="${photoFor(ex.id)}" data-gif="${gifFor(ex.id)}">
-         <span class="play-badge">▶ GIF</span>
-         <span class="icon-fallback">${ICONS[ex.icon] || ""}</span>`;
+         <span class="play-badge">${UI.t("library.badgeGif")}</span>
+         <span class="icon-fallback" aria-hidden="true">${ICONS[ex.icon] || ""}</span>`;
 
     return `
-      <div class="ex-card" style="--accent-cat:${color}" data-id="${ex.id}">
+      <div class="ex-card" style="--accent-cat:${color}" data-id="${ex.id}" role="button" tabindex="0">
         <div class="ex-media">${media}</div>
         <div class="ex-body">
-          <h3>${UI.esc(ex.name)}</h3>
+          <h3>${UI.esc(exName(ex.id))}</h3>
           <div class="ex-meta">
-            <span class="badge" style="--accent-cat:${color}">${MUSCLE_LABELS[ex.muscle]}</span>
-            <span class="badge" style="--accent-cat:#8892a0">${UI.esc(ex.equipment)}</span>
-            ${inPlan ? `<span class="badge" style="--accent-cat:var(--accent)">In plan</span>` : ""}
-            ${flagged ? `<span class="badge" style="--accent-cat:#ffd43b">${UI.esc(flagged.replace("_", " "))} pain</span>` : ""}
-            ${excluded ? `<span class="badge" style="--accent-cat:#ff6b6b">Excluded</span>` : ""}
+            <span class="badge" style="--accent-cat:${color}">${UI.esc(muscleLabel(ex.muscle))}</span>
+            <span class="badge" style="--accent-cat:#8892a0">${UI.esc(equipmentLabel(ex.equipment))}</span>
+            ${inPlan ? `<span class="badge" style="--accent-cat:var(--accent)">${UI.t("library.badgeInPlan")}</span>` : ""}
+            ${flagged ? `<span class="badge" style="--accent-cat:#ffd43b">${UI.t("library.badgePain", { joint: jointLabel(flagged) })}</span>` : ""}
+            ${excluded ? `<span class="badge" style="--accent-cat:#ff6b6b">${UI.t("library.badgeExcluded")}</span>` : ""}
           </div>
-          <div class="ex-sets"><b>${UI.esc(ex.sets)}</b> · ${UI.esc(PATTERNS[ex.pattern] || ex.dayLabel)}</div>
+          <div class="ex-sets"><b>${UI.esc(prescriptionText(ex))}</b> · ${UI.esc(patternLabel(ex.pattern))}</div>
         </div>
       </div>`;
   }
@@ -88,7 +89,8 @@ UI.ready(() => {
       if (activeExtra === "isolation" && ex.role !== "isolation") return false;
       if (activeExtra === "flagged" && !ctx.pain[ex.id] && !ctx.excluded.has(ex.id)) return false;
       if (!q) return true;
-      return [ex.name, ex.equipment, PATTERNS[ex.pattern] || "", MUSCLE_LABELS[ex.muscle] || ""]
+      return [exName(ex.id), ex.name, equipmentLabel(ex.equipment), ex.equipment,
+              patternLabel(ex.pattern), muscleLabel(ex.muscle)]
         .join(" ").toLowerCase().includes(q);
     });
 
@@ -97,6 +99,9 @@ UI.ready(() => {
 
     grid.querySelectorAll(".ex-card").forEach(card => {
       card.addEventListener("click", () => openDetail(card.dataset.id));
+      card.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(card.dataset.id); }
+      });
       const img = card.querySelector(".ex-photo");
       if (!img) return;
       card.addEventListener("mouseenter", () => { img.src = img.dataset.gif; });
@@ -109,6 +114,12 @@ UI.ready(() => {
 
   const JOINTS = ["shoulder", "elbow", "knee", "hip", "lower_back", "ankle"];
 
+  /* Which session of the source program an exercise belongs to, by its day. */
+  const DAY_TEMPLATE = { 1: "upper_a", 2: "lower_a", 4: "upper_b", 5: "lower_b" };
+  function templateNameForDay(ex) {
+    return DAY_TEMPLATE[ex.day] ? templateName(DAY_TEMPLATE[ex.day]) : patternLabel(ex.pattern);
+  }
+
   function openDetail(id) {
     const ex = exerciseById(id);
     if (!ex) return;
@@ -120,67 +131,68 @@ UI.ready(() => {
     const series = p ? Progression.strengthSeries(p, id) : [];
 
     const mediaBlock = ex.hasMedia === false
-      ? `<div class="source-note">This movement ships with the line-art diagram rather than a photograph — it is one of
-           the extra options the coach can substitute in, and no public-domain photo of it is bundled with the app.
-           The instructions below are the same as for every other entry.</div>`
+      ? `<div class="source-note">${UI.t("library.diagramNote")}</div>`
       : `<figure class="gif-figure">
-           <img src="${gifFor(ex.id)}?t=${Date.now()}" alt="${UI.esc(ex.name)} — animated demonstration">
-           <figcaption>${UI.esc(MEDIA_NOTES[ex.id] || "Looping demonstration: start position → end position.")}</figcaption>
+           <img src="${gifFor(ex.id)}?t=${Date.now()}" alt="${UI.esc(exName(ex.id))}">
+           <figcaption>${UI.esc(exMediaNote(ex.id) || I18n.t("library.gifCaption"))}</figcaption>
          </figure>`;
 
     const m = UI.modal(`
       <div class="modal-head" style="--accent-cat:${color}"><div>
-        <span class="badge" style="--accent-cat:${color}">${MUSCLE_LABELS[ex.muscle]}</span>
-        <h3 style="margin-top:10px;">${UI.esc(ex.name)}</h3>
-        <div class="hint">${UI.esc(ex.equipment)} · ${UI.esc(PATTERNS[ex.pattern] || "")} · ${UI.esc(ex.loadSpec.label)}</div>
+        <span class="badge" style="--accent-cat:${color}">${UI.esc(muscleLabel(ex.muscle))}</span>
+        <h3 style="margin-top:10px;">${UI.esc(exName(ex.id))}</h3>
+        <div class="hint">${UI.esc(equipmentLabel(ex.equipment))} · ${UI.esc(patternLabel(ex.pattern))} · ${UI.esc(loadTypeLabel(ex.loadType))}</div>
       </div></div>
       <div class="modal-body">
         ${mediaBlock}
 
-        ${p ? `<h4>Your working load</h4>
+        ${p ? `<h4>${UI.t("library.yourLoad")}</h4>
           <div class="ev" style="display:flex;gap:20px;flex-wrap:wrap;font-size:.86rem;color:var(--text-dim);margin-bottom:6px;">
-            <span>Prescribed <b style="color:var(--accent)">${rx ? UI.esc(UI.fmt.load(rx.weight, ex)) : "not started"}</b></span>
-            ${rx ? `<span>${rx.sets} x ${rx.repLo}–${rx.repHi}</span>` : ""}
-            ${series.length ? `<span>Est. 1RM <b>${series[series.length - 1].e1rm} kg</b> over ${series.length} sessions</span>` : ""}
+            <span>${UI.t("library.prescribed")} <b style="color:var(--accent)">${rx ? UI.esc(UI.fmt.load(rx.weight, ex)) : UI.t("common.notStarted")}</b></span>
+            ${rx ? `<span>${I18n.num(rx.sets)} × ${I18n.num(rx.repLo)}–${I18n.num(rx.repHi)}</span>` : ""}
+            ${series.length ? `<span>${UI.t("library.e1rm", {
+              value: series[series.length - 1].e1rm, sessions: series.length })}</span>` : ""}
           </div>
-          ${rx && rx.reason ? `<p style="font-size:.86rem;">${UI.esc(rx.reason)}</p>` : ""}` : ""}
+          ${rx && rx.reason ? `<p style="font-size:.86rem;">${UI.tx(rx.reason)}</p>` : ""}` : ""}
 
-        <h4>Sets &amp; reps in the source plan</h4>
-        <p style="color:var(--text);font-weight:700;">${UI.esc(ex.sets)}</p>
+        <h4>${UI.t("library.setsInPlan")}</h4>
+        <p style="color:var(--text);font-weight:700;">${UI.esc(prescriptionText(ex))}</p>
 
-        <h4>How to perform it</h4>
-        <ol>${ex.steps.map(s => `<li>${UI.esc(s)}</li>`).join("")}</ol>
+        <h4>${UI.t("library.howTo")}</h4>
+        <ol>${exSteps(ex.id).map(step => `<li>${UI.esc(step)}</li>`).join("")}</ol>
 
-        <h4>Tips</h4>
-        <ul class="tips">${ex.tips.map(t => `<li>${UI.esc(t)}</li>`).join("")}</ul>
+        <h4>${UI.t("library.tips")}</h4>
+        <ul class="tips">${exTips(ex.id).map(tip => `<li>${UI.esc(tip)}</li>`).join("")}</ul>
 
-        <h4>What the coach knows about it</h4>
+        <h4>${UI.t("library.coachKnows")}</h4>
         <div class="ev" style="display:flex;gap:18px;flex-wrap:wrap;font-size:.82rem;color:var(--text-faint);">
-          <span>Pattern <b style="color:var(--text-dim)">${UI.esc(PATTERNS[ex.pattern] || "—")}</b></span>
-          <span>Role <b style="color:var(--text-dim)">${UI.esc(ex.role || "—")}</b></span>
-          <span>Progresses in <b style="color:var(--text-dim)">${ex.loadSpec.increment || "—"} ${ex.loadSpec.unit}</b> steps</span>
-          <span>Systemic cost <b style="color:var(--text-dim)">${ex.fatigue || "—"}/5</b></span>
-          <span>Loads <b style="color:var(--text-dim)">${(ex.jointStress || []).map(j => j.replace("_", " ")).join(", ") || "no major joints"}</b></span>
+          <span>${UI.t("library.metaPattern")} <b style="color:var(--text-dim)">${UI.esc(patternLabel(ex.pattern))}</b></span>
+          <span>${UI.t("library.metaRole")} <b style="color:var(--text-dim)">${UI.esc(roleLabel(ex.role))}</b></span>
+          <span>${UI.t("library.metaSteps", { value: ex.loadSpec.increment || "—", unit: ex.loadSpec.unit })}</span>
+          <span>${UI.t("library.metaFatigue", { value: ex.fatigue || "—" })}</span>
+          <span>${UI.t("library.metaJoints", {
+            joints: (ex.jointStress || []).map(j => jointLabel(j)).join(I18n.isRTL() ? "، " : ", ")
+                    || I18n.t("library.metaNoJoints") })}</span>
         </div>
 
         ${p ? `
-        <h4>Not working for you?</h4>
-        <p style="font-size:.86rem;">Flag a joint and the scheduler stops using this movement and fills the slot with
-        something that spares it. Excluding removes it from your library entirely.</p>
+        <h4>${UI.t("library.notWorking")}</h4>
+        <p style="font-size:.86rem;">${UI.t("library.notWorkingBody")}</p>
         <div class="field" style="max-width:260px;margin-bottom:14px;">
-          <label>Joint pain on this exercise</label>
+          <label for="painSelect">${UI.t("library.painLabel")}</label>
           <select id="painSelect">
-            <option value="">No pain</option>
-            ${JOINTS.map(j => `<option value="${j}" ${pain[id] === j ? "selected" : ""}>${j.replace("_", " ")}</option>`).join("")}
+            <option value="">${UI.t("library.noPain")}</option>
+            ${JOINTS.map(j => `<option value="${j}" ${pain[id] === j ? "selected" : ""}>${UI.esc(jointLabel(j))}</option>`).join("")}
           </select>
         </div>
         <div class="inline-actions">
-          <button class="btn btn-ghost btn-sm" id="excludeBtn">${excluded.has(id) ? "Put back in my library" : "Exclude from my plan"}</button>
-          <button class="btn btn-ghost btn-sm" id="altBtn">Show alternatives</button>
-        </div>` : `<div class="source-note">Create a profile to get a prescribed load, flag joint pain, or see
-          substitutions for this movement.</div>`}
+          <button class="btn btn-ghost btn-sm" id="excludeBtn">${UI.t(excluded.has(id) ? "library.includeBtn" : "library.excludeBtn")}</button>
+          <button class="btn btn-ghost btn-sm" id="altBtn">${UI.t("library.altBtn")}</button>
+        </div>` : `<div class="source-note">${UI.t("library.noProfile")}</div>`}
 
-        <div class="source-note">From your 4-Day Fat Loss Program — ${UI.esc(ex.day ? `Day ${ex.day} · ${ex.dayLabel}` : ex.dayLabel)}.</div>
+        <div class="source-note">${UI.t("library.fromPlan", {
+          day: ex.day ? I18n.t("library.dayOf", { n: ex.day, name: templateNameForDay(ex) })
+                      : patternLabel(ex.pattern) })}</div>
       </div>`, { wide: false });
 
     if (!p) return;
@@ -188,30 +200,29 @@ UI.ready(() => {
     m.el.querySelector("#painSelect").addEventListener("change", e => {
       Store.flagPain(p.id, id, e.target.value || null);
       UI.toast(e.target.value
-        ? `Flagged. The coach will route around ${ex.name} and fill the slot with something that spares your ${e.target.value.replace("_", " ")}.`
-        : "Pain flag cleared — the exercise is back in rotation.");
+        ? I18n.t("library.painFlagged", { name: exName(id), joint: jointLabel(e.target.value) })
+        : I18n.t("library.painCleared"));
       render();
     });
 
     m.el.querySelector("#excludeBtn").addEventListener("click", () => {
       Store.toggleExcluded(p.id, id);
       m.close(); render();
-      UI.toast(excluded.has(id) ? `${ex.name} is back in your library.` : `${ex.name} removed from your plan.`);
+      UI.toast(I18n.t(excluded.has(id) ? "library.included" : "library.excluded", { name: exName(id) }));
     });
 
     m.el.querySelector("#altBtn").addEventListener("click", () => {
       const alts = Adaptation.alternativesFor(id, Store.getActiveProfile(), { avoidJoint: pain[id] || null, limit: 6 });
       m.close();
       UI.modal(`
-        <div class="modal-head"><div><span class="pill info">Substitutions</span>
-          <h3 style="margin-top:10px;">Instead of ${UI.esc(ex.name)}</h3></div></div>
+        <div class="modal-head"><div><span class="pill info">${UI.t("library.altTitle")}</span>
+          <h3 style="margin-top:10px;">${UI.t("library.altHeading", { name: exName(id) })}</h3></div></div>
         <div class="modal-body">
           ${alts.length ? `<table class="rx-table">${alts.map(a => `
-            <tr><td><div class="rx-name">${UI.exerciseThumb(a.exercise.id)}<span>${UI.esc(a.exercise.name)}</span></div>
-              <div class="hint" style="margin:6px 0 0 64px;">${UI.esc(a.why)}</div></td></tr>`).join("")}</table>`
-            : `<p>Nothing else in your library trains this pattern under your current equipment settings.</p>`}
-          <div class="source-note">To actually put one of these into a session, use <b>Swap this exercise</b> on the
-          Coach tab — that pins it to the right slot rather than changing your whole plan.</div>
+            <tr><td><div class="rx-name">${UI.exerciseThumb(a.exercise.id)}<span>${UI.esc(exName(a.exercise.id))}</span></div>
+              <div class="hint" style="margin-top:6px;">${UI.tx(a.why)}</div></td></tr>`).join("")}</table>`
+            : `<p>${UI.t("library.altNone")}</p>`}
+          <div class="source-note" data-i18n-html="library.altNote"></div>
         </div>`, { wide: true });
     });
   }

@@ -10,7 +10,10 @@
   --border: #262b33;
   --text: #eef1f5;
   --text-dim: #a4acb8;
-  --text-faint: #6b7280;
+  /* Was #6b7280, which measured 3.46:1 on a card — under the 4.5:1 AA floor
+     for the body text it is actually used for (hints, sub-labels, table
+     headers). #868f9d clears 4.7:1 against every surface in the theme. */
+  --text-faint: #868f9d;
   --accent: #1fd1a8;
   --accent-dark: #14a884;
   --accent-soft: rgba(31,209,168,.12);
@@ -24,6 +27,10 @@
 }
 
 *{ box-sizing: border-box; }
+/* Form controls do not inherit typography from the page unless told to. Left
+   alone they fall back to the browser default — which for a textarea is
+   monospace, and monospace breaks Arabic letter joining. */
+input, select, textarea, button{ font-family: inherit; font-size: inherit; }
 html{ scroll-behavior: smooth; }
 body{
   margin:0;
@@ -67,12 +74,24 @@ button{ font-family:inherit; }
 .nav-links a.active{ color:#08110f; background: var(--accent); }
 .nav-toggle{ display:none; background:none; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; }
 
-@media (max-width: 760px){
+/* Below 560px the header cannot fit a brand, a menu button, a language switch
+   AND a call-to-action button: the CTA was running 53px past the viewport.
+   It is redundant there anyway — Profile is in the menu, and every gated page
+   already shows its own "set up your profile" button. */
+@media (max-width: 560px){
+  .nav .wrap{ gap:8px; padding:0 14px; }
+  .brand{ font-size:1rem; min-width:0; }
+  .brand .mark{ width:26px; height:26px; }
+  .nav .wrap > .btn-primary{ display:none; }
+  .lang-switch{ padding:6px 11px; font-size:.78rem; }
+}
+
+@media (max-width: 1020px){
   .nav-toggle{ display:block; }
   .nav-links{
     position:absolute; top:64px; left:0; right:0; flex-direction:column; align-items:stretch;
     background: var(--bg-alt); border-bottom:1px solid var(--border); padding:10px; gap:2px;
-    display:none;
+    display:none; z-index:60;
   }
   .nav-links.open{ display:flex; }
   .nav-links a{ padding:12px 14px; }
@@ -106,7 +125,7 @@ button{ font-family:inherit; }
   background: var(--card); border:1px solid var(--border); border-radius: var(--radius);
   padding: 22px; box-shadow: var(--shadow);
 }
-.hero-card h3{ font-size:1rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; }
+.hero-card h3, .hero-card h2{ font-size:1rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; margin:0 0 .5em; }
 .hero-card .day-row{ display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--border); font-size:.92rem; }
 .hero-card .day-row:first-of-type{ border-top:none; }
 .hero-card .day-row b{ color:var(--text); }
@@ -241,7 +260,7 @@ section{ padding: 60px 0; }
 .modal-body{ padding: 20px 22px 26px; }
 .modal-body h4{ font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); margin:18px 0 8px; }
 .modal-body h4:first-child{ margin-top:0; }
-.modal-body ol, .modal-body ul.tips{ margin:0; padding-left: 20px; color: var(--text-dim); font-size:.92rem; }
+.modal-body ol, .modal-body ul.tips{ margin:0; padding-inline-start: 20px; color: var(--text-dim); font-size:.92rem; }
 .modal-body ol li, .modal-body ul.tips li{ margin-bottom:6px; }
 .source-note{ margin-top:18px; padding:10px 14px; background: var(--card); border:1px solid var(--border); border-radius: var(--radius-sm); font-size:.78rem; color: var(--text-faint); }
 
@@ -255,7 +274,7 @@ section{ padding: 60px 0; }
 .day-progress .bar i{ display:block; height:100%; background: var(--accent); width:0%; transition:.2s; }
 
 table.ex-table{ width:100%; border-collapse: collapse; }
-table.ex-table th{ text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); padding:10px 22px; border-bottom:1px solid var(--border); }
+table.ex-table th{ text-align:start; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); padding:10px 22px; border-bottom:1px solid var(--border); }
 table.ex-table td{ padding: 12px 22px; border-bottom:1px solid var(--border); font-size:.92rem; }
 table.ex-table tr:last-child td{ border-bottom:none; }
 table.ex-table tr:hover td{ background: rgba(255,255,255,.02); }
@@ -272,7 +291,7 @@ table.ex-table tr:hover td{ background: rgba(255,255,255,.02); }
 .rest-row td{ padding: 20px 22px; color: var(--text-dim); font-style: italic; }
 
 .notes-box{ background: var(--card); border:1px solid var(--border); border-radius: var(--radius); padding: 22px; }
-.notes-box ul{ padding-left:20px; color: var(--text-dim); font-size:.92rem; }
+.notes-box ul{ padding-inline-start:20px; color: var(--text-dim); font-size:.92rem; }
 .notes-box li{ margin-bottom:8px; }
 .guideline-grid{ display:grid; grid-template-columns: repeat(2,1fr); gap:14px; }
 @media (max-width:700px){ .guideline-grid{ grid-template-columns:1fr; } }
@@ -298,6 +317,10 @@ table.ex-table tr:hover td{ background: rgba(255,255,255,.02); }
 .profile-empty{ text-align:center; padding: 70px 20px; }
 .profile-empty .icon-lg{ width:64px; height:64px; margin:0 auto 18px; color: var(--accent); }
 .profile-shell{ display:grid; grid-template-columns: 300px 1fr; gap: 22px; align-items:start; }
+/* Grid and flex children default to min-width:auto, which lets a single long
+   word push a column wider than the viewport. */
+.profile-shell > *, .workout-shell > *, .session-grid > *, .kpi-grid > *{ min-width: 0; }
+.ex-line .nm, .rx-name, .log-entry .n{ min-width: 0; }
 @media (max-width:860px){ .profile-shell{ grid-template-columns:1fr; } }
 .profile-card{ text-align:center; }
 .avatar{
@@ -307,9 +330,9 @@ table.ex-table tr:hover td{ background: rgba(255,255,255,.02); }
 }
 .profile-card .name{ font-size:1.15rem; font-weight:800; }
 .profile-card .meta{ color: var(--text-faint); font-size:.84rem; margin-bottom:16px; }
-.profile-switch{ margin-top:16px; padding-top:16px; border-top:1px solid var(--border); text-align:left; }
+.profile-switch{ margin-top:16px; padding-top:16px; border-top:1px solid var(--border); text-align:start; }
 .profile-switch .plist{ list-style:none; display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
-.profile-switch .plist button{ width:100%; text-align:left; background: var(--bg-alt); border:1px solid var(--border); color:var(--text-dim); padding:8px 10px; border-radius:8px; cursor:pointer; font-size:.84rem; }
+.profile-switch .plist button{ width:100%; text-align:start; background: var(--bg-alt); border:1px solid var(--border); color:var(--text-dim); padding:8px 10px; border-radius:8px; cursor:pointer; font-size:.84rem; }
 .profile-switch .plist button.active{ border-color: var(--accent); color: var(--text); }
 
 .stat-row{ display:grid; grid-template-columns: repeat(4,1fr); gap:14px; margin-bottom:20px; }
@@ -326,7 +349,7 @@ table.ex-table tr:hover td{ background: rgba(255,255,255,.02); }
 
 .weight-form{ display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; align-items:flex-end; }
 table.log-table{ width:100%; border-collapse: collapse; font-size:.88rem; }
-table.log-table th{ text-align:left; color: var(--text-faint); font-size:.72rem; text-transform:uppercase; padding:8px 4px; border-bottom:1px solid var(--border); }
+table.log-table th{ text-align:start; color: var(--text-faint); font-size:.72rem; text-transform:uppercase; padding:8px 4px; border-bottom:1px solid var(--border); }
 table.log-table td{ padding:8px 4px; border-bottom:1px solid var(--border); color: var(--text-dim); }
 
 canvas#weightChart{ width:100%; height:180px; margin-bottom:18px; }
@@ -431,7 +454,9 @@ footer .wrap{ display:flex; justify-content:space-between; align-items:center; f
   flex:1; min-width:110px; padding:12px 14px; border-radius:var(--radius-sm);
   background:var(--card); border:1px solid var(--border);
 }
-.phase-week b{ display:block; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-faint); }
+/* The current week tints its card with accent-soft, which lifts the background
+   enough that --text-faint drops to 4.08:1 — just under AA. */
+.phase-week b{ display:block; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); }
 .phase-week span{ font-size:.94rem; font-weight:700; }
 .phase-week.current{ border-color:var(--accent); background:var(--accent-soft); }
 .phase-week.current span{ color:var(--accent); }
@@ -486,7 +511,7 @@ footer .wrap{ display:flex; justify-content:space-between; align-items:center; f
 /* ---------- Prescription table ---------- */
 .rx-table{ width:100%; border-collapse:collapse; }
 .rx-table th{
-  text-align:left; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em;
+  text-align:start; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em;
   color:var(--text-faint); padding:10px 12px; border-bottom:1px solid var(--border); font-weight:700;
 }
 .rx-table td{ padding:12px; border-bottom:1px solid var(--border); font-size:.9rem; vertical-align:middle; }
@@ -693,3 +718,168 @@ canvas.chart{ width:100%; display:block; }
 .muted{ color:var(--text-faint); }
 .nowrap{ white-space:nowrap; }
 .tnum{ font-variant-numeric:tabular-nums; }
+
+/* ============================================================================
+   ==  Right-to-left & bilingual typography  ==================================
+   ============================================================================
+   Arabic is not "English with the text right-aligned". The whole layout
+   mirrors: the nav runs the other way, progress bars fill from the right,
+   borders that mark the left edge of a card move to its right edge.
+
+   Most of the work is done by writing the base layout in logical properties
+   (inline-start / inline-end) rather than left / right, so the browser mirrors
+   it for free. What follows are the cases that genuinely cannot mirror
+   automatically — anything positioned absolutely, anything drawn from a
+   percentage, and anything that must stay left-to-right even in Arabic.
+   ============================================================================ */
+
+/* ---------- Arabic typography ----------
+   No web fonts: the site works offline and makes zero external requests, so
+   this leans on the Arabic system faces that ship with every major OS.
+   Arabic glyphs sit smaller than Latin at the same point size and have taller
+   ascenders, so the scale and leading are nudged up to compensate. */
+:root.rtl,
+[dir="rtl"] {
+  font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, "Geeza Pro", "Arabic Typesetting",
+               -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+}
+[dir="rtl"] body { line-height: 1.75; letter-spacing: 0; }
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4 {
+  letter-spacing: 0;             /* negative tracking mangles Arabic joining */
+  line-height: 1.4;
+}
+/* Arabic has no letter case, so uppercasing is a no-op that only widens the
+   tracking and breaks the joins. */
+[dir="rtl"] .kicker, [dir="rtl"] .badge, [dir="rtl"] .pill,
+[dir="rtl"] .stat-tile span, [dir="rtl"] .kpi span, [dir="rtl"] .vol-status,
+[dir="rtl"] .coach-cat, [dir="rtl"] .set-row .f label, [dir="rtl"] .wo-side h4,
+[dir="rtl"] table.ex-table th, [dir="rtl"] .rx-table th, [dir="rtl"] .log-table th,
+[dir="rtl"] .modal-body h4, [dir="rtl"] .guideline b, [dir="rtl"] .phase-week b,
+[dir="rtl"] .section-head .kicker {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ---------- Things that must stay left-to-right ----------
+   Numbers, times, weights and RPE values read the same in both languages, and
+   a clock or a set of plate numbers reversed is simply wrong. */
+[dir="rtl"] .tnum,
+[dir="rtl"] .rest-bar .t,
+[dir="rtl"] input[type="number"],
+[dir="rtl"] input[type="email"],
+[dir="rtl"] .set-row input,
+[dir="rtl"] .set-row select,
+[dir="rtl"] canvas + .hint .tnum {
+  direction: ltr;
+  text-align: start;
+}
+[dir="rtl"] .set-row .f label { text-align: start; }
+
+/* ---------- Skip link ---------- */
+.skip-link {
+  position: absolute; inset-inline-start: 8px; top: -60px; z-index: 100;
+  background: var(--accent); color: #08110f; font-weight: 800;
+  padding: 10px 18px; border-radius: 0 0 8px 8px; transition: top .15s;
+}
+.skip-link:focus { top: 0; }
+
+/* ---------- Language switch ---------- */
+.lang-switch {
+  flex: none; background: var(--card); border: 1px solid var(--border);
+  color: var(--text-dim); border-radius: 999px; padding: 7px 14px;
+  font-weight: 700; font-size: .82rem; cursor: pointer; transition: .15s;
+  font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+}
+.lang-switch:hover { color: var(--text); border-color: var(--accent); }
+.lang-switch[lang="en"] { font-family: inherit; }
+
+/* ---------- Mirrored layout ---------- */
+[dir="rtl"] .nav-links { padding-inline-start: 0; }
+
+/* Cards and callouts marked by a coloured edge: the edge follows the text. */
+[dir="rtl"] .coach-card { border-left-width: 1px; border-right: 3px solid var(--border); }
+[dir="rtl"] .coach-card.sev-action { border-right-color: var(--accent);
+  background: linear-gradient(-90deg, var(--accent-soft), transparent 40%), var(--card); }
+[dir="rtl"] .coach-card.sev-good { border-right-color: var(--good); }
+[dir="rtl"] .coach-card.sev-warn { border-right-color: var(--warn); }
+[dir="rtl"] .coach-card.sev-info { border-right-color: var(--info); }
+[dir="rtl"] .phase-banner { border-left-width: 1px; border-right: 3px solid var(--accent); }
+[dir="rtl"] .phase-banner.deload { border-right-color: var(--warn); }
+[dir="rtl"] .toast { border-left-width: 1px; border-right: 3px solid var(--accent); }
+[dir="rtl"] .toast.error { border-right-color: var(--danger); }
+[dir="rtl"] .toast.warn { border-right-color: var(--warn); }
+[dir="rtl"] .tab-btn { }
+
+/* Bars fill from the inline start, which is the right in Arabic. */
+[dir="rtl"] .vol-fill,
+[dir="rtl"] .vol-zone,
+[dir="rtl"] .rest-bar .bar { left: auto; right: 0; }
+[dir="rtl"] .vol-zone { right: auto; }
+[dir="rtl"] .day-progress .bar i,
+[dir="rtl"] .wo-progress-ring .bar i { margin-inline-start: auto; }
+
+/* Absolutely positioned decoration. */
+[dir="rtl"] .modal-close { right: auto !important; left: 16px; }
+[dir="rtl"] .ex-media .play-badge { right: auto; left: 8px; }
+
+/* The disclosure caret points the other way. */
+[dir="rtl"] .wo-why summary::before { content: "◂ "; }
+[dir="rtl"] .wo-why[open] summary::before { content: "▾ "; }
+
+/* Lists indent from the correct side. */
+[dir="rtl"] .modal-body ol,
+[dir="rtl"] .modal-body ul.tips,
+[dir="rtl"] .notes-box ul,
+[dir="rtl"] ul, [dir="rtl"] ol {
+  padding-left: 0; padding-right: 20px;
+}
+[dir="rtl"] .profile-switch .plist { padding-right: 0; }
+[dir="rtl"] .profile-switch .plist button { text-align: right; }
+[dir="rtl"] .rx-why td { padding: 16px 18px 18px; }
+[dir="rtl"] .rx-table th, [dir="rtl"] .rx-table td,
+[dir="rtl"] table.ex-table th, [dir="rtl"] table.ex-table td,
+[dir="rtl"] table.log-table th, [dir="rtl"] table.log-table td { text-align: right; }
+
+/* The hero's radial gradients read as a light source; mirror them too. */
+[dir="rtl"] .hero {
+  background:
+    radial-gradient(600px 300px at 85% 0%, var(--accent-soft), transparent 60%),
+    radial-gradient(500px 260px at 10% 10%, rgba(151,117,250,.10), transparent 60%);
+}
+
+/* ---------- Focus visibility ----------
+   The theme relied on the browser default, which is nearly invisible on a dark
+   background. Keyboard users need to be able to see where they are. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.day-btn:focus-visible, .chip:focus-visible, .seg button:focus-visible,
+.readiness-scale button:focus-visible { outline-offset: 1px; }
+
+/* ---------- Reduced motion ----------
+   Respect the OS setting: the hover zoom, the modal pop and the rest-bar
+   sweep are decoration, not information. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ex-card:hover { transform: none; }
+  .ex-card:hover .ex-media .ex-photo { transform: none; }
+}
+
+/* ---------- Print ----------
+   People do print their program and take it to the gym. */
+@media print {
+  .nav, footer, .toast-host, .rest-bar, .day-picker, .filters,
+  .btn, .lang-switch, .skip-link { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card, .session-card, .day-card, .coach-card, .chart-card {
+    border-color: #ccc; background: #fff; break-inside: avoid;
+  }
+  a { color: #000; text-decoration: none; }
+}

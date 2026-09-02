@@ -20,13 +20,13 @@ const UI = (function () {
   /* ---------------- Page chrome ---------------- */
 
   const NAV = [
-    { href: "index.html",     label: "Home" },
-    { href: "program.html",   label: "Program" },
-    { href: "workout.html",   label: "Workout" },
-    { href: "coach.html",     label: "Coach" },
-    { href: "progress.html",  label: "Progress" },
-    { href: "exercises.html", label: "Exercises" },
-    { href: "profile.html",   label: "Profile" },
+    { href: "index.html",     key: "nav.home" },
+    { href: "program.html",   key: "nav.program" },
+    { href: "workout.html",   key: "nav.workout" },
+    { href: "coach.html",     key: "nav.coach" },
+    { href: "progress.html",  key: "nav.progress" },
+    { href: "exercises.html", key: "nav.exercises" },
+    { href: "profile.html",   key: "nav.profile" },
   ];
 
   const LOGO = `<svg class="mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
@@ -39,19 +39,27 @@ const UI = (function () {
     const profile = Store.getActiveProfile();
     const phase = profile ? Periodization.phaseFor(profile) : null;
 
+    const other = I18n.languages().find(l => l.id !== I18n.lang());
+
     const nav = document.createElement("nav");
     nav.className = "nav";
     nav.innerHTML = `
+      <a href="#main" class="skip-link">${esc(I18n.t("nav.skipToContent"))}</a>
       <div class="wrap">
         <a href="index.html" class="brand">${LOGO}<span>GymBuddy<b class="ver">2.0</b></span></a>
-        <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
-        <ul class="nav-links">
-          ${NAV.map(n => `<li><a href="${n.href}" class="${n.href === current ? "active" : ""}">${n.label}</a></li>`).join("")}
+        <button class="nav-toggle" aria-label="${esc(I18n.t("nav.menu"))}" aria-expanded="false"
+                aria-controls="navLinks">☰</button>
+        <ul class="nav-links" id="navLinks">
+          ${NAV.map(n => `<li><a href="${n.href}" class="${n.href === current ? "active" : ""}"
+              ${n.href === current ? 'aria-current="page"' : ""}>${esc(I18n.t(n.key))}</a></li>`).join("")}
         </ul>
-        ${profile ? `<a href="profile.html" class="nav-user" title="${esc(profile.name)} — ${esc(phase.label)}">
-            <span class="nav-avatar">${esc(profile.name.trim().charAt(0).toUpperCase() || "?")}</span>
+        <button class="lang-switch" id="langSwitch" lang="${other.id}"
+                title="${esc(I18n.t("nav.switchTo", { lang: other.nativeName }))}"
+                aria-label="${esc(I18n.t("nav.switchTo", { lang: other.nativeName }))}">${esc(other.nativeName)}</button>
+        ${profile ? `<a href="profile.html" class="nav-user">
+            <span class="nav-avatar" aria-hidden="true">${esc(profile.name.trim().charAt(0).toUpperCase() || "?")}</span>
             <span class="nav-user-meta"><b>${esc(profile.name)}</b><span>${esc(phase.label)}</span></span>
-          </a>` : `<a href="profile.html" class="btn btn-primary btn-sm">Create profile</a>`}
+          </a>` : `<a href="profile.html" class="btn btn-primary btn-sm">${esc(I18n.t("nav.createProfile"))}</a>`}
       </div>`;
     document.body.prepend(nav);
 
@@ -62,13 +70,51 @@ const UI = (function () {
       toggle.setAttribute("aria-expanded", String(open));
     });
 
+    nav.querySelector("#langSwitch").addEventListener("click", () => {
+      I18n.setLang(other.id);
+      // A full reload is the honest way to re-render every page: the layout
+      // direction flips, canvases must be repainted, and half the strings live
+      // inside already-rendered markup.
+      location.reload();
+    });
+
     if (!document.querySelector("body > footer")) {
       const footer = document.createElement("footer");
       footer.innerHTML = `<div class="wrap">
-        <span>GymBuddy 2.0 — adaptive coaching built on your Fitness Time training plan.</span>
-        <span>All data stays in this browser. Photos &amp; animations: free-exercise-db (public domain).</span>
+        <span>${esc(I18n.t("footer.tagline"))}</span>
+        <span>${esc(I18n.t("footer.privacy"))}</span>
       </div>`;
       document.body.appendChild(footer);
+    }
+    applyStaticStrings();
+  }
+
+  /**
+   * Translate static markup in place.
+   *
+   * The page shells carry their own headings and hints, and rebuilding all of
+   * that from JavaScript would mean an empty page for anyone whose scripts are
+   * slow. Instead the markup carries `data-i18n` attributes and this fills them
+   * in — the English in the HTML stays as a readable fallback.
+   */
+  function applyStaticStrings(root) {
+    const scope = root || document;
+    scope.querySelectorAll("[data-i18n]").forEach(el => {
+      el.textContent = I18n.t(el.getAttribute("data-i18n"));
+    });
+    // Only for strings that legitimately contain inline markup (<b>, <br>).
+    scope.querySelectorAll("[data-i18n-html]").forEach(el => {
+      el.innerHTML = I18n.t(el.getAttribute("data-i18n-html"));
+    });
+    scope.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+      el.setAttribute("placeholder", I18n.t(el.getAttribute("data-i18n-placeholder")));
+    });
+    scope.querySelectorAll("[data-i18n-aria]").forEach(el => {
+      el.setAttribute("aria-label", I18n.t(el.getAttribute("data-i18n-aria")));
+    });
+    if (!root) {
+      const title = document.querySelector("title[data-i18n]");
+      if (title) document.title = title.textContent;
     }
   }
 
@@ -96,11 +142,10 @@ const UI = (function () {
     if (el) {
       el.innerHTML = `
         <div class="gate">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <h2>Create a profile first</h2>
-          <p>${esc(what || "This page needs to know your bodyweight, goal and training days before it can coach you.")}
-             It takes about twenty seconds and nothing leaves your browser.</p>
-          <a href="profile.html" class="btn btn-primary">Set up your profile</a>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <h2>${esc(I18n.t("gate.title"))}</h2>
+          <p>${esc(I18n.t("gate.body", { reason: I18n.t(`gate.${what || "program"}`) }))}</p>
+          <a href="profile.html" class="btn btn-primary">${esc(I18n.t("gate.cta"))}</a>
         </div>`;
     }
     return null;
@@ -127,14 +172,33 @@ const UI = (function () {
     const options = opts || {};
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay open";
-    overlay.innerHTML = `<div class="modal ${options.wide ? "wide" : ""}">
-      <button class="modal-close" aria-label="Close">&times;</button>${html}</div>`;
+    overlay.innerHTML = `<div class="modal ${options.wide ? "wide" : ""}" role="dialog" aria-modal="true">
+      <button class="modal-close" aria-label="${esc(I18n.t("common.close"))}">&times;</button>${html}</div>`;
     document.body.appendChild(overlay);
-    const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
-    const onKey = e => { if (e.key === "Escape") close(); };
+    applyStaticStrings(overlay);
+    const previouslyFocused = document.activeElement;
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey);
+      if (previouslyFocused && previouslyFocused.focus) previouslyFocused.focus();
+    };
+    const onKey = e => {
+      if (e.key === "Escape") { close(); return; }
+      if (e.key !== "Tab") return;
+      // Keep Tab inside the dialog — otherwise focus wanders onto the page
+      // behind it, which for a screen-reader user means the dialog vanishes.
+      const focusable = overlay.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
     overlay.querySelector(".modal-close").addEventListener("click", close);
     overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
     document.addEventListener("keydown", onKey);
+    const firstField = overlay.querySelector("input, select, textarea, button:not(.modal-close), a[href]");
+    (firstField || overlay.querySelector(".modal-close")).focus();
     return { el: overlay, close };
   }
 
@@ -142,52 +206,53 @@ const UI = (function () {
 
   const fmt = {
     load(weight, exercise) { return Progression.fmtLoad(weight, exercise); },
-    kg(n) { return `${Math.round(n * 10) / 10} kg`; },
-    signed(n, unit) { const r = Math.round(n * 10) / 10; return `${r > 0 ? "+" : ""}${r}${unit || ""}`; },
-    date(iso) {
-      const d = new Date(iso);
-      return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    num(n) { return I18n.num(n); },
+    kg(n) { return I18n.t("engine.prog.loadKg", { n: I18n.num(Math.round(n * 10) / 10) }); },
+    signed(n, unit) {
+      const r = Math.round(n * 10) / 10;
+      return `${r > 0 ? "+" : ""}${I18n.num(r)}${unit || ""}`;
     },
+    date(iso) { return I18n.date(iso); },
     relDate(iso) {
       const days = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
-      if (days <= 0) return "today";
-      if (days === 1) return "yesterday";
-      if (days < 7) return `${days} days ago`;
-      if (days < 14) return "last week";
-      return `${Math.round(days / 7)} weeks ago`;
+      if (days <= 0) return I18n.t("time.today");
+      if (days === 1) return I18n.t("time.yesterday");
+      if (days < 7) return I18n.t("time.daysAgo", { count: days });
+      if (days < 14) return I18n.t("time.lastWeek");
+      return I18n.t("time.weeksAgo", { count: Math.round(days / 7) });
     },
     clock(sec) {
       const s = Math.max(0, Math.round(sec));
-      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      // Always LTR: a clock read right-to-left is a different time.
+      return `${I18n.num(Math.floor(s / 60))}:${String(s % 60).padStart(2, "0")}`;
     },
     tonnage(kg) {
-      return kg >= 1000 ? `${(kg / 1000).toFixed(1)} t` : `${Math.round(kg)} kg`;
+      return kg >= 1000
+        ? `${I18n.num(Math.round(kg / 100) / 10)} ${I18n.t("common.tonnes")}`
+        : I18n.t("engine.prog.loadKg", { n: I18n.num(Math.round(kg)) });
     },
   };
 
+  /** Render an engine message object (or a plain string) and escape it. */
+  function tx(message) { return esc(I18n.tx(message)); }
+  /** Translate a key and escape it — the common case in page templates. */
+  function t(key, params) { return esc(I18n.t(key, params)); }
+
   /** Small coloured pill describing what the engine decided. */
   function actionBadge(action) {
-    const map = {
-      increase:    { text: "Load up",    cls: "good" },
-      add_reps:    { text: "Add a rep",  cls: "good" },
-      hold:        { text: "Repeat",     cls: "neutral" },
-      reduce:      { text: "Back off",   cls: "warn" },
-      deload:      { text: "Deload",     cls: "warn" },
-      stall_break: { text: "Stall break",cls: "warn" },
-      calibrate:   { text: "Calibrate",  cls: "info" },
-    };
-    const m = map[action] || map.hold;
-    return `<span class="pill ${m.cls}">${m.text}</span>`;
+    const tone = (Progression.ACTIONS[action] || {}).tone || "neutral";
+    return `<span class="pill ${tone}">${t(`action.${action}`)}</span>`;
   }
 
   function exerciseThumb(exId, cls) {
     const ex = exerciseById(exId);
     if (!ex) return "";
     if (ex.hasMedia === false) {
-      return `<span class="thumb diagram ${cls || ""}" style="--accent-cat:${MUSCLE_COLORS[ex.muscle]}">${ICONS[ex.icon] || ""}</span>`;
+      return `<span class="thumb diagram ${cls || ""}" aria-hidden="true"
+                style="--accent-cat:${MUSCLE_COLORS[ex.muscle]}">${ICONS[ex.icon] || ""}</span>`;
     }
-    return `<img class="thumb ${cls || ""}" src="${photoFor(ex.id)}" alt="" loading="lazy"
-              data-photo="${photoFor(ex.id)}" data-gif="${gifFor(ex.id)}"
+    return `<img class="thumb ${cls || ""}" src="${photoFor(ex.id)}" alt="" loading="lazy" decoding="async"
+              width="52" height="40" data-photo="${photoFor(ex.id)}" data-gif="${gifFor(ex.id)}"
               onerror="this.classList.add('broken')">`;
   }
 
@@ -233,7 +298,7 @@ const UI = (function () {
 
     if (!series || series.length < 2) {
       ctx.fillStyle = dim; ctx.font = "13px system-ui, sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(o.emptyText || "Not enough data yet — log a couple more sessions.", w / 2, h / 2);
+      ctx.fillText(o.emptyText || I18n.t("progress.notEnough"), w / 2, h / 2);
       ctx.textAlign = "left";
       return;
     }
@@ -254,7 +319,7 @@ const UI = (function () {
       const v = max - (i / 3) * (max - min);
       const gy = Math.round(y(v)) + 0.5;
       ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(w - padR, gy); ctx.stroke();
-      ctx.fillText(`${Math.round(v * 10) / 10}`, padL - 8, gy + 4);
+      ctx.fillText(I18n.num(Math.round(v * 10) / 10), padL - 8, gy + 4);
     }
 
     // Area fill
@@ -313,15 +378,15 @@ const UI = (function () {
       const scale = Math.max(r.landmarks.mrv * 1.15, r.sets * 1.05, 1);
       const pct = v => Math.min(100, (v / scale) * 100);
       return `
-        <div class="vol-row" title="${esc(r.message)}">
-          <div class="vol-label">${esc(r.label)}</div>
+        <div class="vol-row" title="${tx(r.message)}">
+          <div class="vol-label">${esc(muscleLabel(r.muscle))}</div>
           <div class="vol-track">
             <span class="vol-zone mev" style="left:${pct(r.landmarks.mev)}%; width:${pct(r.landmarks.mav) - pct(r.landmarks.mev)}%"></span>
             <span class="vol-mark" style="left:${pct(r.landmarks.mrv)}%" title="Maximum recoverable volume"></span>
             <i class="vol-fill status-${r.status}" style="width:${pct(r.sets)}%"></i>
           </div>
-          <div class="vol-val">${r.sets}<span>sets</span></div>
-          <div class="vol-status status-${r.status}">${r.status}</div>
+          <div class="vol-val">${I18n.num(r.sets)}<span>${t("common.sets")}</span></div>
+          <div class="vol-status status-${r.status}">${t(`volumeStatus.${r.status}`)}</div>
         </div>`;
     }).join("");
   }
@@ -364,10 +429,14 @@ const UI = (function () {
   }
 
   return {
-    esc, mountChrome, refreshChrome, requireProfile, toast, modal, fmt, actionBadge,
+    esc, t, tx, mountChrome, refreshChrome, applyStaticStrings, requireProfile, toast, modal, fmt, actionBadge,
     exerciseThumb, wireThumbHover, lineChart, volumeBars, prepCanvas, beep, ready, hexA,
   };
 })();
 
 window.GymBuddyUI = UI;
+
+/* Language has to be resolved before the first paint, otherwise the page
+   renders left-to-right and then flips, which looks broken. */
+I18n.detect();
 UI.ready(UI.mountChrome);

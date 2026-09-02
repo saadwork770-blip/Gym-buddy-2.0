@@ -48,16 +48,19 @@ const Adaptation = (function () {
         if (avoidJoint && jointsSpared.includes(avoidJoint)) score += 40;
         if (ex.hasMedia === false) score -= 5;
         const sparesJoint = avoidJoint && jointsSpared.includes(avoidJoint);
-        let why;
-        if (sparesJoint && samePattern) {
-          why = `Same ${PATTERNS[source.pattern].toLowerCase()} work, but it does not load your ${avoidJoint.replace("_", " ")}.`;
-        } else if (sparesJoint) {
-          why = `A ${PATTERNS[ex.pattern].toLowerCase()} movement rather than a ${PATTERNS[source.pattern].toLowerCase()} one, so it still trains ${MUSCLE_LABELS[ex.muscle] || ex.muscle} with nothing going through your ${avoidJoint.replace("_", " ")}.`;
-        } else if (samePattern) {
-          why = `Direct like-for-like: same ${PATTERNS[source.pattern].toLowerCase()} work on ${(LOAD_TYPES[ex.loadType] || {}).label || "different equipment"} instead of ${(LOAD_TYPES[source.loadType] || {}).label || "the original"}.`;
-        } else {
-          why = `A ${PATTERNS[ex.pattern].toLowerCase()} movement instead, but it trains ${MUSCLE_LABELS[ex.muscle] || ex.muscle} the same way — a reasonable stand-in when the pattern itself is what is bothering you.`;
-        }
+        const why = sparesJoint && samePattern
+          ? I18n.m("engine.adapt.whySparesSame", {
+              pattern: I18n.ref("pattern", source.pattern), joint: I18n.ref("joint", avoidJoint) })
+          : sparesJoint
+          ? I18n.m("engine.adapt.whySparesOther", {
+              newPattern: I18n.ref("pattern", ex.pattern), pattern: I18n.ref("pattern", source.pattern),
+              muscle: I18n.ref("muscle", ex.muscle), joint: I18n.ref("joint", avoidJoint) })
+          : samePattern
+          ? I18n.m("engine.adapt.whySamePattern", {
+              pattern: I18n.ref("pattern", source.pattern),
+              newEquipment: I18n.ref("loadType", ex.loadType), equipment: I18n.ref("loadType", source.loadType) })
+          : I18n.m("engine.adapt.whyOther", {
+              newPattern: I18n.ref("pattern", ex.pattern), muscle: I18n.ref("muscle", ex.muscle) });
         return { exercise: ex, score, why, samePattern, jointsSpared };
       })
       .filter(Boolean)
@@ -114,10 +117,14 @@ const Adaptation = (function () {
           key: `vol-add-${row.muscle}`,
           kind: "volume",
           severity: row.status === "under" ? "warn" : "info",
-          title: `${row.label} is under-trained at ${row.sets} sets/week`,
-          body: `${row.message} Adding one set to ${candidate.exercise.name} on ${DAY_LABELS[candidate.dayKey]} takes ${row.label.toLowerCase()} to about ${Math.round((row.sets + (candidate.exercise.contribution[row.muscle] || 1)) * 10) / 10} sets — into the range where it actually grows.`,
+          title: I18n.m("engine.adapt.volAddTitle", { muscle: I18n.ref("muscle", row.muscle), sets: row.sets }),
+          body: I18n.m("engine.adapt.volAddBody", {
+            message: row.message, exercise: I18n.ref("ex", candidate.exercise.id),
+            day: I18n.ref("day", candidate.dayKey), muscleLower: I18n.ref("muscle", row.muscle),
+            projected: Math.round((row.sets + (candidate.exercise.contribution[row.muscle] || 1)) * 10) / 10,
+          }),
           apply: { type: "set_delta", exerciseId: candidate.exercise.id, delta: +1 },
-          applyLabel: `Add a set of ${candidate.exercise.name}`,
+          applyLabel: I18n.m("engine.adapt.volAddLabel", { exercise: I18n.ref("ex", candidate.exercise.id) }),
         });
       }
 
@@ -128,10 +135,13 @@ const Adaptation = (function () {
           key: `vol-cut-${row.muscle}`,
           kind: "volume",
           severity: "warn",
-          title: `${row.label} volume is above what you can recover from`,
-          body: `${row.message} Cutting one set from ${candidate.exercise.name} on ${DAY_LABELS[candidate.dayKey]} brings it back under the ceiling. More sets past this point buy fatigue, not muscle.`,
+          title: I18n.m("engine.adapt.volCutTitle", { muscle: I18n.ref("muscle", row.muscle) }),
+          body: I18n.m("engine.adapt.volCutBody", {
+            message: row.message, exercise: I18n.ref("ex", candidate.exercise.id),
+            day: I18n.ref("day", candidate.dayKey),
+          }),
           apply: { type: "set_delta", exerciseId: candidate.exercise.id, delta: -1 },
-          applyLabel: `Drop a set of ${candidate.exercise.name}`,
+          applyLabel: I18n.m("engine.adapt.volCutLabel", { exercise: I18n.ref("ex", candidate.exercise.id) }),
         });
       }
     });
@@ -211,10 +221,14 @@ const Adaptation = (function () {
         key: `sched-move-${drop.dayKey}-${add.dayKey}`,
         kind: "schedule",
         severity: "action",
-        title: `Move your ${DAY_LABELS[drop.dayKey]} session to ${DAY_LABELS[add.dayKey]}`,
-        body: `Over the last ${att.weeks} weeks you trained on ${DAY_LABELS[drop.dayKey]} ${drop.sessions} time${drop.sessions === 1 ? "" : "s"}, but turned up on ${DAY_LABELS[add.dayKey]} ${add.sessions} time${add.sessions === 1 ? "" : "s"} without it being scheduled. The plan should follow your week, not the other way round — the coach will re-space the sessions so nothing lands back to back.`,
+        title: I18n.m("engine.adapt.schedMoveTitle", {
+          from: I18n.ref("day", drop.dayKey), to: I18n.ref("day", add.dayKey) }),
+        body: I18n.m("engine.adapt.schedMoveBody", {
+          weeks: att.weeks, from: I18n.ref("day", drop.dayKey), fromCount: drop.sessions,
+          to: I18n.ref("day", add.dayKey), toCount: add.sessions,
+        }),
         apply: { type: "training_days", days: ordered },
-        applyLabel: `Switch to ${ordered.map(d => DAY_SHORT[d]).join(" · ")}`,
+        applyLabel: I18n.m("engine.adapt.schedMoveLabel", { days: { $: "__list", v: ordered, x: "dayShort" } }),
       });
     } else if (weak.length >= 2) {
       const keep = (profile.settings.trainingDays || []).filter(d => !weak.slice(0, 1).map(x => x.dayKey).includes(d));
@@ -222,10 +236,13 @@ const Adaptation = (function () {
         key: `sched-reduce-${keep.length}`,
         kind: "schedule",
         severity: "info",
-        title: `Consider dropping to ${keep.length} days a week`,
-        body: `You are hitting about ${Math.round(att.plannedRate.reduce((s, d) => s + d.rate, 0) / att.plannedRate.length * 100)}% of your scheduled sessions. ${keep.length} well-attended days beat ${att.plannedRate.length} half-attended ones — the coach will rebuild the split so the same weekly volume fits into fewer, slightly longer sessions.`,
+        title: I18n.m("engine.adapt.schedReduceTitle", { count: keep.length }),
+        body: I18n.m("engine.adapt.schedReduceBody", {
+          pct: Math.round(att.plannedRate.reduce((s, d) => s + d.rate, 0) / att.plannedRate.length * 100),
+          keep: keep.length, planned: att.plannedRate.length,
+        }),
         apply: { type: "training_days", days: keep },
-        applyLabel: `Rebuild for ${keep.length} days`,
+        applyLabel: I18n.m("engine.adapt.schedReduceLabel", { count: keep.length }),
       });
     }
 

@@ -18,35 +18,34 @@ UI.ready(() => {
     root.innerHTML = `
       <div style="max-width:660px;margin:0 auto;">
         <div class="section-head">
-          <div class="kicker">${editing ? "Edit profile" : "New profile"}</div>
-          <h2>${editing ? "Update your details" : "Tell the coach about you"}</h2>
-          <p>Bodyweight, experience and goal are what the engine uses to seed your first working weights and to choose
-          your rep ranges. Nothing here leaves this browser.</p>
+          <div class="kicker">${UI.t(editing ? "profile.formEditKicker" : "profile.formNewKicker")}</div>
+          <h2>${UI.t(editing ? "profile.formEditTitle" : "profile.formNewTitle")}</h2>
+          <p>${UI.t("profile.formIntro")}</p>
         </div>
         <form class="card" id="profileForm">
           <div class="form-grid">
-            <div class="field"><label for="f-name">Name</label>
-              <input id="f-name" required value="${p ? UI.esc(p.name) : ""}" placeholder="e.g. Alex"></div>
-            <div class="field"><label for="f-email">Email (optional)</label>
-              <input id="f-email" type="email" value="${p ? UI.esc(p.email) : ""}" placeholder="you@example.com"></div>
-            <div class="field"><label for="f-age">Age</label>
-              <input id="f-age" type="number" min="12" max="100" required value="${p ? p.age : ""}"></div>
-            <div class="field"><label for="f-sex">Sex</label><select id="f-sex">
-              ${SEXES.map(s => `<option ${p && p.sex === s ? "selected" : ""}>${s}</option>`).join("")}</select>
-              <span class="hint">Only used to scale the first estimated weights.</span></div>
-            <div class="field"><label for="f-height">Height (cm)</label>
-              <input id="f-height" type="number" min="120" max="230" required value="${p ? p.heightCm : ""}"></div>
-            <div class="field"><label for="f-weight">Bodyweight (kg)</label>
-              <input id="f-weight" type="number" min="30" max="300" step="0.1" required value="${p ? p.weightKg : ""}"></div>
-            <div class="field"><label for="f-goal">Goal</label><select id="f-goal">
-              ${GOALS.map(g => `<option ${p && p.goal === g ? "selected" : ""}>${g}</option>`).join("")}</select></div>
-            <div class="field"><label for="f-level">Experience</label><select id="f-level">
-              ${LEVELS.map(l => `<option ${p && p.level === l ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+            <div class="field"><label for="f-name">${UI.t("profile.fName")}</label>
+              <input id="f-name" required value="${p ? UI.esc(p.name) : ""}" placeholder="${UI.t("profile.namePlaceholder")}"></div>
+            <div class="field"><label for="f-email">${UI.t("profile.fEmail")}</label>
+              <input id="f-email" type="email" dir="ltr" value="${p ? UI.esc(p.email) : ""}" placeholder="you@example.com"></div>
+            <div class="field"><label for="f-age">${UI.t("profile.fAge")}</label>
+              <input id="f-age" type="number" min="12" max="100" required dir="ltr" value="${p ? p.age : ""}"></div>
+            <div class="field"><label for="f-sex">${UI.t("profile.fSex")}</label><select id="f-sex">
+              ${SEXES.map(x => `<option value="${UI.esc(x)}" ${p && p.sex === x ? "selected" : ""}>${UI.esc(sexLabel(x))}</option>`).join("")}</select>
+              <span class="hint">${UI.t("profile.fSexHint")}</span></div>
+            <div class="field"><label for="f-height">${UI.t("profile.fHeight")}</label>
+              <input id="f-height" type="number" min="120" max="230" required dir="ltr" value="${p ? p.heightCm : ""}"></div>
+            <div class="field"><label for="f-weight">${UI.t("profile.fWeight")}</label>
+              <input id="f-weight" type="number" min="30" max="300" step="0.1" required dir="ltr" value="${p ? p.weightKg : ""}"></div>
+            <div class="field"><label for="f-goal">${UI.t("profile.fGoal")}</label><select id="f-goal">
+              ${GOALS.map(g => `<option value="${UI.esc(g)}" ${p && p.goal === g ? "selected" : ""}>${UI.esc(goalLabel(g))}</option>`).join("")}</select></div>
+            <div class="field"><label for="f-level">${UI.t("profile.fLevel")}</label><select id="f-level">
+              ${LEVELS.map(l => `<option value="${UI.esc(l)}" ${p && p.level === l ? "selected" : ""}>${UI.esc(levelLabel(l))}</option>`).join("")}</select></div>
           </div>
           <div id="goalNote" class="split-note" style="margin:18px 0 0;"></div>
           <div class="form-actions">
-            <button type="submit" class="btn btn-primary">${editing ? "Save changes" : "Create profile"}</button>
-            ${editing || Store.listProfiles().length ? `<button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>` : ""}
+            <button type="submit" class="btn btn-primary">${UI.t(editing ? "profile.saveChanges" : "profile.create")}</button>
+            ${editing || Store.listProfiles().length ? `<button type="button" class="btn btn-ghost" id="cancelBtn">${UI.t("common.cancel")}</button>` : ""}
           </div>
         </form>
       </div>`;
@@ -54,9 +53,11 @@ UI.ready(() => {
     const goalSel = document.getElementById("f-goal");
     const noteGoal = () => {
       const g = GOAL_PROFILES[goalSel.value];
-      document.getElementById("goalNote").innerHTML =
-        `<b>${UI.esc(goalSel.value)}:</b> ${UI.esc(g.note)} Compounds run ${g.repRange.compound[0]}–${g.repRange.compound[1]} reps,
-         isolation ${g.repRange.isolation[0]}–${g.repRange.isolation[1]}.`;
+      document.getElementById("goalNote").textContent = I18n.t("profile.goalNote", {
+        goal: goalLabel(goalSel.value), note: goalNote(goalSel.value),
+        cLo: g.repRange.compound[0], cHi: g.repRange.compound[1],
+        iLo: g.repRange.isolation[0], iHi: g.repRange.isolation[1],
+      });
     };
     goalSel.addEventListener("change", noteGoal); noteGoal();
 
@@ -79,11 +80,11 @@ UI.ready(() => {
         const active = Store.getActiveProfile();
         Store.updateProfile(active.id, data);
         Store.regeneratePlan(active.id);
-        UI.toast("Profile updated — your plan has been rebuilt.");
+        UI.toast(I18n.t("profile.updated"));
         UI.refreshChrome();
       } else {
         Store.createProfile(data);
-        UI.toast("Profile created. Next: pick your training days on the Program page.");
+        UI.toast(I18n.t("profile.created"));
         UI.refreshChrome();
       }
       mode = null; render();
@@ -100,10 +101,15 @@ UI.ready(() => {
 
     root.innerHTML = `
       <div class="section-head">
-        <div class="kicker">Profile &amp; settings</div>
+        <div class="kicker">${UI.t("profile.kicker")}</div>
         <h2>${UI.esc(p.name)}</h2>
-        <p>${UI.esc(p.goal)} · ${UI.esc(p.level.toLowerCase())} · ${UI.esc(phase.label)} ·
-          ${plan.empty ? "no training days picked yet" : `${UI.esc(plan.splitName)} on ${(p.settings.trainingDays || []).map(d => DAY_SHORT[d]).join(" · ")}`}</p>
+        <p>${UI.t("profile.headerMeta", {
+          goal: goalLabel(p.goal), level: levelLabel(p.level), phase: phase.label,
+          plan: plan.empty ? I18n.t("profile.headerNoPlan")
+            : I18n.t("profile.headerPlan", {
+                split: splitName(plan.splitId),
+                days: (p.settings.trainingDays || []).map(d => dayShort(d)).join(" · ") }),
+        })}</p>
       </div>
       <div class="profile-shell">
         <div>
@@ -111,48 +117,48 @@ UI.ready(() => {
             <div class="avatar">${UI.esc(p.name.trim().charAt(0).toUpperCase() || "?")}</div>
             <div class="name">${UI.esc(p.name)}</div>
             <div class="meta">${UI.esc(p.goal)} · ${UI.esc(p.level)}</div>
-            <button class="btn btn-ghost btn-sm" id="editBtn" style="width:100%;">Edit details</button>
-            <button class="btn btn-danger btn-sm" id="deleteBtn" style="width:100%;margin-top:8px;">Delete profile</button>
+            <button class="btn btn-ghost btn-sm" id="editBtn" style="width:100%;">${UI.t("profile.edit")}</button>
+            <button class="btn btn-danger btn-sm" id="deleteBtn" style="width:100%;margin-top:8px;">${UI.t("profile.del")}</button>
             <div class="profile-switch">
-              <div class="hint" style="margin-bottom:8px;">Local profiles on this device</div>
+              <div class="hint" style="margin-bottom:8px;">${UI.t("profile.localProfiles")}</div>
               <ul class="plist" id="profileList"></ul>
-              <button class="btn btn-ghost btn-sm" id="newProfileBtn" style="width:100%;">+ New profile</button>
+              <button class="btn btn-ghost btn-sm" id="newProfileBtn" style="width:100%;">${UI.t("profile.newProfile")}</button>
             </div>
           </div>
           <div class="card">
-            <h4 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin:0 0 12px;">Backup</h4>
-            <p class="hint" style="margin-bottom:12px;">Your log lives only in this browser. Export it before clearing
-            site data or moving to another device.</p>
-            <button class="btn btn-ghost btn-sm" id="exportBtn" style="width:100%;">Export as JSON</button>
+            <h3 style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin:0 0 12px;">${UI.t("profile.backup")}</h3>
+            <p class="hint" style="margin-bottom:12px;">${UI.t("profile.backupHint")}</p>
+            <button class="btn btn-ghost btn-sm" id="exportBtn" style="width:100%;">${UI.t("profile.export")}</button>
             <label class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px;cursor:pointer;">
-              Import a backup<input type="file" id="importInput" accept="application/json" hidden></label>
+              ${UI.t("profile.import")}<input type="file" id="importInput" accept="application/json" hidden></label>
           </div>
         </div>
 
         <div>
           <div class="stat-row">
-            <div class="stat-tile"><b>${p.age}</b><span>Age</span></div>
-            <div class="stat-tile"><b>${p.heightCm} cm</b><span>Height</span></div>
-            <div class="stat-tile"><b>${p.weightKg} kg</b><span>Bodyweight</span></div>
-            <div class="stat-tile"><b>${bmiVal}</b><span>BMI (reference only)</span></div>
+            <div class="stat-tile"><b>${I18n.num(p.age)}</b><span>${UI.t("profile.statAge")}</span></div>
+            <div class="stat-tile"><b>${I18n.num(p.heightCm)} cm</b><span>${UI.t("profile.statHeight")}</span></div>
+            <div class="stat-tile"><b>${I18n.num(p.weightKg)} ${UI.t("common.kg")}</b><span>${UI.t("profile.statWeight")}</span></div>
+            <div class="stat-tile"><b>${I18n.num(bmiVal)}</b><span>${UI.t("profile.statBmi")}</span></div>
           </div>
 
-          <div class="tabs">
-            <button class="tab-btn active" data-tab="settings">Training settings</button>
-            <button class="tab-btn" data-tab="weight">Bodyweight log</button>
-            <button class="tab-btn" data-tab="cycle">Mesocycle</button>
+          <div class="tabs" role="tablist">
+            <button class="tab-btn active" data-tab="settings" role="tab" aria-selected="true">${UI.t("profile.tabSettings")}</button>
+            <button class="tab-btn" data-tab="weight" role="tab" aria-selected="false">${UI.t("profile.tabWeight")}</button>
+            <button class="tab-btn" data-tab="cycle" role="tab" aria-selected="false">${UI.t("profile.tabCycle")}</button>
           </div>
 
           <div class="tab-panel active" id="tab-settings"><div class="card" id="settingsPanel"></div></div>
 
           <div class="tab-panel" id="tab-weight"><div class="card">
             <form class="weight-form" id="weightForm">
-              <div class="field"><label for="w-weight">Log today's bodyweight (kg)</label>
-                <input id="w-weight" type="number" min="30" max="300" step="0.1" required></div>
-              <button class="btn btn-primary btn-sm" type="submit">Add entry</button>
+              <div class="field"><label for="w-weight">${UI.t("profile.weightLog")}</label>
+                <input id="w-weight" type="number" min="30" max="300" step="0.1" required dir="ltr"></div>
+              <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
             </form>
-            <canvas class="chart" id="weightChart" data-height="190"></canvas>
-            <table class="log-table"><thead><tr><th>Date</th><th>Weight (kg)</th><th>Change</th></tr></thead>
+            <canvas class="chart" id="weightChart" data-height="190" role="img"
+                    aria-label="${UI.t("progress.weightTitle")}"></canvas>
+            <table class="log-table"><thead><tr><th>${UI.t("profile.colDate")}</th><th>${UI.t("profile.colWeightKg")}</th><th>${UI.t("profile.colChange")}</th></tr></thead>
               <tbody id="weightRows"></tbody></table>
           </div></div>
 
@@ -168,14 +174,16 @@ UI.ready(() => {
     document.getElementById("editBtn").addEventListener("click", () => { mode = "edit"; render(); });
     document.getElementById("newProfileBtn").addEventListener("click", () => { mode = "create"; render(); });
     document.getElementById("deleteBtn").addEventListener("click", () => {
-      if (!confirm(`Delete "${p.name}" and everything logged under it? This cannot be undone.`)) return;
+      if (!confirm(I18n.t("profile.deleteConfirm", { name: p.name }))) return;
       Store.deleteProfile(p.id); location.reload();
     });
 
     document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => {
+        b.classList.remove("active"); b.setAttribute("aria-selected", "false");
+      });
       document.querySelectorAll(".tab-panel").forEach(x => x.classList.remove("active"));
-      btn.classList.add("active");
+      btn.classList.add("active"); btn.setAttribute("aria-selected", "true");
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
       if (btn.dataset.tab === "weight") drawWeight(p);
     }));
@@ -192,81 +200,86 @@ UI.ready(() => {
     const s = p.settings;
     const eq = s.equipment || {};
     const EQ = [
-      { key: "machine",    label: "Selectorised & plate machines" },
-      { key: "cable",      label: "Cable stations" },
-      { key: "dumbbell",   label: "Dumbbells" },
-      { key: "barbell",    label: "Barbells / Smith machine" },
-      { key: "bodyweight", label: "Floor & bodyweight space" },
+      { key: "machine",    label: I18n.t("profile.eqMachine") },
+      { key: "cable",      label: I18n.t("profile.eqCable") },
+      { key: "dumbbell",   label: I18n.t("profile.eqDumbbell") },
+      { key: "barbell",    label: I18n.t("profile.eqBarbell") },
+      { key: "bodyweight", label: I18n.t("profile.eqBodyweight") },
     ];
     const TIMES = [40, 50, 60, 75, 90];
-    const cardioOpts = [{ id: "rotate", name: "Rotate low-impact options" }, ...cardioExercises().map(c => ({ id: c.id, name: c.name }))];
-    const splitOpts = [{ id: "", name: "Let the coach choose (recommended)" },
-      ...Object.values(SPLITS).map(x => ({ id: x.id, name: `${x.name} (${x.days} ${x.days === 1 ? "day" : "days"})` }))];
+    const cardioOpts = [{ id: "rotate", name: I18n.t("profile.cardioRotate") },
+      ...cardioExercises().map(c => ({ id: c.id, name: exName(c.id) }))];
+    const splitOpts = [{ id: "", name: I18n.t("profile.splitAuto") },
+      ...Object.values(SPLITS).map(x => ({
+        id: x.id,
+        name: I18n.t("profile.splitOption", {
+          name: splitName(x.id), days: I18n.t("common.daysCount", { count: x.days }) }),
+      }))];
 
     document.getElementById("settingsPanel").innerHTML = `
       <div class="settings-group">
-        <h3>Training days</h3>
-        <p class="hint">Currently <b>${(s.trainingDays || []).map(d => DAY_SHORT[d]).join(" · ") || "none"}</b> —
-          ${UI.esc(plan.empty ? "no plan yet" : plan.splitName)}. Change them on the Program page, where you can see
-          the split rebuild as you pick.</p>
-        <a href="program.html" class="btn btn-ghost btn-sm">Open the day picker</a>
+        <h3>${UI.t("profile.setDays")}</h3>
+        <p class="hint">${UI.t("profile.setDaysHint", {
+          days: (s.trainingDays || []).map(d => dayShort(d)).join(" · ") || I18n.t("common.none"),
+          split: plan.empty ? I18n.t("profile.setDaysNoPlan") : splitName(plan.splitId) })}</p>
+        <a href="program.html" class="btn btn-ghost btn-sm">${UI.t("profile.openPicker")}</a>
       </div>
 
       <div class="settings-group">
-        <h3>Time per session</h3>
-        <p class="hint">Lifting time, not counting the cardio finisher. Sessions longer than this get trimmed — the
-        main compounds are kept and the finishers go first.</p>
-        <div class="seg" id="timeSeg">
-          ${TIMES.map(t => `<button data-min="${t}" class="${s.sessionMinutes === t ? "on" : ""}">${t} min</button>`).join("")}
+        <h3>${UI.t("profile.setTime")}</h3>
+        <p class="hint">${UI.t("profile.setTimeHint")}</p>
+        <div class="seg" id="timeSeg" role="group" aria-label="${UI.t("profile.setTime")}">
+          ${TIMES.map(t => `<button data-min="${t}" class="${s.sessionMinutes === t ? "on" : ""}"
+            aria-pressed="${s.sessionMinutes === t}">${UI.t("profile.setTimeOption", { n: t })}</button>`).join("")}
         </div>
       </div>
 
       <div class="settings-group">
-        <h3>Equipment at your gym</h3>
-        <p class="hint">Turn anything off and the coach substitutes around it, telling you what it changed and why.</p>
+        <h3>${UI.t("profile.setEquipment")}</h3>
+        <p class="hint">${UI.t("profile.setEquipmentHint")}</p>
         <div class="toggle-grid">
           ${EQ.map(e => `<label class="toggle ${eq[e.key] !== false ? "on" : ""}">
-            <input type="checkbox" data-eq="${e.key}" ${eq[e.key] !== false ? "checked" : ""}> ${e.label}</label>`).join("")}
+            <input type="checkbox" data-eq="${e.key}" ${eq[e.key] !== false ? "checked" : ""}> ${UI.esc(e.label)}</label>`).join("")}
         </div>
       </div>
 
       <div class="settings-group">
-        <h3>Cardio</h3>
+        <h3>${UI.t("profile.setCardio")}</h3>
         <div class="form-grid">
-          <div class="field"><label>Preferred machine</label>
+          <div class="field"><label for="cardioPref">${UI.t("profile.cardioPref")}</label>
             <select id="cardioPref">${cardioOpts.map(c =>
               `<option value="${c.id}" ${s.cardioPreference === c.id ? "selected" : ""}>${UI.esc(c.name)}</option>`).join("")}</select></div>
-          <div class="field"><label>On rest days</label>
+          <div class="field"><label for="cardioRest">${UI.t("profile.cardioRest")}</label>
             <select id="cardioRest">
-              <option value="yes" ${s.cardioOnRestDays !== false ? "selected" : ""}>Suggest optional easy cardio</option>
-              <option value="no" ${s.cardioOnRestDays === false ? "selected" : ""}>Full rest, no suggestion</option>
+              <option value="yes" ${s.cardioOnRestDays !== false ? "selected" : ""}>${UI.t("profile.cardioRestYes")}</option>
+              <option value="no" ${s.cardioOnRestDays === false ? "selected" : ""}>${UI.t("profile.cardioRestNo")}</option>
             </select></div>
         </div>
       </div>
 
       <div class="settings-group">
-        <h3>Split override</h3>
-        <p class="hint">The coach picks a split from your day count, experience and goal. Override it only if you have
-        a reason — the automatic choice is based on how many times a week each muscle ends up being trained.</p>
-        <div class="field" style="max-width:360px;"><select id="splitOverride">
+        <h3>${UI.t("profile.setSplit")}</h3>
+        <p class="hint">${UI.t("profile.setSplitHint")}</p>
+        <div class="field" style="max-width:360px;">
+          <label for="splitOverride" class="hint">${UI.t("profile.setSplit")}</label>
+          <select id="splitOverride">
           ${splitOpts.map(o => `<option value="${o.id}" ${(s.splitOverride || "") === o.id ? "selected" : ""}>${UI.esc(o.name)}</option>`).join("")}
         </select></div>
       </div>
 
       <div class="settings-group" style="margin-bottom:0;">
-        <h3>Weight increments</h3>
-        <p class="hint">The smallest jump available on each piece of equipment at your gym. Every load the coach
-        prescribes is rounded to these, so getting them right matters more than it looks.</p>
+        <h3>${UI.t("profile.setIncrements")}</h3>
+        <p class="hint">${UI.t("profile.setIncrementsHint")}</p>
         <div class="form-grid">
           ${["machine_stack", "cable_stack", "dumbbell", "barbell", "plate_loaded"].map(k => `
-            <div class="field"><label>${UI.esc(LOAD_TYPES[k].label)}</label>
-              <input type="number" step="0.5" min="0.5" data-inc="${k}"
+            <div class="field"><label for="inc-${k}">${UI.esc(loadTypeLabel(k))}</label>
+              <input id="inc-${k}" type="number" step="0.5" min="0.5" dir="ltr" data-inc="${k}"
                 value="${(s.increments || {})[k] || LOAD_TYPES[k].increment}"></div>`).join("")}
         </div>
       </div>`;
 
     const panel = document.getElementById("settingsPanel");
-    const save = patch => { Store.updateSettings(p.id, patch); UI.toast("Saved — plan rebuilt."); };
+    const save = patch => { Store.updateSettings(p.id, patch); UI.toast(I18n.t("profile.settingsSaved")); };
 
     panel.querySelectorAll("#timeSeg button").forEach(btn => btn.addEventListener("click", () => {
       save({ sessionMinutes: Number(btn.dataset.min) });
@@ -276,7 +289,7 @@ UI.ready(() => {
       const next = {};
       panel.querySelectorAll("[data-eq]").forEach(x => { next[x.dataset.eq] = x.checked; });
       if (!Object.values(next).some(Boolean)) {
-        UI.toast("You need at least one kind of equipment available.", "warn");
+        UI.toast(I18n.t("profile.eqNeedOne"), "warn");
         cb.checked = true; return;
       }
       cb.closest(".toggle").classList.toggle("on", cb.checked);
@@ -296,35 +309,34 @@ UI.ready(() => {
 
   function renderCycle(p, phase) {
     document.getElementById("cyclePanel").innerHTML = `
-      <p>Your training runs in blocks: loading weeks that ramp volume and effort, then a planned deload that clears
-      the fatigue before it turns into a stall. You are in <b style="color:var(--accent)">${UI.esc(phase.label)}</b>,
-      cycle ${phase.cycle}.</p>
+      <p>${UI.t("profile.cycleIntro", { phase: phase.label, cycle: phase.cycle })}</p>
       <div class="phase-strip" style="margin:18px 0;">
         ${Periodization.cycleOutline(p).map(w => `
           <div class="phase-week ${w.current ? "current" : ""} ${w.type === "deload" ? "deload" : ""}">
-            <b>Week ${w.week}</b><span>${UI.esc(w.label)}</span></div>`).join("")}
+            <b>${UI.t("profile.phaseWeek", { n: w.week })}</b><span>${UI.esc(w.label)}</span></div>`).join("")}
       </div>
       <p class="hint">${UI.esc(phase.detail)}</p>
       <div class="settings-group" style="margin:22px 0 0;">
-        <h3>Block length</h3>
-        <p class="hint">Including the deload. Four weeks suits most people; three is better if you recover slowly.</p>
-        <div class="seg" id="mesoSeg">
-          ${[3, 4, 5, 6].map(w => `<button data-weeks="${w}" class="${(p.meso.weeks || 4) === w ? "on" : ""}">${w} weeks</button>`).join("")}
+        <h3>${UI.t("profile.cycleLength")}</h3>
+        <p class="hint">${UI.t("profile.cycleLengthHint")}</p>
+        <div class="seg" id="mesoSeg" role="group" aria-label="${UI.t("profile.cycleLength")}">
+          ${[3, 4, 5, 6].map(w => `<button data-weeks="${w}" class="${(p.meso.weeks || 4) === w ? "on" : ""}"
+            aria-pressed="${(p.meso.weeks || 4) === w}">${UI.t("profile.cycleWeeks", { n: w })}</button>`).join("")}
         </div>
         <div class="inline-actions">
-          <button class="btn btn-ghost btn-sm" id="restartCycle">Restart the block from this week</button>
+          <button class="btn btn-ghost btn-sm" id="restartCycle">${UI.t("profile.cycleRestart")}</button>
         </div>
       </div>`;
 
     document.querySelectorAll("#mesoSeg button").forEach(btn => btn.addEventListener("click", () => {
       Store.startNewCycle(p.id, Number(btn.dataset.weeks));
-      UI.toast(`New ${btn.dataset.weeks}-week block started from this week.`);
+      UI.toast(I18n.t("profile.cycleStarted", { weeks: btn.dataset.weeks }));
       UI.refreshChrome();
       render();
     }));
     document.getElementById("restartCycle").addEventListener("click", () => {
       Store.startNewCycle(p.id, p.meso.weeks);
-      UI.toast("Block restarted — you are back in week 1.");
+      UI.toast(I18n.t("profile.cycleRestarted"));
       render();
     });
   }
@@ -337,18 +349,18 @@ UI.ready(() => {
       ? log.slice().reverse().map((w, i, arr) => {
           const prev = arr[i + 1];
           const d = prev ? w.weightKg - prev.weightKg : null;
-          return `<tr><td>${UI.esc(w.date)}</td><td class="tnum">${w.weightKg}</td>
+          return `<tr><td>${UI.esc(UI.fmt.date(w.date))}</td><td class="tnum">${I18n.num(w.weightKg)}</td>
             <td class="tnum" style="color:${d == null ? "var(--text-faint)" : d < 0 ? "var(--good)" : "var(--warn)"}">${
-              d == null ? "—" : UI.fmt.signed(d, " kg")}</td></tr>`;
+              d == null ? "—" : UI.esc(UI.fmt.signed(d, " " + I18n.t("common.kg")))}</td></tr>`;
         }).join("")
-      : `<tr><td colspan="3" class="hint">No entries yet.</td></tr>`;
+      : `<tr><td colspan="3" class="hint">${UI.t("profile.noEntries")}</td></tr>`;
 
     document.getElementById("weightForm").addEventListener("submit", e => {
       e.preventDefault();
       const val = document.getElementById("w-weight").value;
       if (!val) return;
       Store.addWeightEntry(p.id, val);
-      UI.toast("Bodyweight logged.");
+      UI.toast(I18n.t("profile.weightLogged"));
       render();
       document.querySelector('.tab-btn[data-tab="weight"]').click();
     });
@@ -358,7 +370,7 @@ UI.ready(() => {
     const canvas = document.getElementById("weightChart");
     if (!canvas) return;
     UI.lineChart(canvas, (p.weightLog || []).map(w => ({ date: w.date, value: w.weightKg })),
-      { color: "#9775fa", trend: true, emptyText: "Log two or more entries to see the trend." });
+      { color: "#9775fa", trend: true, emptyText: I18n.t("progress.weightEmpty") });
   }
 
   /* ---------------- Backup ---------------- */
@@ -371,7 +383,7 @@ UI.ready(() => {
       a.download = `gymbuddy-${p.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
-      UI.toast("Backup downloaded.");
+      UI.toast(I18n.t("profile.exported"));
     });
 
     document.getElementById("importInput").addEventListener("change", e => {
@@ -381,10 +393,10 @@ UI.ready(() => {
       reader.onload = () => {
         try {
           Store.importProfile(reader.result);
-          UI.toast("Backup imported as a new profile.");
+          UI.toast(I18n.t("profile.imported"));
           location.reload();
         } catch (err) {
-          UI.toast(`Could not import that file: ${err.message}`, "error");
+          UI.toast(I18n.t("profile.importFailed", { error: err.message }), "error");
         }
       };
       reader.readAsText(file);
@@ -397,10 +409,9 @@ UI.ready(() => {
     root.innerHTML = `
       <div class="profile-empty">
         <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <h2>Set up your profile</h2>
-        <p style="max-width:48ch;margin:0 auto 22px;">The coach needs your bodyweight, goal and experience to seed your
-        first working weights and pick your rep ranges. It takes twenty seconds, and everything stays in this browser.</p>
-        <button class="btn btn-primary" id="startBtn">Create profile</button>
+        <h2>${UI.t("profile.emptyTitle")}</h2>
+        <p style="max-width:48ch;margin:0 auto 22px;">${UI.t("profile.emptyBody")}</p>
+        <button class="btn btn-primary" id="startBtn">${UI.t("profile.emptyCta")}</button>
       </div>`;
     document.getElementById("startBtn").addEventListener("click", () => { mode = "create"; render(); });
   }

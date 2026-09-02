@@ -21,7 +21,7 @@
 const SESSION_TEMPLATES = {
   /* ---------------- Upper / Lower ---------------- */
   upper_a: {
-    id: "upper_a", name: "Upper Body A", short: "Upper A", emphasis: "Push-led upper body",
+    id: "upper_a",
     slots: [
       { pattern: "horizontal_push", role: "primary",   prefer: "chest-press-machine" },
       { pattern: "vertical_pull",   role: "primary",   prefer: "lat-pulldown-wide" },
@@ -32,7 +32,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   lower_a: {
-    id: "lower_a", name: "Lower Body A", short: "Lower A", emphasis: "Quad-led lower body",
+    id: "lower_a",
     slots: [
       { pattern: "squat",          role: "primary",   prefer: "leg-press" },
       { pattern: "knee_flexion",   role: "secondary", prefer: "seated-leg-curl" },
@@ -43,7 +43,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   upper_b: {
-    id: "upper_b", name: "Upper Body B", short: "Upper B", emphasis: "Incline & delt-led upper body",
+    id: "upper_b",
     slots: [
       { pattern: "incline_push",  role: "primary",   prefer: "smith-machine-incline-press" },
       { pattern: "vertical_pull", role: "primary",   prefer: "assisted-pull-up-machine" },
@@ -54,7 +54,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   lower_b: {
-    id: "lower_b", name: "Lower Body B", short: "Lower B", emphasis: "Hinge & glute-led lower body",
+    id: "lower_b",
     slots: [
       { pattern: "squat",      role: "primary",   prefer: "hack-squat-machine" },
       { pattern: "hinge",      role: "primary",   prefer: "romanian-deadlift" },
@@ -67,7 +67,7 @@ const SESSION_TEMPLATES = {
 
   /* ---------------- Full body ---------------- */
   full_a: {
-    id: "full_a", name: "Full Body A", short: "Full A", emphasis: "Squat + horizontal push/pull",
+    id: "full_a",
     slots: [
       { pattern: "squat",           role: "primary",   prefer: "leg-press" },
       { pattern: "horizontal_push", role: "primary",   prefer: "chest-press-machine" },
@@ -78,7 +78,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   full_b: {
-    id: "full_b", name: "Full Body B", short: "Full B", emphasis: "Hinge + incline push, horizontal pull",
+    id: "full_b",
     slots: [
       { pattern: "hinge",           role: "primary",   prefer: "romanian-deadlift" },
       { pattern: "incline_push",    role: "primary",   prefer: "smith-machine-incline-press" },
@@ -89,7 +89,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   full_c: {
-    id: "full_c", name: "Full Body C", short: "Full C", emphasis: "Single-leg + overhead press",
+    id: "full_c",
     slots: [
       { pattern: "lunge",         role: "primary",   prefer: "walking-lunges" },
       { pattern: "vertical_push", role: "primary",   prefer: "shoulder-press-machine" },
@@ -102,7 +102,7 @@ const SESSION_TEMPLATES = {
 
   /* ---------------- Push / Pull / Legs ---------------- */
   push_a: {
-    id: "push_a", name: "Push A", short: "Push A", emphasis: "Chest-led press day",
+    id: "push_a",
     slots: [
       { pattern: "horizontal_push", role: "primary",   prefer: "chest-press-machine" },
       { pattern: "vertical_push",   role: "primary",   prefer: "shoulder-press-machine" },
@@ -112,7 +112,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   push_b: {
-    id: "push_b", name: "Push B", short: "Push B", emphasis: "Incline-led press day",
+    id: "push_b",
     slots: [
       { pattern: "incline_push",    role: "primary",   prefer: "smith-machine-incline-press" },
       { pattern: "vertical_push",   role: "primary",   prefer: "seated-db-shoulder-press" },
@@ -122,7 +122,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   pull_a: {
-    id: "pull_a", name: "Pull A", short: "Pull A", emphasis: "Vertical-led pull day",
+    id: "pull_a",
     slots: [
       { pattern: "vertical_pull",   role: "primary",   prefer: "lat-pulldown-wide" },
       { pattern: "horizontal_pull", role: "primary",   prefer: "seated-cable-row" },
@@ -132,7 +132,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   pull_b: {
-    id: "pull_b", name: "Pull B", short: "Pull B", emphasis: "Horizontal-led pull day",
+    id: "pull_b",
     slots: [
       { pattern: "horizontal_pull", role: "primary",   prefer: "machine-chest-supported-row" },
       { pattern: "vertical_pull",   role: "primary",   prefer: "assisted-pull-up-machine" },
@@ -142,7 +142,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   legs_a: {
-    id: "legs_a", name: "Legs A", short: "Legs A", emphasis: "Quad-led leg day",
+    id: "legs_a",
     slots: [
       { pattern: "squat",          role: "primary",   prefer: "leg-press" },
       { pattern: "knee_flexion",   role: "secondary", prefer: "seated-leg-curl" },
@@ -152,7 +152,7 @@ const SESSION_TEMPLATES = {
     ],
   },
   legs_b: {
-    id: "legs_b", name: "Legs B", short: "Legs B", emphasis: "Posterior-chain leg day",
+    id: "legs_b",
     slots: [
       { pattern: "hinge",     role: "primary",   prefer: "romanian-deadlift" },
       { pattern: "squat",     role: "primary",   prefer: "hack-squat-machine" },
@@ -170,32 +170,25 @@ const SESSION_TEMPLATES = {
    sense for someone with training history. */
 const SPLITS = {
   full_1: {
-    id: "full_1", name: "Full Body", days: 1, sequence: ["full_a"],
-    rationale: "One session a week has to touch everything, so it is a single full-body day built around the big patterns.",
+    id: "full_1", days: 1, sequence: ["full_a"],
   },
   full_2: {
-    id: "full_2", name: "Full Body A/B", days: 2, sequence: ["full_a", "full_b"],
-    rationale: "Two days a week means every muscle needs to be hit in both sessions. Two alternating full-body days give each muscle two exposures a week — the minimum that reliably drives progress.",
+    id: "full_2", days: 2, sequence: ["full_a", "full_b"],
   },
   full_3: {
-    id: "full_3", name: "Full Body A/B/C", days: 3, sequence: ["full_a", "full_b", "full_c"],
-    rationale: "Three full-body days spread the work evenly and give every muscle three weekly exposures — the most productive way to use three days if you are not yet advanced.",
+    id: "full_3", days: 3, sequence: ["full_a", "full_b", "full_c"],
   },
   ppl_3: {
-    id: "ppl_3", name: "Push / Pull / Legs", days: 3, sequence: ["push_a", "pull_a", "legs_a"],
-    rationale: "A classic three-way rotation. Each session is longer and more focused, which suits a lifter with enough experience to push a single body region hard and recover from it.",
+    id: "ppl_3", days: 3, sequence: ["push_a", "pull_a", "legs_a"],
   },
   upper_lower_4: {
-    id: "upper_lower_4", name: "Upper / Lower x2", days: 4, sequence: ["upper_a", "lower_a", "upper_b", "lower_b"],
-    rationale: "The split your original plan uses: two upper and two lower days, so every muscle gets trained twice a week with a full session's worth of attention.",
+    id: "upper_lower_4", days: 4, sequence: ["upper_a", "lower_a", "upper_b", "lower_b"],
   },
   ul_ppl_5: {
-    id: "ul_ppl_5", name: "Upper / Lower + Push / Pull / Legs", days: 5, sequence: ["upper_a", "lower_a", "push_b", "pull_b", "legs_b"],
-    rationale: "Five days lets you open the week with two whole-body-half sessions and finish it with three focused ones — high weekly volume without any single session running long.",
+    id: "ul_ppl_5", days: 5, sequence: ["upper_a", "lower_a", "push_b", "pull_b", "legs_b"],
   },
   ppl_6: {
-    id: "ppl_6", name: "Push / Pull / Legs x2", days: 6, sequence: ["push_a", "pull_a", "legs_a", "push_b", "pull_b", "legs_b"],
-    rationale: "Six days is only worth it if each session stays short and focused. Two passes through push, pull and legs gives every muscle two hard exposures with a full 72 hours between them.",
+    id: "ppl_6", days: 6, sequence: ["push_a", "pull_a", "legs_a", "push_b", "pull_b", "legs_b"],
   },
 };
 
@@ -239,3 +232,12 @@ function templateOverlap(aId, bId) {
   });
   return (na && nb) ? dot / Math.sqrt(na * nb) : 0;   // cosine similarity
 }
+
+/* ---------- Language-aware names ----------
+   Template and split names live in the dictionaries; the structures above keep
+   only ids, slots and the numbers the scheduler reasons about. */
+function templateName(id)     { return I18n.t(`template.${id}.name`); }
+function templateShort(id)    { return I18n.t(`template.${id}.short`); }
+function templateEmphasis(id) { return I18n.t(`template.${id}.emphasis`); }
+function splitName(id)        { return I18n.t(`split.${id}.name`); }
+function splitRationale(id)   { return I18n.t(`split.${id}.rationale`); }

@@ -25,7 +25,8 @@ function check(condition, message) {
 
 const g = load();
 const { Store, Progression, Periodization, Scheduler, Adaptation, exerciseById,
-        DAY_KEYS, VOLUME_LANDMARKS, SESSION_TEMPLATES } = g;
+        DAY_KEYS, VOLUME_LANDMARKS, SESSION_TEMPLATES, I18n, exName, templateName,
+        splitName } = g;
 
 const baseProfile = {
   name: "Test Athlete", sex: "Male", age: 30, heightCm: 178, weightKg: 114,
@@ -56,7 +57,7 @@ suite("A four-day week reproduces the original Fitness Time plan");
     const session = plan.sessions.find(s => s.templateId === tpl);
     const got = session ? session.blocks.map(b => b.exerciseId) : [];
     check(JSON.stringify(got) === JSON.stringify(ids),
-      `${SESSION_TEMPLATES[tpl].name} matches the source plan exercise for exercise`);
+      `${templateName(tpl)} matches the source plan exercise for exercise`);
   });
 }
 
@@ -262,7 +263,7 @@ suite("The split follows the days you pick");
   expectations.forEach(([days, splitId]) => {
     Store.updateSettings(p.id, { trainingDays: days });
     const plan = Store.getPlan(p.id);
-    check(plan.splitId === splitId, `${days.length} day${days.length === 1 ? "" : "s"} -> ${plan.splitName}`);
+    check(plan.splitId === splitId, `${days.length} day${days.length === 1 ? "" : "s"} -> ${splitName(plan.splitId)}`);
     check(plan.sessions.length === days.length, `  ...and produces ${days.length} session${days.length === 1 ? "" : "s"}`);
   });
 }
@@ -304,6 +305,131 @@ suite("Sessions are trimmed to the time available");
   check(long.sessions[0].totalSets > short.sessions[0].totalSets, "a longer budget keeps more work");
   check(short.sessions.every(s => s.blocks.some(b => b.role === "primary")),
     "the main compounds are protected when trimming");
+}
+
+/* ---------- 13. Localisation ---------- */
+
+suite("Translations are complete and actually used");
+{
+  const en = I18n.keys("en");
+  const ar = I18n.keys("ar");
+  const arSet = new Set(ar), enSet = new Set(en);
+  const missing = en.filter(k => !arSet.has(k));
+  const orphan = ar.filter(k => !enSet.has(k));
+
+  check(missing.length === 0,
+    `every English key has an Arabic translation (${en.length} keys)${missing.length ? " — missing: " + missing.slice(0, 8).join(", ") : ""}`);
+  check(orphan.length === 0,
+    `no orphaned Arabic keys${orphan.length ? ": " + orphan.slice(0, 8).join(", ") : ""}`);
+
+  // Every exercise in the library needs a name and form cues in both languages.
+  const gaps = [];
+  g.EXERCISES.forEach(ex => {
+    ["name", "steps", "tips"].forEach(field => {
+      if (!arSet.has(`exercise.${ex.id}.${field}`)) gaps.push(`${ex.id}.${field}`);
+    });
+  });
+  check(gaps.length === 0,
+    `all ${g.EXERCISES.length} exercises have Arabic names, steps and tips${gaps.length ? " — missing: " + gaps.slice(0, 6).join(", ") : ""}`);
+}
+
+suite("The coaching engine speaks both languages");
+{
+  const g2 = load();
+  const p = g2.Store.createProfile(baseProfile);
+  g2.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+
+  // Log a session so the engine produces a real, evidence-backed reason.
+  const s = g2.Store.startSession(p.id, "mon", null);
+  s.sets = [];
+  s.blocks.forEach(b => { for (let i = 0; i < b.sets; i++)
+    s.sets.push({ exerciseId: b.exerciseId, setIndex: i, weight: b.weight, reps: b.repHi, rpe: 7, done: true }); });
+  g2.Store.completeSession(p.id, s);
+
+  const plan = g2.Store.getPlan(p.id);
+  const block = plan.sessions.find(x => x.templateId === "upper_a").blocks[0];
+
+  // Reasons are stored as message objects, not baked English.
+  check(block.reason && typeof block.reason === "object" && block.reason.k,
+    "prescription reasons are stored as translatable message objects");
+
+  const english = g2.I18n.tx(block.reason);
+  g2.I18n.setLang("ar");
+  const arabic = g2.I18n.tx(block.reason);
+
+  check(english !== arabic && arabic.length > 20,
+    "the same stored reason renders differently in each language");
+  check(/[\u0600-\u06FF]/.test(arabic), "the Arabic rendering actually contains Arabic script");
+  check(!/^[a-z.]+\.[a-z]/.test(arabic.trim()),
+    `no raw translation key leaks into the output (got: ${arabic.slice(0, 40)}…)`);
+  check(arabic.includes("\u2068") || !/[0-9]/.test(arabic),
+    "numbers inside Arabic prose are wrapped in bidi isolates");
+
+  // Whole-feed sweep: nothing should render as a dotted key.
+  const feed = g2.Coach.buildFeed(g2.Store.getProfile(p.id));
+  const leaked = [];
+  feed.forEach(msgItem => {
+    [msgItem.title, msgItem.body].forEach(field => {
+      const text = g2.I18n.tx(field);
+      if (/^[a-zA-Z]+(\.[a-zA-Z]+)+$/.test(text.trim())) leaked.push(text.trim());
+    });
+  });
+  check(leaked.length === 0,
+    `every coach insight renders in Arabic${leaked.length ? " — leaked keys: " + leaked.slice(0, 5).join(", ") : ` (${feed.length} insights checked)`}`);
+
+  // And the library renders too.
+  const noName = g2.EXERCISES.filter(ex => g2.exName(ex.id) === `exercise.${ex.id}.name`);
+  check(noName.length === 0,
+    `every exercise name resolves in Arabic${noName.length ? " — missing: " + noName.slice(0, 4).map(e => e.id).join(", ") : ""}`);
+
+  g2.I18n.setLang("en");
+}
+
+suite("Stored plans re-render in whichever language you switch to");
+{
+  const g4 = load();
+  const p = g4.Store.createProfile(baseProfile);
+  g4.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  g4.Store.flagPain(p.id, "leg-press", "knee");
+
+  // Built entirely in English, then read entirely in Arabic — the case that
+  // used to leave English exercise names embedded in Arabic sentences.
+  const plan = g4.Store.getPlan(p.id);
+  const note = plan.sessions.find(x => x.templateId === "lower_a").notes[0];
+  const englishNote = g4.I18n.tx(note);
+  check(/Hack Squat|Leg Press/.test(englishNote), "the substitution note names the exercises in English");
+
+  g4.I18n.setLang("ar");
+  const arabicNote = g4.I18n.tx(note);
+  check(/[\u0600-\u06FF]/.test(arabicNote), "the same stored note renders in Arabic after switching");
+  check(!/[A-Za-z]{4,}/.test(arabicNote),
+    `no English words survive inside the Arabic note (got: ${arabicNote.slice(0, 60)}…)`);
+
+  // Same check across every generated string in the plan.
+  const strings = [];
+  plan.sessions.forEach(sn => (sn.notes || []).forEach(n => strings.push(g4.I18n.tx(n))));
+  (plan.warnings || []).forEach(w => strings.push(g4.I18n.tx(w)));
+  (plan.restDays || []).forEach(r => strings.push(g4.I18n.tx(r.suggestion)));
+  plan.sessions.forEach(sn => sn.blocks.forEach(b => strings.push(g4.I18n.tx(b.reason))));
+  (plan.volumeReport || []).forEach(r => strings.push(g4.I18n.tx(r.message)));
+  // "RPE" and "1RM" are deliberately left in Latin script.
+  const withEnglish = strings.filter(x => /[A-Za-z]{4,}/.test(x.replace(/RPE|1RM|BW/g, "")));
+  check(withEnglish.length === 0,
+    `no English leaks into any of the ${strings.length} generated plan strings${withEnglish.length ? ` — e.g. "${withEnglish[0].slice(0, 70)}"` : ""}`);
+
+  g4.I18n.setLang("en");
+}
+
+suite("Arabic plural forms are wired up");
+{
+  const g3 = load();
+  g3.I18n.setLang("ar");
+  const forms = [0, 1, 2, 3, 11, 100].map(n => g3.I18n.t("common.sessions", { count: n }));
+  const distinct = new Set(forms).size;
+  check(distinct >= 4, `Arabic picks distinct plural forms by count (${distinct} distinct across 0/1/2/3/11/100)`);
+  g3.I18n.setLang("en");
+  const enForms = [1, 2].map(n => g3.I18n.t("common.sessions", { count: n }));
+  check(enForms[0] !== enForms[1], "English still distinguishes singular from plural");
 }
 
 /* ------------------------------------------------------------------ */

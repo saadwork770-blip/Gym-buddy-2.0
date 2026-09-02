@@ -21,6 +21,10 @@ The engine does three things the static version could not:
    hurts, volume above what you can recover from — each triggers a specific,
    explained modification that you accept or reject.
 
+It runs in **English and Arabic**, with full right-to-left layout — including
+the coaching prose, which is generated from your training data rather than
+written in advance.
+
 It is still a static site. No build step, no dependencies, no server, no
 account. Everything you log stays in your browser.
 
@@ -131,6 +135,104 @@ a week, which buys fatigue rather than muscle.
 
 ---
 
+## Arabic and right-to-left
+
+The whole app runs in Arabic: navigation, settings, the exercise library's form
+cues, and — the part that actually took the work — the coaching engine's own
+sentences.
+
+**Why that is not just a string table.** The engine writes things like *"You hit
+the top of the range on every set — 12/12/12 at 40 kg"* out of live numbers. If
+those sentences were assembled as English text and stored, they could never be
+translated. So the engines emit **message objects** instead — a key plus its
+parameters — and rendering happens at display time:
+
+```js
+{ k: "engine.prog.increase", p: { reps: "12/12/12", from: ref("load", 40, "chest-press-machine"), … } }
+```
+
+Two consequences worth having:
+
+- A reason stored months ago renders in whichever language you are reading
+  **today**. Switching language re-renders your entire training history rather
+  than leaving a trail of English inside an Arabic interface.
+- Names inside those sentences are stored as **references**, not text. "Hack
+  Squat Machine replaces Leg Press" is `ref("ex", …)` on both sides, resolved at
+  render time — so the exercise names translate too, not just the sentence
+  around them.
+
+**Bidirectional text is handled explicitly.** Arabic training prose is full of
+Latin-script numbers and units — "45 kg", "RPE 8.5", "12/12/12" — and without
+isolation the bidi algorithm drags digits and punctuation to the wrong end of a
+phrase. Every interpolated raw value is wrapped in a First Strong Isolate;
+translated prose deliberately is **not**, because an Arabic phrase beginning
+with a formatted number carries a left-to-right mark that would flip the whole
+phrase. Directional arrows follow the language: `45 → 50` in English,
+`45 ← 50` in Arabic.
+
+**Other decisions:**
+
+- **Western digits in both languages.** Arabic-Indic numerals are correct for
+  literary Arabic, but the plates and machine stacks in the room are printed in
+  Western digits, and a training app that disagrees with the equipment is not
+  being helpful.
+- **"RPE" and "1RM" stay in Latin script.** That is what is printed on coaching
+  apps and said on the gym floor; translating them would be more faithful and
+  less useful.
+- **Arabic's six plural categories** are wired through `Intl.PluralRules`, so
+  the dual is right: *أمس* / *قبل يومين* / *قبل 3 أيام*, not "قبل 2 أيام".
+- **No web fonts.** The site makes zero external requests and works offline, so
+  Arabic uses the system faces that ship with every major OS, with the scale and
+  leading nudged up — Arabic glyphs sit smaller than Latin at the same point
+  size. Uppercasing is switched off in Arabic: it is a no-op that only breaks
+  letter joining.
+- **The layout mirrors, it does not just right-align.** Progress bars fill from
+  the right, the coloured edge of a card moves to its other side, disclosure
+  carets point the other way, and the hero gradient flips. Numbers, clocks and
+  number inputs stay left-to-right, because a time read right-to-left is a
+  different time.
+
+The language switcher sits in the header. Your choice is remembered; with no
+choice saved, the browser's own preference decides.
+
+---
+
+## Audit
+
+`node test/audit.js` drives the built site in a real browser and checks it in
+**both languages**: accessibility, keyboard navigation, colour contrast, load
+performance, storage growth, XSS handling, responsive layout at four widths, and
+console/network errors.
+
+```bash
+python3 -m http.server 8099 &
+node test/audit.js            # needs playwright; CHROMIUM_PATH to reuse a browser
+```
+
+It currently reports clean. Getting there fixed these:
+
+| Finding | Fix |
+|---|---|
+| `--text-faint` measured **3.46:1** — under the 4.5:1 AA floor for the hints, sub-labels and table headers it was used for | Lightened to `#868f9d` (5.1:1 on every surface in the theme) |
+| Header ran **213px past the viewport at 768px** once it carried seven links, a language switch and a user chip | Mobile nav breakpoint raised to 1020px; the redundant header CTA hides below 560px |
+| Profile sidebar overflowed **34px at 360px** | Grid and flex children default to `min-width:auto`; set to `0` so one long word cannot push a column past the viewport |
+| Heading-level jumps (h1→h3 on Home, h2→h4 on Profile) | Reordered to a continuous outline |
+| Textareas fell back to **monospace**, breaking Arabic letter joining | Form controls inherit the page typography |
+| Session log stored **5.2 KB each** — the coaching reason, warm-up ramp and evidence snapshot for every block, all re-derivable | Slimmed to the record rather than the narrative: **2.8 KB**, taking a 5 MB quota from ~4 to ~9 years of training |
+
+Also verified and left alone: all output is escaped (a `<img onerror>` payload in
+a profile name renders as inert text), corrupt local storage degrades to an empty
+profile list rather than crashing, pages load in under 200ms, and there are no
+JavaScript or network errors on any page in either language.
+
+Two things the audit deliberately does **not** flag, both correct as they stand:
+the site makes 15 requests because it ships unbundled source with no build step,
+and dark-on-accent text (buttons, chips, the skip link) measures 9.8:1 once the
+element's own background is composited — an earlier version of the checker
+missed that and produced a page of false failures.
+
+---
+
 ## The pages
 
 | Page | What it is |
@@ -173,17 +275,27 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 ### Tests
 
 ```bash
-node test/engine.test.js
+node test/engine.test.js     # coaching engine — no dependencies
+node test/audit.js           # browser audit — needs playwright
 ```
 
-46 behavioural checks on the engine: that the four-day plan reproduces the
+62 behavioural checks on the engine: that the four-day plan reproduces the
 source program exactly, that no prescribed load is unselectable on its
 equipment, that weekly volume never exceeds MRV at any day count, that no
 session repeats an exercise under any equipment or pain configuration, that
 progression responds correctly to reps and effort, that assisted machines
 progress downward, that manual overrides survive, and that a deload is
-genuinely lighter. No test framework — the harness loads the browser scripts
-into Node with a `localStorage` shim.
+genuinely lighter.
+
+The localisation checks are part of the same suite: that every English key has
+an Arabic translation and none is orphaned, that all 39 exercises have Arabic
+names and form cues, that Arabic picks distinct plural forms across 0/1/2/3/11/100,
+and — the one that matters most — that **a plan generated entirely in English
+renders with no English left in it after switching to Arabic**, across every
+generated string in the plan.
+
+No test framework: the harness loads the browser scripts into Node with a
+`localStorage` shim.
 
 ---
 
@@ -194,6 +306,12 @@ index.html program.html workout.html coach.html
 progress.html exercises.html profile.html
 
 css/style.css              v1 theme + the coaching components
+
+js/i18n.js                 Translation core: message objects, deferred
+                           references, plurals, bidi isolation
+js/i18n/en.js              English strings (source of truth)
+js/i18n/ar.js              Arabic strings
+js/i18n/content.ar.js      Arabic exercise library + the plan's own guidelines
 
 js/data.js                 Exercise library, coaching metadata, volume
                            landmarks, goal and experience profiles
@@ -210,7 +328,8 @@ js/engine/coach.js         Insight feed, session cues, debriefs, readiness
 js/pages/*.js              One controller per page
 
 test/harness.js            Loads the engines into Node
-test/engine.test.js        46 behavioural checks
+test/engine.test.js        62 behavioural checks, including localisation
+test/audit.js              Browser audit: a11y, contrast, perf, XSS, responsive
 
 assets/photos/*.jpg        Real gym photo per exercise (29)
 assets/gifs/*.gif          Animated demonstration per exercise (29)
@@ -226,6 +345,8 @@ assets/gifs/*.gif          Animated demonstration per exercise (29)
   export/import pair on the Profile page exists so you can move it yourself.
 - **v1 profiles are migrated automatically** on first load. Nothing you already
   logged is lost.
+- **Your language choice is stored locally too**, in the same browser storage as
+  everything else.
 - **Media is real and stored locally.** Every exercise from the original plan has
   a real gym photograph and a looping GIF, from
   [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain,
