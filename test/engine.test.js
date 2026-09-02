@@ -318,10 +318,8 @@ function simulate(g, profileId, weeks, shape) {
       const d = new Date(now);
       d.setDate(now.getDate() - today - (w * 7) + idx[planned.dayKey]);
       if (d > now) return;
-      const s = g.Store.startSession(profileId, planned.dayKey, null);
+      const s = g.Store.startSession(profileId, planned.dayKey, null, d);
       if (!s) return;
-      s.date = d.toISOString().slice(0, 10);
-      s.startedAt = d.getTime();
       s.sets = [];
       s.blocks.forEach(b => {
         for (let i = 0; i < b.sets; i++) {
@@ -641,6 +639,79 @@ suite("Arabic plural forms are wired up");
   g3.I18n.setLang("en");
   const enForms = [1, 2].map(n => g3.I18n.t("common.sessions", { count: n }));
   check(enForms[0] !== enForms[1], "English still distinguishes singular from plural");
+}
+
+suite("Coming back from a layoff is not treated as another training week");
+{
+  const g4 = load();
+  const p4 = g4.Store.createProfile(baseProfile);
+  g4.Store.updateSettings(p4.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const ex = g4.exerciseById("barbell-bench-press");
+
+  /* Trained steadily to 75 kg, then vanished. The dates are what matter here,
+     so the log is written directly rather than simulated. */
+  const write = gaps => {
+    const db = JSON.parse(g4.__storage["gymbuddy_profiles_v2"]);
+    db[p4.id].sessionLog = gaps.map((d, i) => ({
+      id: `s${i}`, date: today(-d), completed: true,
+      sets: [0, 1, 2].map(n => ({ exerciseId: ex.id, setIndex: n, weight: 75, reps: 8, rpe: 7.5, done: true })),
+    })).sort((a, b) => (a.date < b.date ? -1 : 1));
+    g4.__storage["gymbuddy_profiles_v2"] = JSON.stringify(db);
+    return g4.Store.getProfile(p4.id);
+  };
+  const rec = profile => g4.Progression.recommend({
+    profile, exercise: ex, phase: g4.Periodization.phaseFor(profile) });
+
+  const fresh = rec(write([17, 14, 10, 7, 3]));
+  check(fresh.action !== "comeback", "a week of normal training is not a layoff");
+
+  const away = write([52, 49, 45, 42, 38]);
+  const back = rec(away);
+  check(back.action === "comeback", "five weeks away triggers a re-entry, not an increase");
+  check(back.weight < 75, `the load actually comes down (75 → ${back.weight} kg)`);
+  check(back.weight >= 75 * 0.8, `but not further than the evidence supports (${back.weight} kg)`);
+  check(back.rpeCap <= 8, `and the effort ceiling comes with it (RPE ${back.rpeCap})`);
+  check(g4.Periodization.phaseFor(away).returning === true,
+    "the mesocycle presents as week 1 rather than dropping them into a deload");
+
+  /* Longer off means more given back, monotonically. */
+  const loads = [12, 25, 45, 90, 200].map(d => rec(write([d, d + 3, d + 7])).weight);
+  check(loads.every((w, i) => i === 0 || w <= loads[i - 1]),
+    `a longer break gives back more (${loads.join(" → ")} kg)`);
+
+  /* The ramp ends by itself: after the prescribed sessions back, normal rules. */
+  const served = write([60, 57, 6, 3]);
+  check(g4.Progression.layoffState(served) === null,
+    "the re-entry ramp expires once the sessions back are logged");
+}
+
+suite("A lift that rotated out of the block restarts slightly below where it left");
+{
+  const g5 = load();
+  const p5 = g5.Store.createProfile(baseProfile);
+  g5.Store.updateSettings(p5.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const rusty = g5.exerciseById("barbell-bench-press");
+  const kept = g5.exerciseById("lat-pulldown-wide");
+
+  const db = JSON.parse(g5.__storage["gymbuddy_profiles_v2"]);
+  const set = (id, w) => ({ exerciseId: id, setIndex: 0, weight: w, reps: 8, rpe: 7.5, done: true });
+  db[p5.id].sessionLog = [
+    { id: "a", date: today(-45), completed: true, sets: [set(rusty.id, 75), set(kept.id, 50)] },
+    { id: "b", date: today(-18), completed: true, sets: [set(kept.id, 50)] },
+    { id: "c", date: today(-11), completed: true, sets: [set(kept.id, 50)] },
+    { id: "d", date: today(-4),  completed: true, sets: [set(kept.id, 50)] },
+  ];
+  g5.__storage["gymbuddy_profiles_v2"] = JSON.stringify(db);
+  const profile = g5.Store.getProfile(p5.id);
+  const phase = g5.Periodization.phaseFor(profile);
+
+  check(g5.Progression.layoffState(profile) === null, "training never stopped, so this is not a layoff");
+  const r = g5.Progression.recommend({ profile, exercise: rusty, phase });
+  check(r.action === "comeback", "the lift that went quiet is eased back in");
+  check(r.weight < 75 && r.weight >= 75 * 0.9,
+    `with a much smaller haircut than a real layoff (75 → ${r.weight} kg)`);
+  const other = g5.Progression.recommend({ profile, exercise: kept, phase });
+  check(other.action !== "comeback", "the lift trained all along is untouched");
 }
 
 /* ------------------------------------------------------------------ */

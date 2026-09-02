@@ -41,12 +41,23 @@ const Periodization = (function () {
    *   rpeCap         — how close to failure this week is allowed to get
    */
   function phaseFor(profile, date) {
-    const { week, weeks, cycle } = weekIndex(profile, date);
-    const isDeload = week === weeks;
+    let { week, weeks, cycle } = weekIndex(profile, date);
+
+    /* Somebody who has not trained in a fortnight is not mid-mesocycle any
+       more, whatever the calendar says. Greeting them with "week 4 · deload"
+       on the day they walk back in is both wrong and demoralising, so the
+       block presents as week 1 immediately and the calendar is re-anchored
+       for real once that first session back is filed. */
+    const back = (typeof Progression !== "undefined" && Progression.layoffState)
+      ? Progression.layoffState(profile, date) : null;
+    const returning = !!(back && back.sessionsBack === 0 && back.gapDays >= 14);
+    if (returning) week = 1;
+
+    const isDeload = week === weeks && !returning;
 
     if (isDeload) {
       return {
-        week, weeks, cycle, type: "deload",
+        week, weeks, cycle, returning, type: "deload",
         label: I18n.t("engine.phase.labelDeload", { week }),
         volumeScale: 0.55, intensityScale: 0.9, setBonus: 0, volumeRamp: 0, rpeCap: 6.5,
         headline: I18n.t("engine.phase.deload.headline"),
@@ -65,7 +76,7 @@ const Periodization = (function () {
     const intense = loadingWeek >= 3;
     const copyKey = loadingWeek === 1 ? "w1" : loadingWeek === 2 ? "w2" : "w3";
     return {
-      week, weeks, cycle,
+      week, weeks, cycle, returning,
       type: intense ? "intensification" : "accumulation",
       label: I18n.t(intense ? "engine.phase.labelIntensification" : "engine.phase.labelAccumulation", { week }),
       volumeScale: 1, intensityScale: 1 + (loadingWeek - 1) * 0.1, setBonus, volumeRamp,

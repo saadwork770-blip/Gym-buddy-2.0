@@ -138,7 +138,7 @@ I18n.register("en", {
   action: {
     increase: "Load up", add_reps: "Add a rep", hold: "Repeat",
     reduce: "Back off", deload: "Deload", stall_break: "Stall break",
-    calibrate: "Calibrate", manual: "Your weight",
+    calibrate: "Calibrate", manual: "Your weight", comeback: "Ease back in",
   },
 
   volumeStatus: {
@@ -155,6 +155,9 @@ I18n.register("en", {
       deload: "Planned deload (week {week}). {from} comes down to {to} and volume drops to {pct}%, so accumulated fatigue clears. This is scheduled recovery, not a step backwards — you come back into week 1 fresher and stronger.",
       stallBreak: "{name} has not moved for {count} sessions{trend}. Rather than grinding the same weight again, drop to {to} and rebuild with clean reps — a short step back is the fastest way through a stall. The Coach tab can also swap in a variation if this repeats.",
       stallTrend: " (estimated 1RM trend {slope} kg/week)",
+      comebackLayoff: "It has been {days} since your last session. Strength fades quietly during a break, so rather than hand you the bar you left, {from} starts at {to} — about {pct}% off — with the effort ceiling held at RPE {rpe}. It should feel easy. That is the point: clear the range at this weight and the coach climbs you back up over the next couple of sessions, which is faster than one heroic session followed by a week of not being able to walk.",
+      comebackRust: "{name} has not come up for {days}, even though you kept training. Barely any strength is lost in that time — the groove is what goes — so today starts at {to} instead of {from}, one honest set below where you left it. Clear the range and it goes straight back up next session.",
+      comebackRamp: "Second session back — load moves normally again, but the effort ceiling stays at RPE {rpe} until the ramp is served.",
       bodyweightUp: "You cleared {hi} {unit} on every set. Target moves up to {lo}–{newHi} {unit}. Once that feels easy, add external load instead of chasing endless {unit}.",
       bodyweightHold: "Stay at {lo}–{hi} {unit} and add one more {increment} per set than last time.",
       unitReps: "reps", unitSeconds: "seconds",
@@ -312,6 +315,10 @@ I18n.register("en", {
       plateauTrendValue: "{slope} kg/week",
       plateauAlt: " {name} is the closest substitute: {why}",
       plateauSwapLabel: "Swap in {name}",
+      comebackTitle: "Welcome back — {days} off",
+      comebackBody: "Nothing here is a step backwards. Every load is about {pct}% below where you left it and the effort ceiling is RPE {rpe}, because strength comes back far faster than it is built and the fastest way to lose the next month is to try to prove something in the first session. Clear the rep ranges as prescribed and the coach walks you back up over the next {sessions}.",
+      comebackRampTitle: "Session {n} back",
+      comebackRampBody: "Loads move normally again from here. The effort ceiling stays at RPE {rpe} for {of} sessions in total, so the reps stay clean while your connective tissue catches up with your enthusiasm.",
       adhGoodTitle: "{pct}% attendance over the last 4 weeks",
       adhGoodBody: "{done} of {expected} scheduled sessions done{streak}. Consistency at this level is what makes the load numbers on the other tabs mean anything.",
       adhGoodStreak: ", {count} weeks in a row",

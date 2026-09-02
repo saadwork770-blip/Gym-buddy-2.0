@@ -245,17 +245,22 @@ const Store = {
    * so that mid-session edits and the readiness modifier stay stable even if
    * something else regenerates the plan underneath.
    */
-  startSession(id, dayKey, readiness) {
+  startSession(id, dayKey, readiness, asOf) {
     const profile = this.getProfile(id);
     if (!profile) return null;
     const plan = this.getPlan(id);
     const planned = (plan.sessions || []).find(s => s.dayKey === dayKey);
     if (!planned) return null;
 
-    const phase = Periodization.phaseFor(profile);
+    /* `asOf` back-dates the whole session — the mesocycle week, the layoff
+       reckoning and the prescriptions all resolve against that day rather than
+       against today. Filling in a session you did on Saturday should not be
+       told you have been away since Saturday. */
+    const when = asOf ? new Date(asOf) : new Date();
+    const phase = Periodization.phaseFor(profile, when);
     const blocks = planned.blocks.map(b => {
       const ex = exerciseById(b.exerciseId);
-      const rx = Progression.recommend({ profile, exercise: ex, phase, readiness });
+      const rx = Progression.recommend({ profile, exercise: ex, phase, readiness, today: when });
       return {
         exerciseId: b.exerciseId,
         role: b.role,
@@ -274,8 +279,8 @@ const Store = {
 
     const session = {
       id: uid("s_"),
-      date: new Date().toISOString().slice(0, 10),
-      startedAt: Date.now(),
+      date: when.toISOString().slice(0, 10),
+      startedAt: asOf ? when.getTime() : Date.now(),
       dayKey,
       templateId: planned.templateId,
       name: planned.name,
@@ -342,19 +347,29 @@ const Store = {
       durationMin: session.startedAt ? Math.round((Date.now() - session.startedAt) / 60000) : null,
       tonnage: Math.round(Progression.sessionTonnage(session)),
     };
+    /* A session that ends a real break also starts a new block. Leaving the
+       old mesocycle running would drop a returning lifter into week 3 or a
+       deload a few days after coming back, which is the opposite of what a
+       re-entry needs. Read the layoff BEFORE the new session is filed —
+       afterwards there is no gap left to see. */
+    const when = finished.date ? new Date(`${finished.date}T12:00:00`) : new Date();
+    const endedBreak = Progression.layoffState(db[id], when);
     db[id].sessionLog.push(finished);
     db[id].activeSession = null;
+    if (endedBreak && endedBreak.sessionsBack === 0 && endedBreak.gapDays >= 14) {
+      db[id].meso = Periodization.newCycle(db[id].meso && db[id].meso.weeks);
+    }
     saveDB(db);
 
     // Recompute forward prescriptions with the new session in history.
     const profile = this.getProfile(id);
-    const phase = Periodization.phaseFor(profile);
+    const phase = Periodization.phaseFor(profile, when);
     const touched = [...new Set(finished.sets.filter(s => s.done).map(s => s.exerciseId))];
     const db2 = loadDB();
     touched.forEach(exId => {
       const ex = exerciseById(exId);
       if (!ex) return;
-      const rx = Progression.recommend({ profile, exercise: ex, phase });
+      const rx = Progression.recommend({ profile, exercise: ex, phase, today: when });
       db2[id].prescriptions[exId] = {
         weight: rx.weight, repLo: rx.repLo, repHi: rx.repHi, sets: rx.sets,
         action: rx.action, reason: rx.reason, delta: rx.delta,

@@ -179,6 +179,106 @@ const Progression = (function () {
   }
 
   /* ---------------------------------------------------------------------
+     Detraining — coming back after time off
+     ---------------------------------------------------------------------
+     Strength does not wait for you. A week off costs nothing measurable, but
+     by week three the bar you left is heavier than the bar you come back to,
+     and the honest thing for the engine to do is say so rather than hand you
+     your old top set and call it "increase".
+
+     Two different gaps matter, and they are not the same thing:
+
+       * A LAYOFF — you stopped training altogether. Real strength is lost,
+         roughly a few percent a week and accelerating, so the load comes down
+         and the effort ceiling comes with it.
+       * MOVEMENT RUST — you kept training, but this particular lift has not
+         come up for a month, usually because the block rotated it out. Little
+         actual strength is gone; what is gone is the groove. A small haircut
+         costs one easy session, whereas a stale number costs a bad rep.
+
+     The re-entry is deliberately a ramp, not a single session: the RPE ceiling
+     stays down for the first sessions back, so double progression climbs you
+     home over two or three sessions instead of one heroic one.
+     --------------------------------------------------------------------- */
+
+  const LAYOFF_MIN_DAYS = 11;      // under this, nothing measurable is lost
+  const RUST_MIN_DAYS = 28;        // this movement specifically has gone quiet
+
+  /** Whole calendar days between an ISO date and a reference date. */
+  function daysSince(isoDate, reference) {
+    if (!isoDate) return null;
+    const from = new Date(`${isoDate}T00:00:00`);
+    const to = reference ? new Date(reference) : new Date();
+    to.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.round((to - from) / 86400000));
+  }
+
+  /**
+   * How much of the last working load to give back, and how long to stay
+   * conservative. The curve is flat for a week and a half, then bends: most of
+   * what is lost in a long break is lost in the first month.
+   */
+  function detrainingFor(days) {
+    if (days < LAYOFF_MIN_DAYS) return null;
+    let loss, rpeCap, sessions;
+    if (days <= 17)       { loss = 0.05; rpeCap = 8.0; sessions = 1; }
+    else if (days <= 28)  { loss = 0.10; rpeCap = 8.0; sessions = 2; }
+    else if (days <= 56)  { loss = 0.15; rpeCap = 7.5; sessions = 2; }
+    else if (days <= 120) { loss = 0.20; rpeCap = 7.5; sessions = 3; }
+    else                  { loss = 0.25; rpeCap = 7.0; sessions = 3; }
+    return { days, loss, rpeCap, sessions };
+  }
+
+  /** Session dates, oldest first, de-duplicated. */
+  function sessionDates(profile) {
+    return [...new Set(((profile && profile.sessionLog) || []).map(s => s.date).filter(Boolean))].sort();
+  }
+
+  /**
+   * Where the lifter is in a return to training.
+   *   sessionsBack === 0  — the break is still open; the next session is the
+   *                         first one back and carries the load reduction.
+   *   sessionsBack >= 1   — training again, still inside the re-entry ramp, so
+   *                         the effort ceiling stays down but load is normal.
+   * Returns null once the ramp is served, or if there was never a break.
+   */
+  function layoffState(profile, reference) {
+    const dates = sessionDates(profile);
+    if (!dates.length) return null;
+
+    const trailing = daysSince(dates[dates.length - 1], reference);
+    const open = detrainingFor(trailing);
+    if (open) return { ...open, gapDays: trailing, sessionsBack: 0 };
+
+    // Training again: find the most recent break and see whether the ramp is
+    // still running.
+    for (let i = dates.length - 1; i > 0; i--) {
+      const gap = daysSince(dates[i - 1], new Date(`${dates[i]}T00:00:00`));
+      const past = detrainingFor(gap);
+      if (!past) continue;
+      const sessionsBack = dates.length - i;
+      return sessionsBack < past.sessions
+        ? { ...past, gapDays: gap, sessionsBack }
+        : null;
+    }
+    return null;
+  }
+
+  /**
+   * The adjustment for one exercise: a layoff if the lifter stopped, otherwise
+   * movement rust if this lift alone has gone quiet. Never both.
+   */
+  function returnState(profile, exerciseId, reference, lastExerciseDate) {
+    const layoff = layoffState(profile, reference);
+    if (layoff) return { ...layoff, kind: "layoff" };
+    const rust = daysSince(lastExerciseDate, reference);
+    if (rust != null && rust >= RUST_MIN_DAYS) {
+      return { kind: "rust", days: rust, gapDays: rust, loss: 0.04, rpeCap: 8.5, sessions: 1, sessionsBack: 0 };
+    }
+    return null;
+  }
+
+  /* ---------------------------------------------------------------------
      Seeding a first weight
      --------------------------------------------------------------------- */
 
@@ -236,6 +336,7 @@ const Progression = (function () {
     reduce:      { tone: "warn" },
     deload:      { tone: "warn" },
     stall_break: { tone: "warn" },
+    comeback:    { tone: "warn" },
   };
 
   /**
@@ -340,6 +441,48 @@ const Progression = (function () {
       e1rm, setsCompleted, hitTop, hitLow,
       target: `${priorRange.lo}–${priorRange.hi}`,
     };
+
+    /* ---- Back from a break ----
+       This deliberately outranks both the deload and the plateau rules. Those
+       two answer "you have been training and it stopped working", and neither
+       is true of somebody who has not been in the gym for a month. Handing a
+       returning lifter their old top set with the word "increase" on it is the
+       single worst thing a coaching engine can do. */
+    const back = returnState(profile, exercise.id, ctx.today, last.date);
+    if (back) {
+      const rampCap = Math.min(base.rpeCap, back.rpeCap);
+      if (back.sessionsBack > 0) {
+        // Training again, still inside the ramp: normal rules decide the load,
+        // but the effort ceiling stays down until the ramp is served.
+        base.rpeCap = rampCap;
+        base.returning = { sessionsBack: back.sessionsBack, of: back.sessions, gapDays: back.gapDays };
+      } else if (exercise.loadType === "bodyweight" || exercise.loadType === "timed") {
+        // Nothing to give back on the load — the rep target holds and the
+        // ceiling carries the caution instead.
+        base.rpeCap = rampCap;
+        base.returning = { sessionsBack: 0, of: back.sessions, gapDays: back.gapDays };
+      } else {
+        const w = adjustedLoad(topWeight, inverse ? 1 + back.loss : 1 - back.loss, exercise, increments);
+        return finish({
+          ...base,
+          weight: w,
+          stalls: 0,
+          rpeCap: rampCap,
+          action: "comeback",
+          delta: Math.round((w - topWeight) * 100) / 100,
+          confidence: "medium",
+          returning: { sessionsBack: 0, of: back.sessions, gapDays: back.gapDays },
+          reason: I18n.m(back.kind === "layoff" ? "engine.prog.comebackLayoff" : "engine.prog.comebackRust", {
+            days: I18n.m("common.daysCount", { count: back.gapDays }),
+            name: I18n.ref("ex", exercise.id),
+            from: I18n.ref("load", topWeight, exercise.id),
+            to: I18n.ref("load", w, exercise.id),
+            pct: Math.round(back.loss * 100),
+            rpe: rampCap,
+          }),
+        }, ctx, phase);
+      }
+    }
 
     /* ---- Scheduled deload beats every other rule ---- */
     if (phase.type === "deload") {
@@ -575,5 +718,6 @@ const Progression = (function () {
     roundToIncrement, adjustedLoad, rirFromRpe, estimate1RM, loadForReps, plateBreakdown,
     historyFor, sessionBest1RM, strengthSeries, strengthTrend, effectiveLoad,
     seedWeight, recommend, readinessModifier, fmtLoad, sessionTonnage, signed, ACTIONS,
+    daysSince, detrainingFor, layoffState, returnState,
   };
 })();

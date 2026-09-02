@@ -28,6 +28,7 @@ const Coach = (function () {
     const dismissed = new Set(profile.dismissed || []);
     const msgs = [];
 
+    msgs.push(...comebackInsight(profile));
     msgs.push(...phaseInsight(profile, phase));
     msgs.push(...todayInsight(profile, plan));
     msgs.push(...progressionInsights(profile, plan));
@@ -286,6 +287,37 @@ const Coach = (function () {
         muscle: I18n.ref("muscle", p.muscle),
       }),
       weight: 4,
+    }];
+  }
+
+  /**
+   * Back after time off. This sits above everything else in the feed because
+   * it reframes every number underneath it: the loads are down on purpose, and
+   * a returning lifter who is not told that reads the drop as failure and
+   * loads the bar back up.
+   */
+  function comebackInsight(profile) {
+    const back = Progression.layoffState(profile);
+    if (!back) return [];
+    if (back.sessionsBack > 0) {
+      return [{
+        key: `comeback-ramp-${back.gapDays}-${back.sessionsBack}`,
+        category: "session", severity: "info",
+        title: I18n.m("engine.coach.comebackRampTitle", { n: back.sessionsBack + 1 }),
+        body: I18n.m("engine.coach.comebackRampBody", { rpe: back.rpeCap, of: back.sessions }),
+        weight: 7,
+      }];
+    }
+    return [{
+      key: `comeback-${back.gapDays}`,
+      category: "session", severity: "warn",
+      title: I18n.m("engine.coach.comebackTitle", {
+        days: I18n.m("common.daysCount", { count: back.gapDays }) }),
+      body: I18n.m("engine.coach.comebackBody", {
+        pct: Math.round(back.loss * 100), rpe: back.rpeCap,
+        sessions: I18n.m("common.sessions", { count: back.sessions }),
+      }),
+      weight: 11,
     }];
   }
 
