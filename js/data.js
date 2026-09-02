@@ -802,16 +802,19 @@ const SUPPLEMENTARY_EXERCISES = [
     tips: ["Neutral grip is usually kinder to a sore elbow than a supinated curl."],
   },
   {
-    id: "cable-lateral-raise", name: "Cable Lateral Raise", day: null,
+    id: "cable-lateral-raise", name: "Seated Cable Lateral Raise", day: null,
     dayLabel: "Library", equipment: "Cable", muscle: "shoulders", icon: "cable",
     sets: "3 x 12–15",
     steps: [
-      "Set a D-handle at the lowest pulley and stand side-on, grabbing it with the outside hand.",
-      "With a slight elbow bend, raise your arm out to the side to shoulder height.",
-      "Lead with the elbow and keep the shoulder down away from your ear.",
-      "Lower slowly — the cable keeps tension at the bottom where dumbbells lose it.",
+      "Sit on a low bench between two low pulleys and take the left handle in your right hand and the right handle in your left, so the cables cross in front of your shins.",
+      "With a slight, fixed bend in each elbow, raise both arms out to the side to shoulder height.",
+      "Lead with the elbows and keep your shoulders down away from your ears.",
+      "Lower slowly — crossed cables keep tension at the bottom, where dumbbells lose it entirely.",
     ],
-    tips: ["Smoother resistance curve than dumbbells; good when 2 kg jumps feel too big."],
+    tips: [
+      "Sitting takes the legs and lower back out of it, so nothing helps you cheat the weight up.",
+      "Smoother resistance curve than dumbbells; good when 2 kg jumps feel too big.",
+    ],
   },
   {
     id: "hanging-knee-raise", name: "Hanging Knee Raise", day: null,

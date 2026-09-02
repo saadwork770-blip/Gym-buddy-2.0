@@ -22,7 +22,10 @@
   "walking-lunges": "Dumbbell Lunges",
   "glute-kickback": "Glute Kickback",
   "seated-calf-raise": "Seated Calf Raise",
-  "plank": "Plank",
+  "plank": {
+    "source": "Plank",
+    "poster": "end"
+  },
   "incline-treadmill-walk": "Walking, Treadmill",
   "stationary-bike": "Bicycling, Stationary",
   "elliptical": "Elliptical Trainer",
