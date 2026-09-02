@@ -388,8 +388,13 @@ js/i18n/en.js              English strings (source of truth)
 js/i18n/ar.js              Arabic strings
 js/i18n/content.ar.js      Arabic exercise library + the plan's own guidelines
 
-js/data.js                 Exercise library, coaching metadata, volume
-                           landmarks, goal and experience profiles
+js/data/library.js         The exercise library and the source program:
+                           names, steps, tips, media paths, the four-day plan
+js/data/coaching.js        What the engine reasons about: movement patterns,
+                           load types, joint stress, muscle contribution,
+                           volume landmarks, goal and experience profiles
+js/data/labels.js          Registers the English source text and resolves
+                           deferred references into the current language
 js/templates.js            Session blueprints as pattern slots; split definitions
 js/storage.js              localStorage persistence, schema v2, v1 migration
 js/ui.js                   Page chrome, formatting, charts, toasts, modals

@@ -184,8 +184,8 @@ const I18n = (function () {
      Arabic sentences forever.
 
      So names are stored as references — `ref("ex", "leg-press")` — and
-     resolved at render time. The resolvers themselves live in data.js, which
-     is what knows how to turn an id into a name; this module only knows that
+     resolved at render time. The resolvers themselves live in data/labels.js,
+     which knows how to turn an id into a name; this module only knows that
      something has to be looked up. */
 
   const resolvers = {};

@@ -21,7 +21,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const MAP = require("./media-map.json");
 
-const source = fs.readFileSync(path.join(ROOT, "js/data.js"), "utf8");
+const source = fs.readFileSync(path.join(ROOT, "js/data/library.js"), "utf8");
 const names = {};
 source.replace(/id:\s*"([^"]+)",\s*name:\s*"([^"]+)"/g, (_, id, name) => { names[id] = name; return _; });
 
