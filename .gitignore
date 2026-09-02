@@ -1,0 +1,4 @@
+# Downloaded source frames for tools/build-media.js. Rebuilt on demand; the
+# generated photos and clips under assets/ are what the site actually ships.
+tools/.media-cache/
+node_modules/

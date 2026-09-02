@@ -48,13 +48,11 @@ UI.ready(() => {
     const flagged = ctx.pain[ex.id];
     const excluded = ctx.excluded.has(ex.id);
     const inPlan = ctx.inPlan.has(ex.id);
-    const media = ex.hasMedia === false
-      ? `<span class="icon-fallback" aria-hidden="true" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${ICONS[ex.icon] || ""}</span>
-         <span class="play-badge">${UI.t("library.badgeDiagram")}</span>`
-      : `<img class="ex-photo" src="${photoFor(ex.id)}" alt="${UI.esc(exName(ex.id))}" loading="lazy" decoding="async"
-              data-photo="${photoFor(ex.id)}" data-gif="${gifFor(ex.id)}">
-         <span class="play-badge">${UI.t("library.badgeGif")}</span>
-         <span class="icon-fallback" aria-hidden="true">${ICONS[ex.icon] || ""}</span>`;
+    const media =
+      `<img class="ex-photo" src="${photoFor(ex.id)}" alt="${UI.esc(exName(ex.id))}" loading="lazy" decoding="async"
+            data-clip="${clipFor(ex.id)}">
+       ${UI.canPlayClips() ? `<span class="play-badge">${UI.t("library.badgeClip")}</span>` : ""}
+       <span class="icon-fallback" aria-hidden="true">${ICONS[ex.icon] || ""}</span>`;
 
     return `
       <div class="ex-card" style="--accent-cat:${color}" data-id="${ex.id}" role="button" tabindex="0">
@@ -104,9 +102,22 @@ UI.ready(() => {
       });
       const img = card.querySelector(".ex-photo");
       if (!img) return;
-      card.addEventListener("mouseenter", () => { img.src = img.dataset.gif; });
-      card.addEventListener("mouseleave", () => { img.src = img.dataset.photo; });
       img.addEventListener("error", () => card.classList.add("no-photo"), { once: true });
+      if (!UI.canPlayClips()) return;
+      let clip = null;
+      card.addEventListener("mouseenter", () => {
+        if (!clip) {
+          clip = document.createElement("video");
+          clip.className = "ex-photo";
+          clip.muted = true; clip.loop = true; clip.playsInline = true;
+          clip.setAttribute("aria-hidden", "true");
+          clip.src = img.dataset.clip;          // fetched on first hover only
+        }
+        if (img.parentNode) { img.replaceWith(clip); clip.play().catch(() => {}); }
+      });
+      card.addEventListener("mouseleave", () => {
+        if (clip && clip.parentNode) { clip.pause(); clip.replaceWith(img); }
+      });
     });
   }
 
@@ -130,12 +141,11 @@ UI.ready(() => {
     const rx = p ? (p.prescriptions || {})[id] : null;
     const series = p ? Progression.strengthSeries(p, id) : [];
 
-    const mediaBlock = ex.hasMedia === false
-      ? `<div class="source-note">${UI.t("library.diagramNote")}</div>`
-      : `<figure class="gif-figure">
-           <img src="${gifFor(ex.id)}?t=${Date.now()}" alt="${UI.esc(exName(ex.id))}">
-           <figcaption>${UI.esc(exMediaNote(ex.id) || I18n.t("library.gifCaption"))}</figcaption>
-         </figure>`;
+    const mediaBlock = `
+      <figure class="clip-figure">
+        ${UI.exerciseClip(ex.id, exName(ex.id))}
+        <figcaption>${UI.esc(exMediaNote(ex.id) || I18n.t("library.clipCaption"))}</figcaption>
+      </figure>`;
 
     const m = UI.modal(`
       <div class="modal-head" style="--accent-cat:${color}"><div>

@@ -48,7 +48,7 @@ const Periodization = (function () {
       return {
         week, weeks, cycle, type: "deload",
         label: I18n.t("engine.phase.labelDeload", { week }),
-        volumeScale: 0.55, intensityScale: 0.9, setBonus: 0, rpeCap: 6.5,
+        volumeScale: 0.55, intensityScale: 0.9, setBonus: 0, volumeRamp: 0, rpeCap: 6.5,
         headline: I18n.t("engine.phase.deload.headline"),
         detail: I18n.t("engine.phase.deload.detail"),
       };
@@ -56,6 +56,11 @@ const Periodization = (function () {
 
     const loadingWeek = week;                        // 1..weeks-1
     const setBonus = loadingWeek >= 3 ? 1 : 0;
+    /* Volume ramp: week 1 runs the plan as prescribed, later weeks add work
+       toward each muscle's adaptive volume. Expressed as a fraction of the gap
+       between what the plan prescribes and the MAV ceiling, so it never cuts
+       below the program you actually chose — it only builds on it. */
+    const volumeRamp = Math.min(1, (loadingWeek - 1) * 0.45);
     const rpeCap = Math.min(9, 7.5 + (loadingWeek - 1) * 0.5);   // 7.5 → 8.0 → 8.5
     const intense = loadingWeek >= 3;
     const copyKey = loadingWeek === 1 ? "w1" : loadingWeek === 2 ? "w2" : "w3";
@@ -63,7 +68,7 @@ const Periodization = (function () {
       week, weeks, cycle,
       type: intense ? "intensification" : "accumulation",
       label: I18n.t(intense ? "engine.phase.labelIntensification" : "engine.phase.labelAccumulation", { week }),
-      volumeScale: 1, intensityScale: 1 + (loadingWeek - 1) * 0.1, setBonus,
+      volumeScale: 1, intensityScale: 1 + (loadingWeek - 1) * 0.1, setBonus, volumeRamp,
       rpeCap,
       headline: I18n.t(`engine.phase.${copyKey}.headline`),
       detail: I18n.t(`engine.phase.${copyKey}.detail`, { rpe: rpeCap }),

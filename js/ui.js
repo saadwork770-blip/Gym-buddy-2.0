@@ -244,25 +244,69 @@ const UI = (function () {
     return `<span class="pill ${tone}">${t(`action.${action}`)}</span>`;
   }
 
+  /* ---------------- Exercise media ----------------
+     Clips are silent WebM. Support is broad but not universal (Safari only
+     gained it in 2021, iOS in 2022), so capability is checked once and the
+     photograph is used on its own where it is missing — rather than shipping a
+     <video> that renders as an empty box. */
+  const CAN_PLAY_CLIPS = (() => {
+    try {
+      const v = document.createElement("video");
+      return !!v.canPlayType && v.canPlayType('video/webm; codecs="vp8"') !== "";
+    } catch (e) { return false; }
+  })();
+
   function exerciseThumb(exId, cls) {
     const ex = exerciseById(exId);
     if (!ex) return "";
-    if (ex.hasMedia === false) {
-      return `<span class="thumb diagram ${cls || ""}" aria-hidden="true"
-                style="--accent-cat:${MUSCLE_COLORS[ex.muscle]}">${ICONS[ex.icon] || ""}</span>`;
-    }
     return `<img class="thumb ${cls || ""}" src="${photoFor(ex.id)}" alt="" loading="lazy" decoding="async"
-              width="52" height="40" data-photo="${photoFor(ex.id)}" data-gif="${gifFor(ex.id)}"
+              width="52" height="40" data-clip="${clipFor(ex.id)}"
               onerror="this.classList.add('broken')">`;
   }
 
-  /** Hover any thumbnail to play its GIF; leave to fall back to the still. */
+  /**
+   * Hovering a thumbnail swaps the still for its clip, which is only fetched on
+   * the first hover — the library grid holds sixty-odd of these and loading
+   * them all up front would be several megabytes for nothing.
+   */
   function wireThumbHover(root) {
-    (root || document).querySelectorAll("img.thumb[data-gif]").forEach(img => {
-      const parent = img.closest("[data-hover-media]") || img;
-      parent.addEventListener("mouseenter", () => { img.src = img.dataset.gif; });
-      parent.addEventListener("mouseleave", () => { img.src = img.dataset.photo; });
+    if (!CAN_PLAY_CLIPS) return;
+    (root || document).querySelectorAll("img.thumb[data-clip]").forEach(img => {
+      const host = img.closest("[data-hover-media]") || img;
+      let video = null;
+      host.addEventListener("mouseenter", () => {
+        if (!video) {
+          video = document.createElement("video");
+          video.className = img.className;
+          video.muted = true; video.loop = true; video.playsInline = true;
+          video.setAttribute("aria-hidden", "true");
+          video.src = img.dataset.clip;
+        }
+        img.replaceWith(video);
+        video.play().catch(() => {});
+      });
+      host.addEventListener("mouseleave", () => {
+        if (video && video.parentNode) { video.pause(); video.replaceWith(img); }
+      });
     });
+  }
+
+  /**
+   * The full-size demonstration for a detail view: the clip where it can play,
+   * the photograph where it cannot. `autoplay muted playsinline` is the
+   * combination browsers allow to start on its own; it is silent by design.
+   */
+  function exerciseClip(exId, alt) {
+    const ex = exerciseById(exId);
+    if (!ex) return "";
+    if (!CAN_PLAY_CLIPS) {
+      return `<img class="ex-clip" src="${photoFor(ex.id)}" alt="${esc(alt || "")}" loading="lazy">`;
+    }
+    return `<video class="ex-clip" autoplay muted loop playsinline preload="metadata"
+                   poster="${photoFor(ex.id)}" aria-label="${esc(alt || "")}">
+              <source src="${clipFor(ex.id)}" type="video/webm">
+              <img src="${photoFor(ex.id)}" alt="${esc(alt || "")}">
+            </video>`;
   }
 
   /* ---------------- Charts ----------------
@@ -430,7 +474,7 @@ const UI = (function () {
 
   return {
     esc, t, tx, mountChrome, refreshChrome, applyStaticStrings, requireProfile, toast, modal, fmt, actionBadge,
-    exerciseThumb, wireThumbHover, lineChart, volumeBars, prepCanvas, beep, ready, hexA,
+    exerciseThumb, exerciseClip, canPlayClips: () => CAN_PLAY_CLIPS, wireThumbHover, lineChart, volumeBars, prepCanvas, beep, ready, hexA,
   };
 })();
 

@@ -17,7 +17,7 @@ I18n.register("en", {
 
   footer: {
     tagline: "GymBuddy 2.0 — adaptive coaching built on your Fitness Time training plan.",
-    privacy: "All data stays in this browser. Photos & animations: free-exercise-db (public domain).",
+    privacy: "All data stays in this browser. Photos and demonstrations: free-exercise-db (public domain).",
   },
 
   common: {
@@ -230,6 +230,7 @@ I18n.register("en", {
       slotDropped: "The {pattern} slot is empty this week: every option either needs equipment you marked unavailable or loads a joint you flagged as painful. Re-enable equipment in Settings, or clear the pain flag once it settles.",
       trimmed: "{session} was trimmed to fit your {minutes}-minute session limit: {dropped} dropped. Raise the time budget in Settings to keep them.",
       ceilingCut: "Weekly volume was over what most people recover from, so the coach trimmed {count} sets from isolation work: {names}. Sets past that ceiling buy fatigue, not muscle.",
+      volumeRamp: "Week {week} of the block adds volume: {count} extra sets across {names}. Week 1 runs your program as written; the weeks after it build toward the volume each muscle grows on.",
       restCardio: "{minutes} min {name} — {intensity}. Optional, and it should leave you fresher than it found you.",
       restFull: "Full rest. Recovery is when the adaptation actually happens.",
       volume: {
@@ -263,10 +264,32 @@ I18n.register("en", {
 
     /* ---------------- Engine: coach feed ---------------- */
     coach: {
+      fatigueTitle: "Fatigue is running ahead of the calendar",
+      fatigueBody: "Three things moved at once over the last two weeks: the same work is costing more effort (average RPE {rpeFrom} → {rpeTo}, {drift}), you are hitting the bottom of the rep range on only {completion}% of sets, and measured strength has flattened{slope}. That combination is what the end of a block looks like, and you are only in week {week} of {weeks}. Bringing the deload forward now costs one easy week; grinding on costs a month.",
+      fatigueSlope: " ({slope} kg/week)",
+      fatigueApply: "Deload this week instead",
+      balanceBody: "Your {strong} is running at {ratio}× your {weak}, against a healthy band of {low}–{high}×. That is roughly {shortfall} kg of catching up for the weaker side. The fix is not to stop training the strong side — it is to give the weak one more work until the ratio closes.",
+      balance: {
+        push_pull:       { a_weak: "Your pressing is behind your rowing", b_weak: "Your rowing is behind your pressing" },
+        vert_pull_push:  { a_weak: "Your vertical pull is behind your overhead press", b_weak: "Your overhead press is behind your vertical pull" },
+        quad_ham:        { a_weak: "Your quads are behind your hamstrings", b_weak: "Your hamstrings are behind your quads" },
+        squat_hinge:     { a_weak: "Your squat is behind your hinge", b_weak: "Your hinge is behind your squat" },
+      },
+      dropOffTitle: "{name}: the later sets are collapsing",
+      dropOffBody: "Across your last {sessions} sessions the reps fall from {first} on the first set to {last} on set {sets} — a {pct}% drop. Under about 30% is normal fatigue; this is more than that. Either the load is too heavy to hold for {sets} sets, or {rest} seconds is not enough rest between them. Try {restPlus} seconds first: it is the cheaper fix, and it usually is the answer.",
+      forecastTitle: "{name} is on track for {target} kg",
+      forecastBody: "Your estimated 1RM is climbing {rate} kg a week from {current} kg. At that rate {target} kg arrives in about {weeks} weeks — around {date}. {confidence} The projection is a straight line through your logged sessions, not a promise; it will move as your training does.",
+      confidence: {
+        high: "The trend fits your data closely (R² {r2}).",
+        medium: "Your sessions scatter around the trend (R² {r2}), so treat the date as a rough guide.",
+      },
+      orderTitle: "{session} is ordered against you",
+      orderBody: "{before} comes before {primary} in that session, and both work your {muscle} hard. The accessory takes weight off the lift the session is built around, for no benefit you can measure. Do the main lift first, while you are fresh.",
       category: {
         periodization: "periodization", session: "session", progression: "progression",
         plateau: "plateau", volume: "volume", schedule: "schedule",
         adherence: "adherence", nutrition: "nutrition", health: "health", plan: "plan",
+        fatigue: "fatigue", balance: "balance", execution: "execution", forecast: "forecast",
       },
       phaseTitle: "{label} — {headline}",
       todayDoneTitle: "Session logged for today",
@@ -516,9 +539,8 @@ I18n.register("en", {
     filterIsolation: "Isolation", filterFlagged: "Flagged / excluded",
     allMuscles: "All muscle groups",
     badgeInPlan: "In plan", badgePain: "{joint} pain", badgeExcluded: "Excluded",
-    badgeGif: "▶ GIF", badgeDiagram: "Diagram",
-    diagramNote: "This movement ships with the line-art diagram rather than a photograph — it is one of the extra options the coach can substitute in, and no public-domain photo of it is bundled with the app. The instructions below are the same as for every other entry.",
-    gifCaption: "Looping demonstration: start position → end position.",
+    badgeClip: "▶ Play",
+    clipCaption: "Silent looping demonstration: start position → end position.",
     yourLoad: "Your working load",
     prescribed: "Prescribed", e1rm: "Est. 1RM {value} kg over {sessions} sessions",
     setsInPlan: "Sets & reps in the source plan",

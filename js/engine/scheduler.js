@@ -443,7 +443,7 @@ const Scheduler = (function () {
         } : null,
       };
 
-      fitToBudget(session, settings.sessionMinutes || 60, level);
+      fitToBudget(session, settings.sessionMinutes || 75, level);
       session.estMinutes = sessionMinutes(session);
       session.totalMinutes = totalMinutes(session);
       session.totalSets = session.blocks.reduce((s, b) => s + b.sets, 0);
@@ -466,6 +466,16 @@ const Scheduler = (function () {
         cardio: wantCardio && ex ? { exerciseId: ex.id, minutes: goal.cardioMinutes.rest } : null,
       };
     });
+
+    /* Later weeks in the block add work toward each muscle's adaptive volume.
+       This only ever adds: week 1 is the program as prescribed, so the plan you
+       chose is never quietly cut down in the name of periodisation. */
+    const rampAdded = applyVolumeRamp(sessions, phase.volumeRamp || 0, settings, level);
+    if (rampAdded.length) {
+      warnings.push(I18n.m("engine.sched.volumeRamp", {
+        week: phase.week, count: rampAdded.length, names: I18n.refList("ex", rampAdded),
+      }));
+    }
 
     /* A six-day split can stack a muscle far past what anyone recovers from —
        shoulders were coming out at 39 sets a week against a 24-set ceiling.
@@ -515,6 +525,49 @@ const Scheduler = (function () {
       volumeReport,
       warnings,
     };
+  }
+
+  /**
+   * Add sets toward each muscle's adaptive volume, in proportion to how far
+   * into the block we are. Sets go onto accessory work first — a fourth set of
+   * a heavy compound costs far more recovery than a fourth set of a cable
+   * movement, for the same entry in the volume tally.
+   */
+  function applyVolumeRamp(sessions, ramp, settings, level) {
+    if (!ramp) return [];
+    const added = [];
+    const budget = settings.sessionMinutes || 75;
+
+    for (let guard = 0; guard < 40; guard++) {
+      const vol = weeklyVolume(sessions);
+      // The muscle furthest below the week's target, as a fraction of its gap.
+      const target = Object.entries(VOLUME_LANDMARKS).map(([muscle, lm]) => {
+        const now = vol[muscle] || 0;
+        const want = now + (lm.mav - now) * ramp;
+        return { muscle, now, want, deficit: want - now, mrv: lm.mrv };
+      }).filter(x => x.deficit >= 0.75 && x.now < x.mrv)
+        .sort((a, b) => b.deficit - a.deficit)[0];
+      if (!target) break;
+
+      const candidates = [];
+      sessions.forEach(s => s.blocks.forEach(b => {
+        const ex = exerciseById(b.exerciseId);
+        if (!ex || !(ex.contribution || {})[target.muscle]) return;
+        if (b.sets >= 5) return;
+        if (sessionMinutes(s) + blockMinutes({ ...b, sets: 1 }) / b.sets > budget) return;
+        if (s.totalSets >= level.maxSetsPerSession) return;
+        candidates.push({ session: s, block: b, ex, iso: ex.role === "isolation" ? 1 : 0 });
+      }));
+      if (!candidates.length) break;
+      candidates.sort((a, b) => (b.iso - a.iso) || (a.block.sets - b.block.sets));
+
+      const pick = candidates[0];
+      pick.block.sets += 1;
+      pick.session.totalSets = pick.session.blocks.reduce((n, b) => n + b.sets, 0);
+      added.push(pick.ex.id);
+    }
+    const seen = new Set();
+    return added.filter(id => (seen.has(id) ? false : (seen.add(id), true)));
   }
 
   /**
@@ -602,6 +655,6 @@ const Scheduler = (function () {
   return {
     buildPlan, previewForDays, chooseSplit, placeSessions, weeklyVolume,
     auditVolume, sessionMinutes, totalMinutes, blockMinutes, equipmentAvailable,
-    pickCardio, enforceVolumeCeiling,
+    pickCardio, enforceVolumeCeiling, applyVolumeRamp,
   };
 })();

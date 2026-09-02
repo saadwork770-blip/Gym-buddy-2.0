@@ -307,7 +307,218 @@ suite("Sessions are trimmed to the time available");
     "the main compounds are protected when trimming");
 }
 
-/* ---------- 13. Localisation ---------- */
+/* ---------- 13. The analysis engine ---------- */
+
+/** Log `weeks` of sessions, letting a callback shape what gets lifted. */
+function simulate(g, profileId, weeks, shape) {
+  const idx = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, sat: 5, sun: 6 };
+  for (let w = weeks - 1; w >= 0; w--) {
+    g.Store.getPlan(profileId).sessions.forEach(planned => {
+      const now = new Date(), today = (now.getDay() + 6) % 7;
+      const d = new Date(now);
+      d.setDate(now.getDate() - today - (w * 7) + idx[planned.dayKey]);
+      if (d > now) return;
+      const s = g.Store.startSession(profileId, planned.dayKey, null);
+      if (!s) return;
+      s.date = d.toISOString().slice(0, 10);
+      s.startedAt = d.getTime();
+      s.sets = [];
+      s.blocks.forEach(b => {
+        for (let i = 0; i < b.sets; i++) {
+          s.sets.push({ exerciseId: b.exerciseId, setIndex: i, weight: b.weight, done: true,
+            ...shape(b, i, w) });
+        }
+      });
+      g.Store.completeSession(profileId, s);
+    });
+  }
+}
+
+suite("Strength imbalance between opposing patterns is detected");
+{
+  const g = load();
+  const p = g.Store.createProfile(baseProfile);
+  g.Store.updateProfile(p.id, { createdAt: Date.now() - 56 * 86400000 });
+  g.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+
+  // Pressing climbs every week; rowing is logged but never progresses.
+  simulate(g, p.id, 8, (b, i, w) => {
+    const ex = g.exerciseById(b.exerciseId);
+    const pressing = ["horizontal_push", "incline_push"].includes(ex.pattern);
+    return pressing
+      ? { reps: b.repHi, rpe: 7 }                 // clears the range, load keeps rising
+      : { reps: b.repLo, rpe: 9.5 };              // never earns an increase
+  });
+
+  const profile = g.Store.getProfile(p.id);
+  const pairs = g.Analysis.balance(profile);
+  const pushPull = pairs.find(x => x.id === "push_pull");
+  check(!!pushPull, `the push/pull pair has enough data to judge (${pairs.length} pairs assessed)`);
+  check(pushPull && pushPull.status === "b_weak",
+    `deliberate press-dominant training is flagged as rowing behind pressing (ratio ${pushPull && pushPull.ratio}×)`);
+  check(pushPull && pushPull.shortfallKg > 0,
+    `and it quantifies the gap (${pushPull && pushPull.shortfallKg} kg)`);
+
+  const feed = g.Coach.buildFeed(profile);
+  const insight = feed.find(m => m.category === "balance");
+  check(!!insight, "the coach raises it as an insight");
+  check(insight && insight.apply && insight.apply.type === "set_delta",
+    "with an action that adds volume to the weaker side");
+}
+
+suite("A balanced lifter is told nothing about balance");
+{
+  const g = load();
+  const p = g.Store.createProfile(baseProfile);
+  g.Store.updateProfile(p.id, { createdAt: Date.now() - 56 * 86400000 });
+  g.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  simulate(g, p.id, 8, (b) => ({ reps: b.repHi, rpe: 7.5 }));   // everything progresses evenly
+
+  const flagged = g.Analysis.balance(g.Store.getProfile(p.id)).filter(x => x.status !== "balanced");
+  check(flagged.length === 0,
+    `even progress produces no imbalance warnings${flagged.length ? ": " + flagged.map(f => f.id).join(", ") : ""}`);
+}
+
+suite("Accumulated fatigue is caught before the calendar deload");
+{
+  const g = load();
+  const p = g.Store.createProfile(baseProfile);
+  g.Store.updateProfile(p.id, { createdAt: Date.now() - 56 * 86400000 });
+  g.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+
+  // Weeks 5–8 were fine; the last two weeks cost more effort for fewer reps.
+  simulate(g, p.id, 8, (b, i, w) => (w >= 2
+    ? { reps: b.repHi, rpe: 7.5 }
+    : { reps: Math.max(1, b.repLo - 2), rpe: 9.5 }));
+
+  const profile = g.Store.getProfile(p.id);
+  const f = g.Analysis.fatigue(profile);
+  check(f.ready, "there is enough history to assess fatigue");
+  check(f.rpeDrift > 0, `effort has drifted upward (${f.rpeDrift} RPE)`);
+  check(f.completion < 85, `rep completion has fallen (${f.completion}%)`);
+  check(f.overreached, `two or more signals agree, so an early deload is proposed (${f.signals.join(", ")})`);
+
+  const insight = g.Coach.buildFeed(profile).find(m => m.category === "fatigue");
+  check(!!insight, "the coach surfaces it");
+  check(insight && insight.apply && insight.apply.deloadNow === true,
+    "and the action brings the deload forward rather than restarting the block");
+
+  // Applying it must actually put this week into the deload.
+  if (insight) {
+    g.Adaptation.apply(p.id, insight.apply);
+    const phase = g.Periodization.phaseFor(g.Store.getProfile(p.id));
+    check(phase.type === "deload", `applying it puts you in the deload week immediately (${phase.label})`);
+  }
+}
+
+suite("A steady lifter is not told they are overreached");
+{
+  const g = load();
+  const p = g.Store.createProfile(baseProfile);
+  g.Store.updateProfile(p.id, { createdAt: Date.now() - 56 * 86400000 });
+  g.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  simulate(g, p.id, 8, (b) => ({ reps: b.repHi, rpe: 7.5 }));
+  const f = g.Analysis.fatigue(g.Store.getProfile(p.id));
+  check(f.ready && !f.overreached,
+    `consistent, comfortable training raises no fatigue warning (signals: ${f.signals.join(", ") || "none"})`);
+}
+
+suite("Collapsing later sets are diagnosed");
+{
+  const g = load();
+  const p = g.Store.createProfile(baseProfile);
+  g.Store.updateProfile(p.id, { createdAt: Date.now() - 42 * 86400000 });
+  g.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+
+  // First set strong, then falling away hard — the signature of too little rest.
+  simulate(g, p.id, 6, (b, i) => ({ reps: Math.max(1, b.repHi - i * 3), rpe: 8 + i * 0.5 }));
+
+  const drops = g.Analysis.dropOff(g.Store.getProfile(p.id));
+  check(drops.length > 0, `a steep rep drop-off is detected (${drops.length} exercises)`);
+  check(drops[0].dropPct >= 30, `and quantified (${drops[0].dropPct}% from set 1 to set ${drops[0].sets})`);
+
+  const g2 = load();
+  const p2 = g2.Store.createProfile(baseProfile);
+  g2.Store.updateProfile(p2.id, { createdAt: Date.now() - 42 * 86400000 });
+  g2.Store.updateSettings(p2.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  simulate(g2, p2.id, 6, (b, i) => ({ reps: Math.max(1, b.repHi - (i > 1 ? 1 : 0)), rpe: 8 }));
+  check(g2.Analysis.dropOff(g2.Store.getProfile(p2.id)).length === 0,
+    "normal end-of-exercise fatigue is not flagged");
+}
+
+suite("Progress is forecast only where the trend supports it");
+{
+  const g = load();
+  const p = g.Store.createProfile(baseProfile);
+  g.Store.updateProfile(p.id, { createdAt: Date.now() - 70 * 86400000 });
+  g.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  simulate(g, p.id, 10, (b) => ({ reps: b.repHi, rpe: 7 }));
+
+  const f = g.Analysis.bestForecast(g.Store.getProfile(p.id));
+  check(!!f, "a consistently rising lift produces a projection");
+  if (f) {
+    check(f.target > f.current, `it projects forward, not backward (${f.current} → ${f.target} kg)`);
+    check(f.weeks > 0 && f.weeks <= 26, `within a useful horizon (${f.weeks} weeks, ${f.date})`);
+    check(f.target - f.current >= 2.5, `and the milestone is worth naming (+${Math.round((f.target - f.current) * 10) / 10} kg, not a rounding step)`);
+    check(f.r2 >= 0.4, `and only because the line fits (R² ${f.r2})`);
+  }
+
+  const g2 = load();
+  const p2 = g2.Store.createProfile(baseProfile);
+  g2.Store.updateSettings(p2.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  check(g2.Analysis.bestForecast(g2.Store.getProfile(p2.id)) === null,
+    "a profile with no history is given no projection");
+}
+
+suite("Volume ramps across the block without cutting week 1");
+{
+  const g = load();
+  const p = g.Store.createProfile(baseProfile);
+  g.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+
+  const setsIn = plan => plan.sessions.reduce((n, s) => n + s.totalSets, 0);
+  const week1 = setsIn(g.Store.getPlan(p.id));
+
+  const atWeek = n => {
+    const start = new Date(); start.setDate(start.getDate() - (n - 1) * 7);
+    g.Store.updateProfile(p.id, { meso: { startDate: start.toISOString().slice(0, 10), weeks: 4 } });
+    return g.Store.regeneratePlan(p.id).plan;
+  };
+  const week2 = setsIn(atWeek(2));
+  const week3 = setsIn(atWeek(3));
+  const week4 = setsIn(atWeek(4));
+
+  check(week2 > week1, `week 2 adds volume (${week1} → ${week2} sets)`);
+  check(week3 >= week2, `week 3 holds or adds again (${week3} sets)`);
+  check(week4 < week1, `the deload week cuts below week 1 (${week4} sets)`);
+
+  const over = g.Store.getPlan(p.id) && atWeek(3).volumeReport.filter(r => r.sets > r.landmarks.mrv);
+  check(over.length === 0, "and the ramp never pushes a muscle past its recoverable ceiling");
+}
+
+suite("Session ordering problems are spotted");
+{
+  const g = load();
+  const p = g.Store.createProfile(baseProfile);
+  g.Store.updateSettings(p.id, { trainingDays: ["mon", "tue", "thu", "fri"] });
+  const plan = g.Store.getPlan(p.id);
+  const problems = plan.sessions.flatMap(s => g.Analysis.ordering(s));
+  check(problems.length === 0,
+    `the generated plan puts the main lifts first${problems.length ? " — " + problems.map(x => x.before + " before " + x.primary).join(", ") : ""}`);
+
+  // A deliberately bad order must be caught.
+  const bad = {
+    templateId: "upper_a",
+    blocks: [
+      { exerciseId: "chest-fly-pec-deck", role: "accessory" },
+      { exerciseId: "barbell-bench-press", role: "primary" },
+    ],
+  };
+  check(g.Analysis.ordering(bad).length === 1,
+    "and a fatiguing accessory placed before a main lift is flagged");
+}
+
+/* ---------- 14. Localisation ---------- */
 
 suite("Translations are complete and actually used");
 {

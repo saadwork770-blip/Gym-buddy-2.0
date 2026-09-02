@@ -25,6 +25,9 @@ It runs in **English and Arabic**, with full right-to-left layout — including
 the coaching prose, which is generated from your training data rather than
 written in advance.
 
+The library is **66 exercises**, every one with a real gym photograph and a
+silent looping demonstration.
+
 It is still a static site. No build step, no dependencies, no server, no
 account. Everything you log stays in your browser.
 
@@ -89,9 +92,16 @@ test that asserts it.
 ### `periodization.js` — the calendar
 
 A mesocycle of loading weeks closed by a planned deload (four weeks by default,
-configurable 3–6). Loading weeks raise the RPE ceiling from 7.5 to 9 and add a
-set to the compounds in week 3; the deload cuts volume to ~55% and load by ~10%.
-Every other engine asks it what week it is before deciding anything.
+configurable 3–6). Loading weeks raise the RPE ceiling from 7.5 to 9; the deload
+cuts volume to ~55% and load by ~10%. Every other engine asks it what week it is
+before deciding anything.
+
+Volume also **ramps across the block**: week 1 runs your program exactly as
+prescribed, and the weeks after it add sets toward each muscle's adaptive volume
+— onto accessory work first, since a fourth set of a cable movement costs far
+less recovery than a fourth set of a heavy compound for the same entry in the
+tally. The ramp only ever adds. Week 1 is never quietly cut down in the name of
+periodisation, so the program you chose is the program you get.
 
 ### `adaptation.js` — changing the workouts
 
@@ -108,6 +118,21 @@ Every other engine asks it what week it is before deciding anything.
 
 Everything here returns a *proposal* with a reason and an apply button. Nothing
 rewrites your program behind your back.
+
+### `analysis.js` — reading across sessions
+
+Progression looks at one exercise's last session. This module looks across
+exercises and across weeks, and answers what a coach standing next to you would
+be asking. Every function is evidence-gated: silence is the correct output for a
+log with three sessions in it.
+
+| What it finds | How |
+|---|---|
+| **Strength imbalances** | Opposing patterns compared on *relative* strength — each lift scored against what someone of this bodyweight and experience should handle on it. Raw kilos are meaningless across patterns: a leg press moves two to three times a squat. Only raised when the weaker side has actually stalled or fallen behind expectation, because loads move in the increments the equipment has and a 20 kg stack climbing 5 kg gains 25% while a 100 kg press gains 5%. |
+| **Accumulated fatigue** | Three signals over a fortnight: is the same work costing more RPE, are prescribed reps still being hit, has measured strength flattened. Two of three agreeing means the block has run its course ahead of the calendar — and the coach offers to bring the deload forward rather than grind three more weeks into it. |
+| **Collapsing sets** | Reps falling more than ~30% from first set to last, sustained across sessions. Under that is normal fatigue. Above it, the fix is either load or rest — and the coach suggests rest first, because it is the cheaper one and usually the answer. |
+| **Forecasting** | A least-squares projection to the next meaningful milestone, with R². Only shown when the line actually fits (R² ≥ 0.4) and the target is worth naming — "+0.8 kg, four days away" is noise dressed as insight. |
+| **Session ordering** | Fatiguing accessory work placed ahead of the lift a session is built around. Cheap to check, easy to fix, and nobody notices it themselves. |
 
 ### `coach.js` — the voice
 
@@ -132,6 +157,48 @@ Anything above MRV is trimmed automatically before the plan is handed over
 (isolation work first, compounds protected). Anything below MEV is flagged with
 a specific fix. A six-day split can otherwise stack shoulders to nearly 40 sets
 a week, which buys fatigue rather than muscle.
+
+---
+
+## The exercise library
+
+66 movements, each with a photograph and a **silent looping demonstration**.
+
+Version 2.0 shipped with 29 photographed exercises and 10 more that only had a
+line drawing. That was enough for the original four-day machine program and not
+much else — a plateau swap or a pain flag had nowhere to go, and the barbell
+patterns were missing entirely. The library now covers every main pattern with
+free-weight, machine and bodyweight options: the pull-up family, barbell squat,
+deadlift and bench, unilateral work, and enough choice in each pattern that the
+coach can always find a substitute.
+
+**The demonstrations are built, not filmed.** `tools/build-media.js` takes the
+source's two frames — start and end position — and assembles a ~1.2 second loop:
+a hold at the bottom, a fast concentric, a brief squeeze, a slower eccentric.
+The transitions are kept short deliberately, because a cross-fade between two
+photographs ghosts, and the shorter it is the more it reads as motion blur
+rather than double exposure. It is an animation from two stills, and the
+interface says so rather than implying footage that does not exist.
+
+```bash
+node tools/build-media.js               # rebuild everything
+node tools/build-media.js leg-press     # or one exercise
+```
+
+The pipeline uses tools already in the repo rather than adding dependencies:
+Chromium does the image work (decode, resize, alpha compositing, JPEG encoding)
+because it is already installed for the audit, and ffmpeg only muxes the frames
+into VP8. Output is **WebM, about 45 KB per clip** — roughly 60% smaller than
+the equivalent GIF, smoother, and now covering 66 exercises instead of 29.
+Total media is 6.0 MB against the old 5.3 MB: slightly larger overall, for a
+library more than twice the size. Per exercise it halved, from about 183 KB to
+about 91 KB.
+
+WebM support is broad but not universal (Safari 2021, iOS 2022), so the video is
+feature-detected once and the photograph is used on its own where it is missing —
+rather than shipping a `<video>` that renders as an empty box. In the library
+grid a clip is only fetched on first hover; loading sixty of them up front would
+be megabytes for nothing.
 
 ---
 
@@ -279,7 +346,7 @@ node test/engine.test.js     # coaching engine — no dependencies
 node test/audit.js           # browser audit — needs playwright
 ```
 
-62 behavioural checks on the engine: that the four-day plan reproduces the
+91 behavioural checks on the engine: that the four-day plan reproduces the
 source program exactly, that no prescribed load is unselectable on its
 equipment, that weekly volume never exceeds MRV at any day count, that no
 session repeats an exercise under any equipment or pain configuration, that
@@ -293,6 +360,14 @@ names and form cues, that Arabic picks distinct plural forms across 0/1/2/3/11/1
 and — the one that matters most — that **a plan generated entirely in English
 renders with no English left in it after switching to Arabic**, across every
 generated string in the plan.
+
+The analysis engine is tested against simulated training histories shaped to
+provoke it — a press-dominant lifter whose rowing never progresses, a block
+where the last fortnight costs more effort for fewer reps, sets that collapse
+from the first to the last. Each has a matching negative case, because a coach
+that cries imbalance at someone training perfectly evenly is worse than one that
+says nothing: an evenly-progressing lifter must raise **no** imbalance warning,
+and a consistent one must raise **no** fatigue warning.
 
 No test framework: the harness loads the browser scripts into Node with a
 `localStorage` shim.
@@ -321,18 +396,22 @@ js/ui.js                   Page chrome, formatting, charts, toasts, modals
 
 js/engine/progression.js   Load selection: double progression, RPE, e1RM
 js/engine/scheduler.js     Split choice, day placement, slot filling, time budget
-js/engine/periodization.js Mesocycle weeks and the deload
+js/engine/periodization.js Mesocycle weeks, volume ramp and the deload
+js/engine/analysis.js      Imbalance, fatigue, rep drop-off, forecasting, ordering
 js/engine/adaptation.js    Substitutions, plateaus, volume and schedule proposals
 js/engine/coach.js         Insight feed, session cues, debriefs, readiness
 
 js/pages/*.js              One controller per page
 
 test/harness.js            Loads the engines into Node
-test/engine.test.js        62 behavioural checks, including localisation
+test/engine.test.js        91 behavioural checks, including localisation
 test/audit.js              Browser audit: a11y, contrast, perf, XSS, responsive
 
-assets/photos/*.jpg        Real gym photo per exercise (29)
-assets/gifs/*.gif          Animated demonstration per exercise (29)
+tools/build-media.js       Rebuilds photos and clips from free-exercise-db
+tools/media-map.json       Exercise id -> source entry
+
+assets/photos/*.jpg        Real gym photograph per exercise (66)
+assets/clips/*.webm        Silent looping demonstration per exercise (66)
 ```
 
 ---
@@ -347,14 +426,16 @@ assets/gifs/*.gif          Animated demonstration per exercise (29)
   logged is lost.
 - **Your language choice is stored locally too**, in the same browser storage as
   everything else.
-- **Media is real and stored locally.** Every exercise from the original plan has
-  a real gym photograph and a looping GIF, from
+- **Media is real and stored locally.** All 66 exercises have a real gym
+  photograph and a silent looping demonstration, from
   [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain,
   Unlicense), committed into this repo — so the site makes zero external requests
-  and works fully offline. The ten supplementary movements added in 2.0 (extra
-  substitution options for thin patterns like vertical push and hip hinge) ship
-  with line-art diagrams instead, and the interface labels them as diagrams
-  rather than passing a drawing off as a photograph.
+  and works fully offline.
+- **The demonstrations are animations, not footage.** They are built from the
+  source's two photographs with a short eased cross-fade, and the interface
+  describes them that way. No filmed video was available under a licence that
+  allows redistribution, and dressing an animation up as one would be a lie
+  about the thing you are trying to copy.
 - **Where a photo shows a documented variation** rather than an exact match — the
   close-grip lat pulldown standing in for the assisted pull-up machine, which the
   plan itself lists as the substitution — the detail view says so.

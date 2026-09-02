@@ -489,13 +489,16 @@ const PROGRAM = {
 };
 
 /* ---------- Local media ----------
-   Every exercise has a real gym photograph and a looping animated GIF
-   (start position → end position) stored locally under assets/.
-   Source: free-exercise-db (github.com/yuhonas/free-exercise-db), released
-   into the public domain under the Unlicense. Files are served from this
-   repo, so the site still needs no external requests.
-   Paths are derived from the exercise id. */
-const MEDIA_CREDIT = "Photos & animations: free-exercise-db (public domain / Unlicense)";
+   Every exercise has a real gym photograph and a silent looping video clip
+   stored locally under assets/. The clip is an animation built by
+   tools/build-media.js from the source's start and end frames — a short eased
+   cross-fade with holds at each end, timed like a rep. It is not filmed video,
+   and the interface says so rather than implying otherwise.
+
+   Source: free-exercise-db (github.com/yuhonas/free-exercise-db), released into
+   the public domain under the Unlicense. Everything is served from this repo,
+   so the site still makes zero external requests. Paths derive from the id. */
+const MEDIA_CREDIT = "Photos & demonstrations: free-exercise-db (public domain / Unlicense)";
 
 /* Cases where the pictured movement is a documented variation rather than an
    exact match — called out in the UI so nothing is misrepresented. */
@@ -509,7 +512,7 @@ const MEDIA_NOTES = {
 };
 
 function photoFor(id){ return `assets/photos/${id}.jpg`; }
-function gifFor(id){ return `assets/gifs/${id}.gif`; }
+function clipFor(id){ return `assets/clips/${id}.webm`; }
 
 function exerciseById(id){ return EXERCISES.find(e => e.id === id); }
 function exercisesForDay(day){ return EXERCISES.filter(e => e.day === day); }
@@ -721,14 +724,13 @@ const EX_META = {
    The original 24 lifts cover the 4-day plan, but a 5- or 6-day split, a pain
    swap, or a plateau variation needs more options in the thin patterns
    (vertical push, horizontal pull, hinge). These are drawn from the same
-   commercial-gym equipment list. They ship with the line-art diagram rather
-   than a photo — flagged `hasMedia: false` so the UI labels them honestly as
-   diagrams instead of passing a drawing off as a gym photograph. */
+   commercial-gym equipment list. Like everything else in the library, each one
+   ships with a photograph and a looping demonstration. */
 const SUPPLEMENTARY_EXERCISES = [
   {
     id: "seated-db-shoulder-press", name: "Seated Dumbbell Shoulder Press", day: null,
     dayLabel: "Library", equipment: "Dumbbell", muscle: "shoulders", icon: "dumbbell",
-    sets: "3 x 8–12", hasMedia: false,
+    sets: "3 x 8–12",
     steps: [
       "Set an upright bench and sit with a dumbbell in each hand at shoulder height, palms forward.",
       "Brace your core and press both dumbbells overhead until your arms are extended.",
@@ -740,7 +742,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "machine-chest-supported-row", name: "Chest-Supported Machine Row", day: null,
     dayLabel: "Library", equipment: "Machine", muscle: "back", icon: "machine",
-    sets: "3 x 10–12", hasMedia: false,
+    sets: "3 x 10–12",
     steps: [
       "Set the chest pad so the handles sit at mid-chest with your arms extended.",
       "Brace your chest against the pad — this takes your lower back out of the movement.",
@@ -752,7 +754,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "db-romanian-deadlift", name: "Dumbbell Romanian Deadlift", day: null,
     dayLabel: "Library", equipment: "Dumbbell", muscle: "legs", icon: "dumbbell",
-    sets: "3 x 10–12", hasMedia: false,
+    sets: "3 x 10–12",
     steps: [
       "Hold a dumbbell in each hand in front of your thighs, feet hip-width apart.",
       "Soften your knees and push your hips straight back, letting the dumbbells travel down your legs.",
@@ -764,7 +766,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "back-extension", name: "45° Back Extension", day: null,
     dayLabel: "Library", equipment: "Bodyweight", muscle: "glutes", icon: "bodyweight",
-    sets: "3 x 12–15", hasMedia: false,
+    sets: "3 x 12–15",
     steps: [
       "Set the pad just below your hip bones so your hips can hinge freely.",
       "Cross your arms over your chest and hinge forward with a flat back.",
@@ -776,7 +778,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "goblet-squat", name: "Goblet Squat", day: null,
     dayLabel: "Library", equipment: "Dumbbell", muscle: "legs", icon: "dumbbell",
-    sets: "3 x 10–12", hasMedia: false,
+    sets: "3 x 10–12",
     steps: [
       "Hold one dumbbell vertically against your chest, elbows tucked underneath it.",
       "Stand a little wider than shoulder width with your toes turned slightly out.",
@@ -788,7 +790,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "hammer-curl", name: "Dumbbell Hammer Curl", day: null,
     dayLabel: "Library", equipment: "Dumbbell", muscle: "arms", icon: "dumbbell",
-    sets: "3 x 10–12", hasMedia: false,
+    sets: "3 x 10–12",
     steps: [
       "Stand holding a dumbbell in each hand with your palms facing your thighs.",
       "Keeping that neutral grip, curl the weights toward your shoulders.",
@@ -800,7 +802,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "cable-lateral-raise", name: "Cable Lateral Raise", day: null,
     dayLabel: "Library", equipment: "Cable", muscle: "shoulders", icon: "cable",
-    sets: "3 x 12–15", hasMedia: false,
+    sets: "3 x 12–15",
     steps: [
       "Set a D-handle at the lowest pulley and stand side-on, grabbing it with the outside hand.",
       "With a slight elbow bend, raise your arm out to the side to shoulder height.",
@@ -812,7 +814,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "hanging-knee-raise", name: "Hanging Knee Raise", day: null,
     dayLabel: "Library", equipment: "Bodyweight", muscle: "core", icon: "bodyweight",
-    sets: "3 x 10–15", hasMedia: false,
+    sets: "3 x 10–15",
     steps: [
       "Hang from a pull-up bar or set up in a captain's chair with your back against the pad.",
       "Brace your core and lift your knees toward your chest by curling your pelvis up.",
@@ -824,7 +826,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "reverse-pec-deck", name: "Reverse Pec Deck", day: null,
     dayLabel: "Library", equipment: "Machine", muscle: "shoulders", icon: "machine",
-    sets: "3 x 15", hasMedia: false,
+    sets: "3 x 15",
     steps: [
       "Turn to face the pec deck's back pad and set the handles to shoulder height.",
       "Grip the handles with a slight elbow bend and arms extended in front of you.",
@@ -836,7 +838,7 @@ const SUPPLEMENTARY_EXERCISES = [
   {
     id: "seated-db-shrug", name: "Seated Dumbbell Shrug", day: null,
     dayLabel: "Library", equipment: "Dumbbell", muscle: "back", icon: "dumbbell",
-    sets: "3 x 12–15", hasMedia: false,
+    sets: "3 x 12–15",
     steps: [
       "Sit on the end of a bench with a dumbbell hanging at each side.",
       "Shrug your shoulders straight up toward your ears — no rolling.",
@@ -846,6 +848,376 @@ const SUPPLEMENTARY_EXERCISES = [
     tips: ["Sitting removes the leg drive people cheat with when standing."],
   },
 ];
+
+/* ---------- Library expansion ----------
+   The original plan is built on machines, which is right for someone starting
+   out in a commercial gym. These add the free-weight and bodyweight movements
+   the coach needs to keep progressing someone past that: barbell variants of
+   every main pattern, the pull-up family, unilateral work, and enough choice in
+   each pattern that a plateau swap or a pain flag has somewhere to go.
+   Every one ships with a photograph and a looping demonstration. */
+const EXPANSION_EXERCISES = [
+  {
+    id: "barbell-bench-press", name: "Barbell Bench Press", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "chest", icon: "dumbbell", sets: "4 x 5–8",
+    steps: [
+      "Lie back with your eyes under the bar, feet flat, and a slight natural arch in your lower back.",
+      "Grip a little wider than shoulder width, pull your shoulder blades down and together, and unrack.",
+      "Lower the bar under control to your lower chest, keeping your elbows at roughly 45° to your torso.",
+      "Touch lightly, then press back up and slightly back toward your face until the arms are extended.",
+    ],
+    tips: [
+      "Use a spotter or safety pins for anything heavy — this is the one lift you cannot bail out of.",
+      "Rest 2–3 min between sets. This is a heavy compound and the reps are the point, not the pump.",
+    ],
+  },
+  {
+    id: "dumbbell-bench-press", name: "Dumbbell Bench Press", day: null, dayLabel: "Library",
+    equipment: "Dumbbell", muscle: "chest", icon: "dumbbell", sets: "3 x 8–12",
+    steps: [
+      "Sit on the bench with a dumbbell on each thigh, then kick them up as you lie back.",
+      "Start with the weights at chest level, palms facing forward, shoulder blades pinned down.",
+      "Press up and slightly together until your arms are extended, without clashing the dumbbells.",
+      "Lower under control until you feel a stretch across your chest, elbows at about 45°.",
+    ],
+    tips: [
+      "A deeper stretch than the barbell, and each side has to work on its own.",
+      "To finish safely, bring the dumbbells to your chest and sit up with them.",
+    ],
+  },
+  {
+    id: "incline-dumbbell-press", name: "Incline Dumbbell Press", day: null, dayLabel: "Library",
+    equipment: "Dumbbell", muscle: "chest", icon: "dumbbell", sets: "3 x 8–12",
+    steps: [
+      "Set the bench to about 30° — steeper than that turns it into a shoulder press.",
+      "Sit back with a dumbbell in each hand at shoulder height, palms forward.",
+      "Press up until your arms are extended over your upper chest.",
+      "Lower under control to the sides of your upper chest.",
+    ],
+    tips: ["Targets the upper chest, which the flat press under-trains.", "Rest 90–120 sec between sets."],
+  },
+  {
+    id: "push-up", name: "Push-Up", day: null, dayLabel: "Library",
+    equipment: "Bodyweight", muscle: "chest", icon: "bodyweight", sets: "3 x 10–20",
+    steps: [
+      "Set your hands slightly wider than your shoulders, body in a straight line from head to heels.",
+      "Brace your core and glutes so your hips neither sag nor pike up.",
+      "Lower until your chest is just off the floor, elbows at about 45° to your torso.",
+      "Press back up to full arm extension without letting your hips lead.",
+    ],
+    tips: [
+      "Hands on a bench makes it easier; feet on a bench makes it harder — no equipment needed either way.",
+      "A free warm-up for any pressing session.",
+    ],
+  },
+  {
+    id: "cable-crossover", name: "Cable Crossover", day: null, dayLabel: "Library",
+    equipment: "Cable", muscle: "chest", icon: "cable", sets: "3 x 12–15",
+    steps: [
+      "Set both pulleys high, take a handle in each hand and step forward into a split stance.",
+      "With a slight bend in the elbows, bring your hands down and together in front of your hips.",
+      "Squeeze your chest at the point where your hands meet.",
+      "Return slowly to a stretch without letting the weight pull your shoulders back.",
+    ],
+    tips: ["Cables keep tension through the whole range where dumbbell flyes lose it at the top."],
+  },
+  {
+    id: "arnold-press", name: "Arnold Press", day: null, dayLabel: "Library",
+    equipment: "Dumbbell", muscle: "shoulders", icon: "dumbbell", sets: "3 x 10–12",
+    steps: [
+      "Sit upright holding a dumbbell in each hand at chest height, palms facing you.",
+      "Press up while rotating your palms outward, finishing overhead with palms facing forward.",
+      "Reverse the rotation on the way down, ending with palms facing you again.",
+      "Keep the movement smooth — the rotation happens as you press, not before it.",
+    ],
+    tips: ["The rotation brings the front delt through a longer range than a straight press."],
+  },
+  {
+    id: "dips-triceps", name: "Triceps Dips", day: null, dayLabel: "Library",
+    equipment: "Bodyweight", muscle: "arms", icon: "bodyweight", sets: "3 x 8–12",
+    steps: [
+      "Support yourself on parallel bars with arms extended and torso close to upright.",
+      "Keep your elbows tucked in — flaring them turns this into a chest exercise.",
+      "Lower until your elbows reach about 90°, no deeper if your shoulders complain.",
+      "Press back up to full extension.",
+    ],
+    tips: [
+      "Use the assisted dip machine if you cannot yet control your bodyweight.",
+      "Stop short of a deep stretch: the bottom of a dip is the position shoulders least like.",
+    ],
+  },
+  {
+    id: "pull-up", name: "Pull-Up", day: null, dayLabel: "Library",
+    equipment: "Bodyweight", muscle: "back", icon: "bodyweight", sets: "4 x 5–10",
+    steps: [
+      "Hang from the bar with an overhand grip slightly wider than your shoulders.",
+      "Start from a full hang, then pull your shoulder blades down before your arms bend.",
+      "Pull until your chin clears the bar, driving your elbows down toward your ribs.",
+      "Lower under control all the way back to a full hang.",
+    ],
+    tips: [
+      "The hardest and best vertical pull there is. Use the assisted machine or bands to build up.",
+      "Add weight in a belt once you can do 12 clean reps.",
+    ],
+  },
+  {
+    id: "chin-up", name: "Chin-Up", day: null, dayLabel: "Library",
+    equipment: "Bodyweight", muscle: "back", icon: "bodyweight", sets: "3 x 6–12",
+    steps: [
+      "Hang from the bar with an underhand grip about shoulder width apart.",
+      "Pull your shoulder blades down, then drive your elbows toward your ribs.",
+      "Pull until your chin clears the bar, keeping your ribs down rather than swinging.",
+      "Lower under control to a full hang.",
+    ],
+    tips: ["The supinated grip lets the biceps help, so most people manage more of these than pull-ups."],
+  },
+  {
+    id: "straight-arm-pulldown", name: "Straight-Arm Pulldown", day: null, dayLabel: "Library",
+    equipment: "Cable", muscle: "back", icon: "cable", sets: "3 x 12–15",
+    steps: [
+      "Stand facing a high pulley with a straight bar or rope, arms extended in front of you.",
+      "Hinge forward slightly and keep a fixed, soft bend in your elbows.",
+      "Pull the bar down in an arc to your thighs using your lats, not your triceps.",
+      "Return slowly, letting your lats stretch at the top without shrugging.",
+    ],
+    tips: ["Isolates the lats with no elbow flexion, so the arms cannot take over."],
+  },
+  {
+    id: "bent-over-barbell-row", name: "Bent-Over Barbell Row", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "back", icon: "dumbbell", sets: "4 x 6–10",
+    steps: [
+      "Stand with feet hip-width, hinge at the hips until your torso is around 45° or lower.",
+      "Hold the bar with an overhand grip just outside your knees, back flat and braced.",
+      "Row the bar to your lower ribs, driving your elbows back past your torso.",
+      "Lower under control without letting your back round or your torso rise.",
+    ],
+    tips: [
+      "The most demanding row there is, and the hardest on the lower back — swap for a chest-supported row if it complains.",
+      "Rest 2–3 min between sets.",
+    ],
+  },
+  {
+    id: "one-arm-db-row", name: "One-Arm Dumbbell Row", day: null, dayLabel: "Library",
+    equipment: "Dumbbell", muscle: "back", icon: "dumbbell", sets: "3 x 8–12 each",
+    steps: [
+      "Put one knee and the same-side hand on a bench, the other foot planted on the floor.",
+      "Let the dumbbell hang at arm's length with your back flat and parallel to the floor.",
+      "Row the weight to your hip, driving the elbow back and letting your shoulder blade travel.",
+      "Lower to a full stretch without twisting your torso to help.",
+    ],
+    tips: ["The bench takes your lower back out of it, so you can row heavy without paying for it."],
+  },
+  {
+    id: "t-bar-row", name: "T-Bar Row", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "back", icon: "dumbbell", sets: "3 x 8–12",
+    steps: [
+      "Straddle the bar, hinge forward with a flat back and grip the handles.",
+      "Start with your arms extended and your shoulder blades stretched forward.",
+      "Row the weight to your torso, driving your elbows back and squeezing your mid-back.",
+      "Lower under control to a full stretch.",
+    ],
+    tips: ["A thicker mid-back builder than the cable row, with less lower-back load than a barbell row."],
+  },
+  {
+    id: "barbell-back-squat", name: "Barbell Back Squat", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "legs", icon: "dumbbell", sets: "4 x 5–8",
+    steps: [
+      "Set the bar across your upper traps, grip it firmly, and step back into a shoulder-width stance.",
+      "Brace your core, break at the hips and knees together, and sit down between your heels.",
+      "Descend until your hip crease is at least level with your knee, keeping your chest up.",
+      "Drive up through your whole foot, hips and shoulders rising at the same rate.",
+    ],
+    tips: [
+      "Always squat inside a rack with the safety pins set — bailing out of a squat is not a plan.",
+      "Rest 3 min between heavy sets.",
+    ],
+  },
+  {
+    id: "front-squat", name: "Front Squat", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "legs", icon: "dumbbell", sets: "3 x 6–10",
+    steps: [
+      "Rest the bar across your front delts with elbows high — the shelf is your shoulders, not your hands.",
+      "Stand shoulder-width, brace hard, and squat straight down with an upright torso.",
+      "Keep your elbows up throughout; when they drop, the bar rolls forward.",
+      "Drive back up without letting your hips shoot up first.",
+    ],
+    tips: ["More quad and far less lower back than the back squat. Lighter loads, same effect on the legs."],
+  },
+  {
+    id: "barbell-deadlift", name: "Barbell Deadlift", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "legs", icon: "dumbbell", sets: "3 x 3–6",
+    steps: [
+      "Stand with mid-foot under the bar, hip-width apart, and grip just outside your shins.",
+      "Drop your hips until your shins touch the bar, chest up, back flat, lats engaged.",
+      "Push the floor away and stand, keeping the bar dragging up your legs.",
+      "Lock out by squeezing your glutes — do not lean back — then hinge the bar back down.",
+    ],
+    tips: [
+      "The most systemically taxing lift in the gym. Three hard sets is plenty; more is rarely better.",
+      "The moment your back rounds, the set is over.",
+    ],
+  },
+  {
+    id: "good-morning", name: "Good Morning", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "legs", icon: "dumbbell", sets: "3 x 10–12",
+    steps: [
+      "Set a light bar across your upper back as for a squat, feet hip-width.",
+      "With soft knees, push your hips straight back and let your torso hinge forward.",
+      "Go until you feel a strong hamstring stretch with a flat back — depth comes from the hips.",
+      "Drive your hips forward to stand tall.",
+    ],
+    tips: ["Start far lighter than feels necessary. This one punishes ego more than any other lift."],
+  },
+  {
+    id: "barbell-hip-thrust", name: "Barbell Hip Thrust", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "glutes", icon: "dumbbell", sets: "3 x 8–12",
+    steps: [
+      "Sit on the floor with your upper back against a bench and the padded bar over your hips.",
+      "Plant your feet flat, shins vertical at the top of the movement.",
+      "Drive through your heels to lift your hips until your torso is parallel to the floor.",
+      "Squeeze your glutes hard at the top, tuck your ribs down, then lower under control.",
+    ],
+    tips: ["The heaviest loadable glute exercise there is, and easy on the knees."],
+  },
+  {
+    id: "bulgarian-split-squat", name: "Bulgarian Split Squat", day: null, dayLabel: "Library",
+    equipment: "Dumbbell", muscle: "legs", icon: "dumbbell", sets: "3 x 8–12 each",
+    steps: [
+      "Stand a stride in front of a bench and place the top of your rear foot on it.",
+      "Hold a dumbbell in each hand and set your front foot far enough forward to keep the shin near vertical.",
+      "Lower straight down until your rear knee is just off the floor.",
+      "Drive up through your front heel without pushing off the back foot.",
+    ],
+    tips: [
+      "Brutal for the amount of weight involved, and it exposes side-to-side differences a barbell hides.",
+      "Rest 90 sec between legs, not between sets.",
+    ],
+  },
+  {
+    id: "preacher-curl", name: "Preacher Curl", day: null, dayLabel: "Library",
+    equipment: "Machine", muscle: "arms", icon: "machine", sets: "3 x 10–12",
+    steps: [
+      "Set the seat so your armpits rest against the top of the pad with your arms flat on it.",
+      "Grip the handles and start from a near-full stretch, not a locked-out elbow.",
+      "Curl up until your forearms are just past vertical.",
+      "Lower slowly all the way back to the stretch — this is where the pad earns its keep.",
+    ],
+    tips: ["The pad removes all swing, so the biceps get exactly the load you selected."],
+  },
+  {
+    id: "concentration-curl", name: "Concentration Curl", day: null, dayLabel: "Library",
+    equipment: "Dumbbell", muscle: "arms", icon: "dumbbell", sets: "3 x 12–15 each",
+    steps: [
+      "Sit on a bench, legs apart, and brace the back of your upper arm against your inner thigh.",
+      "Let the dumbbell hang at a full stretch.",
+      "Curl it toward your shoulder without letting your elbow travel off your thigh.",
+      "Squeeze at the top, then lower slowly to full extension.",
+    ],
+    tips: ["One arm at a time, no momentum available — the cleanest biceps contraction on offer."],
+  },
+  {
+    id: "skull-crusher", name: "Skull Crusher", day: null, dayLabel: "Library",
+    equipment: "Free Weight", muscle: "arms", icon: "dumbbell", sets: "3 x 10–12",
+    steps: [
+      "Lie on a flat bench holding an EZ bar over your chest with a narrow overhand grip.",
+      "Keeping your upper arms fixed and angled slightly back, bend your elbows to lower the bar.",
+      "Bring it to just behind your forehead, not straight down to it.",
+      "Extend your elbows to press back up without letting your upper arms drift.",
+    ],
+    tips: ["Use an EZ bar rather than a straight one — the angled grip is much kinder to the elbows."],
+  },
+  {
+    id: "bench-dips", name: "Bench Dips", day: null, dayLabel: "Library",
+    equipment: "Bodyweight", muscle: "arms", icon: "bodyweight", sets: "3 x 12–20",
+    steps: [
+      "Sit on the edge of a bench with your hands beside your hips, then slide your hips off the front.",
+      "Keep your back close to the bench and your elbows pointing straight back.",
+      "Lower until your elbows reach about 90°.",
+      "Press back up through your palms to full extension.",
+    ],
+    tips: [
+      "Feet closer makes it easier, further away or elevated makes it harder.",
+      "Stop if your shoulders feel pinched at the bottom — this position is demanding on them.",
+    ],
+  },
+  {
+    id: "upright-row", name: "Upright Row", day: null, dayLabel: "Library",
+    equipment: "Machine", muscle: "shoulders", icon: "machine", sets: "3 x 12–15",
+    steps: [
+      "Hold the bar with an overhand grip about shoulder width — narrower grips crowd the shoulder.",
+      "Pull the bar straight up close to your body, leading with your elbows.",
+      "Stop when your upper arms reach shoulder height. Higher buys nothing and costs the joint.",
+      "Lower under control to full extension.",
+    ],
+    tips: ["Stop at shoulder height and use a wider grip: taken high and narrow, this is a shoulder-impingement exercise."],
+  },
+  {
+    id: "cable-rear-delt-fly", name: "Cable Rear Delt Fly", day: null, dayLabel: "Library",
+    equipment: "Cable", muscle: "shoulders", icon: "cable", sets: "3 x 15",
+    steps: [
+      "Set two pulleys to shoulder height and take the left handle in your right hand and vice versa.",
+      "Stand centred with arms crossed in front of you and a slight bend in the elbows.",
+      "Sweep your arms out and back in a wide arc, squeezing your rear delts.",
+      "Return under control without letting your shoulders round forward.",
+    ],
+    tips: ["Rear delts are the most under-trained head of the shoulder and the one that fixes posture."],
+  },
+  {
+    id: "ab-roller", name: "Ab Wheel Rollout", day: null, dayLabel: "Library",
+    equipment: "Bodyweight", muscle: "core", icon: "bodyweight", sets: "3 x 8–12",
+    steps: [
+      "Kneel with the wheel under your shoulders and your hips directly over your knees.",
+      "Brace hard and tuck your ribs down — the rep starts before the wheel moves.",
+      "Roll forward only as far as you can go without your lower back arching.",
+      "Pull yourself back with your abs, not by sitting back onto your heels.",
+    ],
+    tips: [
+      "Range is earned. A short, braced rollout beats a long one with a sagging back.",
+      "If your lower back aches afterwards, you went too far.",
+    ],
+  },
+  {
+    id: "side-plank", name: "Side Plank", day: null, dayLabel: "Library",
+    equipment: "Bodyweight", muscle: "core", icon: "bodyweight", sets: "3 x 30–45 sec each",
+    steps: [
+      "Lie on your side, elbow directly under your shoulder, legs stacked.",
+      "Lift your hips until your body forms a straight line from head to feet.",
+      "Keep your top hip pushed forward so you do not rotate backwards.",
+      "Hold, breathing steadily, then swap sides.",
+    ],
+    tips: ["Trains the side of the trunk, which the front plank misses entirely."],
+  },
+];
+
+const EXPANSION_META = {
+  "barbell-bench-press":     { pattern: "horizontal_push", loadType: "barbell",       role: "compound",  fatigue: 4, contribution: { chest: 1, shoulders: 0.5, arms: 0.5 }, jointStress: ["shoulder", "elbow"],            startCoef: 0.50, unilateral: false },
+  "dumbbell-bench-press":    { pattern: "horizontal_push", loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { chest: 1, shoulders: 0.5, arms: 0.5 }, jointStress: ["shoulder", "elbow"],            startCoef: 0.20, unilateral: true },
+  "incline-dumbbell-press":  { pattern: "incline_push",    loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { chest: 1, shoulders: 0.5, arms: 0.5 }, jointStress: ["shoulder", "elbow"],            startCoef: 0.17, unilateral: true },
+  "push-up":                 { pattern: "horizontal_push", loadType: "bodyweight",    role: "compound",  fatigue: 2, contribution: { chest: 1, shoulders: 0.5, arms: 0.5, core: 0.25 }, jointStress: ["shoulder", "elbow"], startCoef: 0,    unilateral: false },
+  "cable-crossover":         { pattern: "chest_iso",       loadType: "cable_stack",   role: "isolation", fatigue: 2, contribution: { chest: 1, shoulders: 0.25 },           jointStress: ["shoulder"],                     startCoef: 0.12, unilateral: true },
+  "arnold-press":            { pattern: "vertical_push",   loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { shoulders: 1, arms: 0.5, chest: 0.25 },jointStress: ["shoulder", "elbow"],            startCoef: 0.10, unilateral: true },
+  "dips-triceps":            { pattern: "vertical_push",   loadType: "bodyweight",    role: "compound",  fatigue: 3, contribution: { arms: 1, chest: 0.5, shoulders: 0.5 }, jointStress: ["shoulder", "elbow"],            startCoef: 0,    unilateral: false },
+  "pull-up":                 { pattern: "vertical_pull",   loadType: "bodyweight",    role: "compound",  fatigue: 3, contribution: { back: 1, arms: 0.5, shoulders: 0.25 }, jointStress: ["shoulder", "elbow"],            startCoef: 0,    unilateral: false },
+  "chin-up":                 { pattern: "vertical_pull",   loadType: "bodyweight",    role: "compound",  fatigue: 3, contribution: { back: 1, arms: 0.75, shoulders: 0.25 },jointStress: ["shoulder", "elbow"],            startCoef: 0,    unilateral: false },
+  "straight-arm-pulldown":   { pattern: "vertical_pull",   loadType: "cable_stack",   role: "isolation", fatigue: 2, contribution: { back: 1 },                             jointStress: ["shoulder"],                     startCoef: 0.16, unilateral: false },
+  "bent-over-barbell-row":   { pattern: "horizontal_pull", loadType: "barbell",       role: "compound",  fatigue: 4, contribution: { back: 1, arms: 0.5, shoulders: 0.25 }, jointStress: ["lower_back", "shoulder", "elbow"], startCoef: 0.40, unilateral: false },
+  "one-arm-db-row":          { pattern: "horizontal_pull", loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { back: 1, arms: 0.5 },                  jointStress: ["shoulder", "elbow"],            startCoef: 0.22, unilateral: true },
+  "t-bar-row":               { pattern: "horizontal_pull", loadType: "barbell",       role: "compound",  fatigue: 4, contribution: { back: 1, arms: 0.5, shoulders: 0.25 }, jointStress: ["lower_back", "shoulder"],       startCoef: 0.35, unilateral: false },
+  "barbell-back-squat":      { pattern: "squat",           loadType: "barbell",       role: "compound",  fatigue: 5, contribution: { legs: 1, glutes: 0.75, core: 0.25 },   jointStress: ["knee", "hip", "lower_back"],    startCoef: 0.55, unilateral: false },
+  "front-squat":             { pattern: "squat",           loadType: "barbell",       role: "compound",  fatigue: 5, contribution: { legs: 1, glutes: 0.5, core: 0.5 },     jointStress: ["knee", "hip"],                  startCoef: 0.40, unilateral: false },
+  "barbell-deadlift":        { pattern: "hinge",           loadType: "barbell",       role: "compound",  fatigue: 5, contribution: { legs: 1, glutes: 1, back: 0.75 },      jointStress: ["lower_back", "hip", "knee"],    startCoef: 0.65, unilateral: false },
+  "good-morning":            { pattern: "hinge",           loadType: "barbell",       role: "compound",  fatigue: 3, contribution: { legs: 1, glutes: 0.75, back: 0.5 },    jointStress: ["lower_back", "hip"],            startCoef: 0.22, unilateral: false },
+  "barbell-hip-thrust":      { pattern: "glute_iso",       loadType: "barbell",       role: "compound",  fatigue: 3, contribution: { glutes: 1, legs: 0.5 },                jointStress: ["hip"],                          startCoef: 0.55, unilateral: false },
+  "bulgarian-split-squat":   { pattern: "lunge",           loadType: "dumbbell",      role: "compound",  fatigue: 4, contribution: { legs: 1, glutes: 0.75 },               jointStress: ["knee", "hip"],                  startCoef: 0.10, unilateral: true },
+  "preacher-curl":           { pattern: "biceps_iso",      loadType: "machine_stack", role: "isolation", fatigue: 1, contribution: { arms: 1 },                             jointStress: ["elbow"],                        startCoef: 0.16, unilateral: false },
+  "concentration-curl":      { pattern: "biceps_iso",      loadType: "dumbbell",      role: "isolation", fatigue: 1, contribution: { arms: 1 },                             jointStress: ["elbow"],                        startCoef: 0.08, unilateral: true },
+  "skull-crusher":           { pattern: "triceps_iso",     loadType: "barbell",       role: "isolation", fatigue: 2, contribution: { arms: 1 },                             jointStress: ["elbow"],                        startCoef: 0.18, unilateral: false },
+  "bench-dips":              { pattern: "triceps_iso",     loadType: "bodyweight",    role: "isolation", fatigue: 2, contribution: { arms: 1, chest: 0.25 },                jointStress: ["shoulder", "elbow"],            startCoef: 0,    unilateral: false },
+  "upright-row":             { pattern: "lateral_raise",   loadType: "machine_stack", role: "compound",  fatigue: 2, contribution: { shoulders: 1, back: 0.5, arms: 0.25 }, jointStress: ["shoulder", "elbow"],            startCoef: 0.22, unilateral: false },
+  "cable-rear-delt-fly":     { pattern: "rear_delt",       loadType: "cable_stack",   role: "isolation", fatigue: 1, contribution: { shoulders: 0.75, back: 0.5 },          jointStress: ["shoulder"],                     startCoef: 0.10, unilateral: true },
+  "ab-roller":               { pattern: "core_brace",      loadType: "bodyweight",    role: "isolation", fatigue: 3, contribution: { core: 1, shoulders: 0.25 },            jointStress: ["lower_back", "shoulder"],       startCoef: 0,    unilateral: false },
+  "side-plank":              { pattern: "core_brace",      loadType: "timed",         role: "isolation", fatigue: 1, contribution: { core: 1 },                             jointStress: ["shoulder"],                     startCoef: 0,    unilateral: true },
+};
 
 const SUPPLEMENTARY_META = {
   "seated-db-shoulder-press":     { pattern: "vertical_push",   loadType: "dumbbell",      role: "compound",  fatigue: 3, contribution: { shoulders: 1, arms: 0.5, chest: 0.25 }, jointStress: ["shoulder", "elbow"], startCoef: 0.11, unilateral: true },
@@ -861,8 +1233,8 @@ const SUPPLEMENTARY_META = {
 };
 
 /* ---------- Merge metadata onto the library ---------- */
-EXERCISES.push(...SUPPLEMENTARY_EXERCISES);
-Object.assign(EX_META, SUPPLEMENTARY_META);
+EXERCISES.push(...SUPPLEMENTARY_EXERCISES, ...EXPANSION_EXERCISES);
+Object.assign(EX_META, SUPPLEMENTARY_META, EXPANSION_META);
 
 EXERCISES.forEach(ex => {
   const meta = EX_META[ex.id] || {};

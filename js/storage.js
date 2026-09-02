@@ -222,6 +222,22 @@ const Store = {
     return this.regeneratePlan(id);
   },
 
+  /**
+   * Bring the deload forward. The mesocycle is back-dated so that this week is
+   * its last — the deload — after which a fresh block starts normally. Used
+   * when the log says fatigue arrived ahead of the calendar.
+   */
+  startDeloadNow(id, weeks) {
+    const db = loadDB();
+    if (!db[id]) return null;
+    const w = weeks || (db[id].meso && db[id].meso.weeks) || Periodization.DEFAULT_WEEKS;
+    const start = new Date();
+    start.setDate(start.getDate() - (w - 1) * 7);
+    db[id].meso = { startDate: start.toISOString().slice(0, 10), weeks: w };
+    saveDB(db);
+    return this.regeneratePlan(id);
+  },
+
   /* ---------------- Live sessions ---------------- */
 
   /**

@@ -34,6 +34,11 @@ const Coach = (function () {
     msgs.push(...plateauInsights(profile));
     msgs.push(...Adaptation.volumeProposals(profile, plan).map(toMessage));
     msgs.push(...Adaptation.scheduleProposals(profile).map(toMessage));
+    msgs.push(...fatigueInsights(profile, phase));
+    msgs.push(...balanceInsights(profile));
+    msgs.push(...dropOffInsights(profile));
+    msgs.push(...forecastInsight(profile));
+    msgs.push(...orderingInsights(plan));
     msgs.push(...adherenceInsights(profile));
     msgs.push(...bodyweightInsights(profile));
     msgs.push(...painInsights(profile));
@@ -170,6 +175,118 @@ const Coach = (function () {
         weight: 6,
       };
     });
+  }
+
+  /**
+   * The block is scheduled to deload on a fixed week, which assumes fatigue
+   * accumulates at the rate the calendar expects. When effort, rep completion
+   * and measured strength all say otherwise, say so — an early deload is
+   * cheaper than three more weeks of grinding into it.
+   */
+  function fatigueInsights(profile, phase) {
+    if (phase.type === "deload") return [];
+    const f = Analysis.fatigue(profile);
+    if (!f.ready || !f.overreached) return [];
+    return [{
+      key: `fatigue-${f.signals.join("-")}-${f.completion}`,
+      category: "fatigue", severity: "warn",
+      title: I18n.m("engine.coach.fatigueTitle"),
+      body: I18n.m("engine.coach.fatigueBody", {
+        rpeFrom: f.priorRpe, rpeTo: f.recentRpe,
+        drift: Progression.signed(f.rpeDrift),
+        completion: f.completion,
+        slope: f.slopePerWeek == null ? null : Progression.signed(f.slopePerWeek),
+        week: phase.week, weeks: phase.weeks,
+      }),
+      apply: { type: "new_cycle", weeks: (profile.meso && profile.meso.weeks) || 4, deloadNow: true },
+      applyLabel: I18n.m("engine.coach.fatigueApply"),
+      weight: 9,
+    }];
+  }
+
+  /**
+   * Opposing patterns drifting apart is the imbalance people cannot see in
+   * themselves — the bench climbs, the row does not follow, and the shoulder
+   * pays for it eighteen months later.
+   */
+  function balanceInsights(profile) {
+    return Analysis.balance(profile)
+      .filter(p => p.status !== "balanced")
+      .slice(0, 2)
+      .map(p => ({
+        key: `balance-${p.id}-${p.status}`,
+        category: "balance", severity: "warn",
+        title: I18n.m(`engine.coach.balance.${p.id}.${p.status}`),
+        body: I18n.m("engine.coach.balanceBody", {
+          weak: I18n.ref("ex", p.weakExerciseId),
+          strong: I18n.ref("ex", p.strongExerciseId),
+          ratio: p.ratio, ideal: p.ideal, low: p.low, high: p.high,
+          shortfall: p.shortfallKg,
+        }),
+        apply: p.weakExerciseId ? { type: "set_delta", exerciseId: p.weakExerciseId, delta: +1 } : null,
+        applyLabel: p.weakExerciseId
+          ? I18n.m("engine.adapt.volAddLabel", { exercise: I18n.ref("ex", p.weakExerciseId) }) : null,
+        weight: 6,
+      }));
+  }
+
+  /**
+   * Reps collapsing across sets is a specific problem with a specific fix, and
+   * which fix depends on where it collapses — too heavy for the set count, or
+   * not enough rest between them.
+   */
+  function dropOffInsights(profile) {
+    return Analysis.dropOff(profile).slice(0, 2).map(d => ({
+      key: `dropoff-${d.exerciseId}-${d.dropPct}`,
+      category: "execution", severity: "info",
+      title: I18n.m("engine.coach.dropOffTitle", { name: I18n.ref("ex", d.exerciseId) }),
+      body: I18n.m("engine.coach.dropOffBody", {
+        first: d.first, last: d.last, sets: d.sets, pct: d.dropPct,
+        rest: d.restSec, restPlus: d.restSec ? d.restSec + 30 : null, sessions: d.sessions,
+      }),
+      weight: 5,
+    }));
+  }
+
+  /** One forward-looking number, and only where the trend line actually fits. */
+  function forecastInsight(profile) {
+    const f = Analysis.bestForecast(profile);
+    if (!f) return [];
+    return [{
+      key: `forecast-${f.exerciseId}-${f.target}`,
+      category: "forecast", severity: "good",
+      title: I18n.m("engine.coach.forecastTitle", {
+        name: I18n.ref("ex", f.exerciseId), target: f.target,
+      }),
+      body: I18n.m("engine.coach.forecastBody", {
+        name: I18n.ref("ex", f.exerciseId),
+        current: f.current, target: f.target,
+        rate: Progression.signed(f.slopePerWeek),
+        weeks: f.weeks, date: I18n.date(f.date, { day: "numeric", month: "long" }),
+        confidence: I18n.m(`engine.coach.confidence.${f.confidence}`),
+        r2: f.r2,
+      }),
+      weight: 3,
+    }];
+  }
+
+  /** Fatiguing accessories placed ahead of the lift the session is built on. */
+  function orderingInsights(plan) {
+    if (!plan || plan.empty) return [];
+    const found = [];
+    plan.sessions.forEach(s => Analysis.ordering(s).forEach(p => found.push(p)));
+    if (!found.length) return [];
+    const p = found[0];
+    return [{
+      key: `order-${p.templateId}-${p.before}-${p.primary}`,
+      category: "execution", severity: "info",
+      title: I18n.m("engine.coach.orderTitle", { session: I18n.ref("template", p.templateId) }),
+      body: I18n.m("engine.coach.orderBody", {
+        before: I18n.ref("ex", p.before), primary: I18n.ref("ex", p.primary),
+        muscle: I18n.ref("muscle", p.muscle),
+      }),
+      weight: 4,
+    }];
   }
 
   function adherenceInsights(profile) {

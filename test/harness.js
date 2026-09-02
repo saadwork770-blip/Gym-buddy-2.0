@@ -26,6 +26,7 @@ const FILES = [
   "js/engine/periodization.js",
   "js/engine/progression.js",
   "js/engine/scheduler.js",
+  "js/engine/analysis.js",
   "js/engine/adaptation.js",
   "js/engine/coach.js",
   "js/storage.js",
@@ -33,7 +34,7 @@ const FILES = [
 
 const EXPORTS = [
   "Store", "Scheduler", "Progression", "Periodization", "Coach", "Adaptation",
-  "I18n", "exerciseById", "exercisesForDay", "exercisesByPattern", "templateOverlap",
+  "I18n", "Analysis", "exerciseById", "exercisesForDay", "exercisesByPattern", "templateOverlap",
   "exName", "exSteps", "exTips", "muscleLabel", "patternLabel", "loadTypeLabel",
   "dayLabel", "dayShort", "jointLabel", "templateName", "splitName", "splitRationale",
   "EXERCISES", "SPLITS", "SESSION_TEMPLATES", "VOLUME_LANDMARKS", "PATTERNS",

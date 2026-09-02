@@ -303,7 +303,12 @@ const Adaptation = (function () {
         return Store.flagPain(profileId, payload.exerciseId, null);
 
       case "new_cycle":
-        return Store.startNewCycle(profileId, payload.weeks);
+        /* An early deload means ending the block now, not restarting it: the
+           next week has to be the recovery week, so the cycle is back-dated to
+           put today in its final week. */
+        return payload.deloadNow
+          ? Store.startDeloadNow(profileId, payload.weeks)
+          : Store.startNewCycle(profileId, payload.weeks);
 
       case "session_minutes":
         return Store.updateSettings(profileId, { sessionMinutes: payload.minutes });
