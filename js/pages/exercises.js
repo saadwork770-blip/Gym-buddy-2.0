@@ -144,6 +144,37 @@ UI.ready(() => {
     return DAY_TEMPLATE[ex.day] ? templateName(DAY_TEMPLATE[ex.day]) : patternLabel(ex.pattern);
   }
 
+  const CAMERA_ICON = `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 22h9l4-6h18l4 6h9a2 2 0 0 1 2 2v26a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V24a2 2 0 0 1 2-2z"/>
+    <circle cx="32" cy="36" r="9"/>
+  </svg>`;
+
+  /* A tile per brand: what this machine is called there, and its own photo
+     once one has been added. Most tiles have no photo yet — that stays an
+     empty frame rather than the shared picture wearing somebody else's name,
+     because a side-by-side row implies the pictures actually differ. */
+  function brandGalleryHtml(id) {
+    const active = activeBrand();
+    const cards = Object.keys(BRANDS).map(b => {
+      const has = hasBrandPhotoOf(id, b);
+      const label = brandEquipmentFor(id, b) || brandLabel(b);
+      const thumb = has
+        ? `<img src="${photoForBrand(id, b)}" alt="${UI.esc(exNameForBrand(id, b))}" loading="lazy">`
+        : CAMERA_ICON;
+      return `
+        <div class="brand-gallery-card${b === active ? " active" : ""}">
+          <div class="brand-gallery-thumb">${thumb}</div>
+          <div class="brand-gallery-name">${UI.esc(label)}</div>
+          ${b === active ? `<span class="pill neutral">${UI.t("library.yourGym")}</span>` : ""}
+        </div>`;
+    }).join("");
+
+    return `
+      <h4>${UI.t("library.compareBrands")}</h4>
+      <p class="hint" style="margin:0 0 10px;">${UI.t("library.compareBrandsHint")}</p>
+      <div class="brand-gallery"><div class="brand-gallery-track">${cards}</div></div>`;
+  }
+
   function openDetail(id) {
     const ex = exerciseById(id);
     if (!ex) return;
@@ -158,7 +189,8 @@ UI.ready(() => {
       <figure class="clip-figure">
         ${UI.exerciseClip(ex.id, exName(ex.id))}
         <figcaption>${UI.esc(exMediaNote(ex.id) || I18n.t("library.clipCaption"))}</figcaption>
-      </figure>`;
+      </figure>
+      ${brandGalleryHtml(ex.id)}`;
 
     const m = UI.modal(`
       <div class="modal-head" style="--accent-cat:${color}"><div>
@@ -217,6 +249,11 @@ UI.ready(() => {
           day: ex.day ? I18n.t("library.dayOf", { n: ex.day, name: templateNameForDay(ex) })
                       : patternLabel(ex.pattern) })}</div>
       </div>`, { wide: false });
+
+    /* Land on your own gym's tile rather than wherever the fixed brand order
+       happens to put it, so "scroll right" has somewhere to scroll from. */
+    const activeCard = m.el.querySelector(".brand-gallery-card.active");
+    if (activeCard) activeCard.scrollIntoView({ block: "nearest", inline: "center" });
 
     if (!p) return;
 

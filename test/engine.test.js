@@ -1038,6 +1038,42 @@ suite("A brand renames the machine without inventing anything about it");
     `Arabic reads the machine and then the frame (${arName})`);
 }
 
+suite("The compare-brands strip reads any brand without switching the setting");
+{
+  const gb = load();
+  const p = gb.Store.createProfile({ ...baseProfile, name: "Gallery" });
+  gb.Store.updateSettings(p.id, { equipmentBrand: "cybex" });
+
+  /* The *For variants take an explicit brand, which is what lets a strip show
+     all ten tiles from a single active setting. */
+  check(gb.exNameForBrand("leg-extension", "matrix") === "Leg Extension (Ultra Series)",
+    `a non-active brand still composes correctly (${gb.exNameForBrand("leg-extension", "matrix")})`);
+  check(gb.exName("leg-extension") === "Leg Extension (Eagle NX)",
+    "and the active brand is unaffected by asking about another one");
+  check(gb.brandEquipmentFor("leg-extension", "lifefitness") === "Life Fitness Insignia Series",
+    `equipment label composes the same way (${gb.brandEquipmentFor("leg-extension", "lifefitness")})`);
+
+  /* No brand ships photography of its own yet, so every tile \u2014 including the
+     active brand's \u2014 reports no photo, and the strip must not invent one. */
+  Object.keys(gb.BRANDS).forEach(b => {
+    check(gb.hasBrandPhotoOf("leg-extension", b) === false,
+      `${b} has no photo of its own yet, honestly`);
+    check(gb.photoForBrand("leg-extension", b) === "assets/photos/leg-extension.jpg",
+      `so its tile falls back to the shared photo path (${gb.photoForBrand("leg-extension", b)})`);
+  });
+
+  /* Once a brand's manifest lists a photo, hasBrandPhotoOf and photoForBrand
+     pick it up for that brand only \u2014 this is the state tools/import-photos.js
+     produces, simulated directly since the test has no real image to import. */
+  gb.BRAND_PHOTOS.technogym = ["leg-extension"];
+  check(gb.hasBrandPhotoOf("leg-extension", "technogym") === true,
+    "a brand with a real photo reports one");
+  check(gb.photoForBrand("leg-extension", "technogym") === "assets/photos/technogym/leg-extension.jpg",
+    `and its tile points at the brand folder (${gb.photoForBrand("leg-extension", "technogym")})`);
+  check(gb.hasBrandPhotoOf("leg-extension", "cybex") === false,
+    "a photo added under one brand does not leak into another's tile");
+}
+
 /* ------------------------------------------------------------------ */
 
 console.log("");

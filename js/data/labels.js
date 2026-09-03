@@ -53,11 +53,15 @@
    is a dumbbell. */
 function brandKey(id, field) { return `brand.${activeBrand()}.exercise.${id}.${field}`; }
 
-function exName(id) {
-  const k = brandKey(id, "name");
+/** exName for a given brand rather than the active one — what the "compare
+    brands" strip on the exercise detail page uses to caption a tile without
+    switching the profile's own setting. */
+function exNameForBrand(id, brand) {
+  const k = `brand.${brand}.exercise.${id}.name`;
   if (I18n.has(k)) return I18n.t(k);
-  return brandMachineName(id) || I18n.t(`exercise.${id}.name`);
+  return brandMachineNameFor(id, brand) || I18n.t(`exercise.${id}.name`);
 }
+function exName(id) { return exNameForBrand(id, activeBrand()); }
 function exSteps(id) {
   const k = brandKey(id, "steps");
   return I18n.has(k) ? I18n.list(k) : I18n.list(`exercise.${id}.steps`);
