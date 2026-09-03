@@ -45,7 +45,27 @@
    rather than reading the English constant directly, so a language switch
    re-renders the whole app instead of leaving English islands behind. */
 
-function exName(id)  { return I18n.t(`exercise.${id}.name`); }
+/* A handful of English names already carry their own parenthetical —
+   "Lat Pulldown (Wide Grip)" — and nesting a second pair of brackets around
+   one of those wraps badly in RTL text: the line break lands inside the
+   inner parenthesis and the mirrored bidi rendering shows what looks like a
+   doubled "((". Flattened to a comma before it goes in the outer bracket:
+   "Lat Pulldown, Wide Grip". */
+function flattenParens(name) {
+  const m = name.match(/^(.*)\s\(([^()]+)\)$/);
+  return m ? `${m[1]}, ${m[2]}` : name;
+}
+
+/* In Arabic, the English name rides along in brackets — "جهاز ضغط الصدر
+   (Chest Press Machine)" — because that is closer to what is printed on the
+   machine, and a lifter hunting for it on the gym floor is reading the frame,
+   not a dictionary. English stays plain; there is nothing to bracket it with. */
+function exName(id) {
+  const name = I18n.t(`exercise.${id}.name`);
+  if (!I18n.isRTL()) return name;
+  const ex = exerciseById(id);
+  return ex && ex.name ? `${name} (${flattenParens(ex.name)})` : name;
+}
 function exSteps(id) { return I18n.list(`exercise.${id}.steps`); }
 function exTips(id)  { return I18n.list(`exercise.${id}.tips`); }
 function exMediaNote(id){ return I18n.has(`mediaNote.${id}`) ? I18n.t(`mediaNote.${id}`) : null; }
