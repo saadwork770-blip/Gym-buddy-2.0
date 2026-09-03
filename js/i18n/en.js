@@ -15,6 +15,22 @@ I18n.register("en", {
     skipToContent: "Skip to content", primary: "Main",
   },
 
+  /* Bottom-bar labels, for languages whose full nav label does not fit a
+     55-point tab. English does fit, so these are the nav labels — they are
+     here because English is the source language every other one is checked
+     against, and an Arabic-only key would be an orphan. */
+  tab: {
+    diet: "Diet",
+    profile: "Profile",
+  },
+
+  app: {
+    installTitle: "Install GymBuddy",
+    installBody: "Tap Share, then <b>Add to Home Screen</b>. It opens full screen and works with no signal.",
+    updateReady: "A new version is ready.",
+    updateNow: "Update",
+  },
+
   footer: {
     tagline: "GymBuddy 2.0 — adaptive coaching built on your Fitness Time training plan.",
     privacy: "All data stays in this browser. Photos and demonstrations: free-exercise-db (public domain).",

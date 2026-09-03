@@ -438,6 +438,29 @@ open index.html
 python3 -m http.server 8000   # then visit http://localhost:8000
 ```
 
+### On an iPhone
+
+Served over http(s) it is an installable app, not a page that happens to fit a
+phone. Open it in Safari, tap **Share → Add to Home Screen**, and it gets a
+proper icon, launches full screen with no browser chrome, shows its own dark
+launch screen instead of a white flash, and opens from the cache — so it works
+in the part of the gym where the signal does not.
+
+None of that is a wrapper or a framework: it is `manifest.webmanifest`, a
+service worker holding the shell, and a set of icons and launch images built
+from the same SVG mark.
+
+```bash
+node tools/build-app-icons.js   # after changing assets/img/favicon.svg
+```
+
+Bump `VERSION` in `sw.js` whenever a page, the stylesheet or a script changes.
+The app then offers the new version rather than swapping it in underneath
+somebody mid-set, which is how you lose a set.
+
+Opened by double-clicking the folder there is no origin to register a worker
+against, so the offline cache is simply skipped and everything else works.
+
 ### Tests
 
 ```bash
@@ -523,7 +546,8 @@ js/pages/*.js              One controller per page
 
 test/harness.js            Loads the engines into Node
 test/engine.test.js        176 behavioural checks, including localisation
-test/audit.js              Browser audit: a11y, contrast, perf, XSS, responsive
+test/audit.js              Browser audit: a11y, contrast, perf, XSS, responsive,
+                           installability and offline
 
 tools/build-media.js       Rebuilds photos and clips from free-exercise-db
 tools/media-map.json       Exercise id -> source entry
@@ -533,10 +557,18 @@ tools/import-photos.js     Replaces a stock photo and clip with a walk-around
                            built from two or more angles you photographed
                            yourself of your own gym's machine
 
+tools/build-app-icons.js   Renders the home-screen icons and the iPhone launch
+                           images from assets/img/favicon.svg
+
+manifest.webmanifest       What makes it installable: name, icons, standalone
+sw.js                      Service worker — precaches the shell, caches media on
+                           demand, so the app opens instantly and works offline
 robots.txt                 Keeps the shared-by-link site out of search results
 
 assets/photos/*.jpg        Real gym photograph per exercise (66)
 assets/clips/*.webm        Silent looping demonstration per exercise (66)
+assets/img/icon-*.png      App icons (192, 512, and a maskable 512)
+assets/img/launch-*.png    Launch images, one per iPhone screen size
 ```
 
 ---

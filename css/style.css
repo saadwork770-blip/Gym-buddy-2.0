@@ -1178,7 +1178,13 @@ canvas.chart{ width:100%; display:block; }
     font-size: .625rem; font-weight: 700; letter-spacing: .01em;
     text-decoration: none; transition: color .15s ease;
   }
-  .tabbar a svg{ width: 23px; height: 23px; }
+  .tabbar a svg{ width: 23px; height: 23px; flex: none; }
+  /* A label that wraps makes the tab taller than the bar and the text spills
+     out under it. Short labels are the fix (see tab.* in the Arabic strings);
+     this is the guard that keeps a future long one from breaking the bar. */
+  .tabbar a span{
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .tabbar a.active{ color: var(--accent); }
   .tabbar a:active{ opacity: .55; }
   /* Arabic labels need a touch more room and no letter-spacing. */
@@ -1356,4 +1362,176 @@ canvas.chart{ width:100%; display:block; }
 @media (pointer: coarse){
   html, body{ -webkit-overflow-scrolling: touch; }
   .tabs, .table-scroll{ overscroll-behavior-x: contain; }
+}
+
+/* ============================================================================
+   ==  Installed app  =========================================================
+   ============================================================================
+   The phone section above makes the site fit a phone. This section is about
+   the difference between a page that fits a phone and an app: what happens
+   when it is launched from the home screen with no browser around it, what a
+   page change looks like, and what a finger does that a mouse never does.
+   ============================================================================ */
+
+/* ---------- Page transitions ----------
+   A tab bar whose pages arrive by full page load flashes the background
+   between them, and that flash is the single most obvious tell that this is a
+   website. A cross-document view transition holds the old page on screen
+   until the new one has painted, so the change reads as one continuous
+   surface — which is exactly what a native tab bar does. Browsers without it
+   (older Safari) simply navigate as before; nothing is conditional on it. */
+@view-transition { navigation: auto; }
+
+/* The chrome is identical on every page, so it should not take part in the
+   cross-fade at all — naming it makes the browser carry the same element
+   across, and only the content between them animates. */
+.nav{ view-transition-name: app-header; }
+.tabbar{ view-transition-name: app-tabbar; }
+
+::view-transition-old(root),
+::view-transition-new(root){
+  animation-duration: .22s;
+  animation-timing-function: cubic-bezier(.32, .72, 0, 1);   /* iOS's own curve */
+}
+::view-transition-group(app-header),
+::view-transition-group(app-tabbar){ animation-duration: 0s; }
+
+@media (prefers-reduced-motion: reduce){
+  ::view-transition-old(root),
+  ::view-transition-new(root){ animation: none; }
+}
+
+/* ---------- Home-screen launch ----------
+   `html.standalone` is set by ui.js before the chrome mounts. In a home-screen
+   launch there is no browser toolbar and no way back to one, so the app owns
+   the whole screen — including the strip behind the status bar, which
+   `black-translucent` puts our own background under. */
+html.standalone, html.standalone body{
+  /* Dragging past the end of a page in a standalone app peels the whole app
+     off its background, which no native app does. */
+  overscroll-behavior-y: none;
+}
+
+html.standalone .nav{
+  /* The header is the top of the app now, not a bar under Safari's. */
+  padding-top: var(--safe-top);
+}
+
+/* Selecting the header text by long-pressing it is a browser gesture that has
+   no meaning in an app, and it fires constantly on a phone held one-handed.
+   Content itself stays selectable — a lifter may well want to copy a number. */
+.nav, .tabbar, .rest-bar{
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Double-tapping a button zooms the page in on iOS unless the element opts
+   out. This is the targeted version of `user-scalable=no`: no accidental zoom
+   on the controls, while pinch-to-zoom on a photograph still works. */
+a, button, summary, label, .chip, .day-btn, .tab-btn, .seg button, .tabbar a{
+  touch-action: manipulation;
+}
+
+/* ---------- Dialogs as sheets ----------
+   A centred dialog is a desktop idea. On a phone the exercise detail came out
+   1270px tall inside a 664px window, so the whole box scrolled up the screen
+   as you read it and the close button scrolled away with it — the single most
+   "web page" moment left in the app.
+
+   iOS answers this with a sheet: anchored to the bottom edge, sized to the
+   screen rather than to its content, scrolling inside itself, with a grab
+   handle and a swipe down to dismiss. The desktop dialog above is untouched. */
+@media (max-width: 700px){
+  .modal-overlay{
+    align-items: flex-end;
+    padding: 0;
+    overflow: hidden;          /* the sheet scrolls, not the page behind it */
+  }
+  .modal{
+    width: 100%; max-width: none;
+    max-height: 92dvh;
+    display: flex; flex-direction: column;
+    border: 1px solid var(--border); border-bottom: none;
+    border-radius: 20px 20px 0 0;
+    animation: sheetUp .3s cubic-bezier(.32, .72, 0, 1);
+    transition: transform .26s cubic-bezier(.32, .72, 0, 1);
+    padding-top: 8px;
+  }
+  /* The grab handle. It is the affordance for the swipe, and it is also what
+     tells you at a glance that this is a sheet and not a new page. */
+  .modal::before{
+    content: ""; flex: none;
+    width: 38px; height: 4px; margin: 0 auto 2px;
+    border-radius: 999px; background: var(--border);
+  }
+  @keyframes sheetUp{ from{ transform: translateY(100%); } to{ transform: none; } }
+
+  .modal-close{
+    position: absolute; top: 10px; inset-inline-end: 8px; z-index: 2;
+    min-width: 44px; min-height: 44px;
+  }
+  .modal-head{ padding: 14px 18px 16px; padding-inline-end: 56px; }
+  .modal-head .m-icon{ width: 48px; height: 48px; }
+  .modal-body{
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;   /* stop the page behind it scrolling too */
+    padding: 16px 18px calc(24px + var(--safe-bottom));
+  }
+}
+
+@media (max-width: 700px) and (prefers-reduced-motion: reduce){
+  .modal{ animation: none; transition: none; }
+}
+
+/* ---------- Install hint ----------
+   iOS has no install prompt a page can call — only the Share sheet — so the
+   most a web app can honestly do is point at it, once. */
+.install-hint{
+  position: fixed; z-index: 300;
+  inset-inline: 12px;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 12px);
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 14px;
+  background: rgba(26,30,36,.96);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: saturate(180%) blur(18px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  transform: translateY(14px); opacity: 0;
+  transition: transform .22s cubic-bezier(.32,.72,0,1), opacity .22s ease;
+}
+.install-hint.in{ transform: none; opacity: 1; }
+.install-mark{
+  flex: none; width: 42px; height: 42px; border-radius: 11px; margin-top: 1px;
+  background: var(--bg); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.install-mark .mark{ width: 26px; height: 26px; }
+.install-copy{ min-width: 0; }
+.install-copy b{ display: block; font-size: .88rem; }
+.install-copy span{ display: block; font-size: .78rem; color: var(--text-dim); line-height: 1.4; margin-top: 2px; }
+.install-copy b + span b{ display: inline; color: var(--text); }
+.install-close{
+  flex: none; margin-inline-start: auto; align-self: flex-start;
+  min-width: 34px; min-height: 34px;
+  background: none; border: none; color: var(--text-faint);
+  font-size: 1.4rem; line-height: 1; cursor: pointer;
+}
+/* Nothing to install once it is installed, and nothing to install on a
+   desktop where the tab bar it sits above does not exist either. */
+html.standalone .install-hint{ display: none; }
+@media (min-width: 701px){ .install-hint{ display: none; } }
+
+/* ---------- "Update ready" ----------
+   The service worker never swaps itself in mid-session, so the toast carries
+   the button that does it. */
+.toast.toast-action{ display: flex; align-items: center; gap: 14px; pointer-events: auto; }
+.toast.toast-action button{
+  flex: none; min-height: 34px; padding: 0 14px;
+  background: var(--accent); color: #08110f;
+  border: none; border-radius: 999px;
+  font-weight: 700; font-size: .82rem; cursor: pointer;
 }
