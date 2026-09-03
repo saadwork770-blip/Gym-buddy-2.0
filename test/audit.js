@@ -106,6 +106,57 @@ const CONTRAST = () => {
   return out;
 };
 
+/* Everything that only goes wrong when the thing pointing at the page is a
+   finger. Run under touch emulation, because the rules that fix these are
+   keyed to `pointer: coarse` rather than to a width. */
+const TOUCH = () => {
+  const out = { zoomers: [], smallTargets: [], squeezed: [] };
+  const vw = document.documentElement.clientWidth;
+  const seen = new Set();
+  const name = el => `${el.tagName.toLowerCase()}.${String(el.className || "").split(" ")[0]}`;
+
+  document.querySelectorAll("input, select, textarea").forEach(el => {
+    const cs = getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden") return;
+    /* Under 16px, iOS Safari zooms the page in on focus and does not zoom
+       back out — mid-set, on the field you just tapped. */
+    const fs = parseFloat(cs.fontSize);
+    if (fs < 16 && !seen.has("z" + name(el))) { seen.add("z" + name(el)); out.zoomers.push(`${name(el)} ${fs}px`); }
+  });
+
+  document.querySelectorAll('a[href], button, input, select, textarea, summary, [role="tab"]').forEach(el => {
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    if (!r.width || !r.height || cs.visibility === "hidden") return;
+    // A checkbox is drawn at 16px by the browser; its label carries the target.
+    const label = el.closest("label");
+    const lr = label && label.getBoundingClientRect();
+    if (lr && lr.height >= 43.5 && lr.width >= 43.5) return;
+    if ((r.height < 43.5 || r.width < 43.5) && !seen.has("t" + name(el))) {
+      seen.add("t" + name(el));
+      out.smallTargets.push(`${name(el)} ${Math.round(r.width)}x${Math.round(r.height)}`);
+    }
+  });
+
+  /* Text squeezed into a column too narrow for it — the "one word per line"
+     collapse a flex row causes when a nowrap sibling takes the width. */
+  document.querySelectorAll("h1,h2,h3,h4,p,span,b,div,td,label,summary").forEach(el => {
+    if (el.children.length) return;
+    const text = (el.textContent || "").trim();
+    if (text.length < 18 || !/\s/.test(text)) return;
+    const r = el.getBoundingClientRect();
+    if (!r.height || r.width >= 160) return;
+    const lh = parseFloat(getComputedStyle(el).lineHeight) || 20;
+    const lines = Math.round(r.height / lh);
+    if (lines >= 3 && text.split(/\s+/).length / lines < 1.6) {
+      out.squeezed.push(`${name(el)} ${Math.round(r.width)}px over ${lines} lines — "${text.slice(0, 30)}"`);
+    }
+  });
+
+  out.overflow = document.documentElement.scrollWidth - vw;
+  return out;
+};
+
 const A11Y = () => {
   const issues = [];
   document.querySelectorAll("img").forEach(i => {
@@ -193,6 +244,42 @@ const A11Y = () => {
       if (worst > 1) fail(`${label} ${w}px: ${worst}px horizontal overflow — ${culprit}`);
       else pass(`${label} ${w}px: no horizontal overflow on any page`);
       await p2.close();
+    }
+  }
+
+  log("\n=== MOBILE (touch emulation) ===");
+  for (const lang of ["en", "ar"]) {
+    for (const [w, h, dpr, label] of [[375, 667, 2, "iPhone SE"], [412, 915, 2.6, "Android phone"]]) {
+      const ctx = await browser.newContext({
+        viewport: { width: w, height: h }, deviceScaleFactor: dpr,
+        isMobile: true, hasTouch: true, reducedMotion: "reduce",
+      });
+      const mp = await ctx.newPage();
+      await mp.goto(`${BASE}/index.html`);
+      await mp.evaluate(l => localStorage.setItem("gymbuddy_lang", l), lang);
+      await mp.evaluate(SEED);
+
+      const zoomers = new Set(), targets = new Set(), squeezed = new Set();
+      let overflow = 0, culprit = "";
+      for (const name of PAGES) {
+        await mp.goto(`${BASE}/${name}.html`);
+        await mp.waitForTimeout(420);
+        const r = await mp.evaluate(TOUCH);
+        r.zoomers.forEach(x => zoomers.add(`${name}: ${x}`));
+        r.smallTargets.forEach(x => targets.add(`${name}: ${x}`));
+        r.squeezed.forEach(x => squeezed.add(`${name}: ${x}`));
+        if (r.overflow > overflow) { overflow = r.overflow; culprit = name; }
+      }
+      const tag = `${label} · ${lang}`;
+      if (overflow > 1) fail(`${tag}: ${overflow}px horizontal overflow on ${culprit}`);
+      else pass(`${tag}: no page scrolls sideways`);
+      if (zoomers.size) fail(`${tag}: form controls under 16px, which makes iOS zoom in on focus — ${[...zoomers].slice(0, 3).join("; ")}`);
+      else pass(`${tag}: every form control is at least 16px, so tapping one does not zoom the page`);
+      if (targets.size) fail(`${tag}: touch targets under 44px — ${[...targets].slice(0, 4).join("; ")}`);
+      else pass(`${tag}: every control is at least 44px in both directions`);
+      if (squeezed.size) fail(`${tag}: text squeezed into a narrow column — ${[...squeezed].slice(0, 3).join("; ")}`);
+      else pass(`${tag}: no text collapsed into a one-word-per-line column`);
+      await ctx.close();
     }
   }
 

@@ -29,14 +29,14 @@ UI.ready(() => {
             <div class="field"><label for="f-email">${UI.t("profile.fEmail")}</label>
               <input id="f-email" type="email" dir="ltr" value="${p ? UI.esc(p.email) : ""}" placeholder="you@example.com"></div>
             <div class="field"><label for="f-age">${UI.t("profile.fAge")}</label>
-              <input id="f-age" type="number" min="12" max="100" required dir="ltr" value="${p ? p.age : ""}"></div>
+              <input id="f-age" type="number" min="12" max="100" required inputmode="numeric" dir="ltr" value="${p ? p.age : ""}"></div>
             <div class="field"><label for="f-sex">${UI.t("profile.fSex")}</label><select id="f-sex">
               ${SEXES.map(x => `<option value="${UI.esc(x)}" ${p && p.sex === x ? "selected" : ""}>${UI.esc(sexLabel(x))}</option>`).join("")}</select>
               <span class="hint">${UI.t("profile.fSexHint")}</span></div>
             <div class="field"><label for="f-height">${UI.t("profile.fHeight")}</label>
-              <input id="f-height" type="number" min="120" max="230" required dir="ltr" value="${p ? p.heightCm : ""}"></div>
+              <input id="f-height" type="number" min="120" max="230" required inputmode="numeric" dir="ltr" value="${p ? p.heightCm : ""}"></div>
             <div class="field"><label for="f-weight">${UI.t("profile.fWeight")}</label>
-              <input id="f-weight" type="number" min="30" max="300" step="0.1" required dir="ltr" value="${p ? p.weightKg : ""}"></div>
+              <input id="f-weight" type="number" min="30" max="300" step="0.1" required inputmode="decimal" dir="ltr" value="${p ? p.weightKg : ""}"></div>
             <div class="field"><label for="f-goal">${UI.t("profile.fGoal")}</label><select id="f-goal">
               ${GOALS.map(g => `<option value="${UI.esc(g)}" ${p && p.goal === g ? "selected" : ""}>${UI.esc(goalLabel(g))}</option>`).join("")}</select></div>
             <div class="field"><label for="f-level">${UI.t("profile.fLevel")}</label><select id="f-level">
@@ -157,7 +157,7 @@ UI.ready(() => {
             <div class="card">
               <form class="weight-form" id="weightForm">
                 <div class="field"><label for="w-weight">${UI.t("profile.weightLog")}</label>
-                  <input id="w-weight" type="number" min="30" max="300" step="0.1" required dir="ltr"></div>
+                  <input id="w-weight" type="number" min="30" max="300" step="0.1" required inputmode="decimal" dir="ltr"></div>
                 <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
               </form>
               <canvas class="chart" id="weightChart" data-height="190" role="img"
@@ -171,9 +171,9 @@ UI.ready(() => {
               <p class="hint" style="margin-bottom:12px;">${UI.t("profile.girthHint")}</p>
               <form class="weight-form" id="girthForm">
                 <div class="field"><label for="g-waist">${UI.t("profile.girthWaist")}</label>
-                  <input id="g-waist" type="number" min="40" max="200" step="0.5" dir="ltr"></div>
+                  <input id="g-waist" type="number" min="40" max="200" step="0.5" inputmode="decimal" dir="ltr"></div>
                 <div class="field"><label for="g-hip">${UI.t("profile.girthHip")}</label>
-                  <input id="g-hip" type="number" min="40" max="200" step="0.5" dir="ltr"></div>
+                  <input id="g-hip" type="number" min="40" max="200" step="0.5" inputmode="decimal" dir="ltr"></div>
                 <button class="btn btn-primary btn-sm" type="submit">${UI.t("profile.addEntry")}</button>
               </form>
               <canvas class="chart" id="girthChart" data-height="170" role="img"
@@ -273,13 +273,13 @@ UI.ready(() => {
                   <span>${UI.esc(exName(ex.id))}</span>
                   ${trained.has(ex.id) ? `<span class="hint"> · ${UI.t("profile.calAlreadyTrained")}</span>` : ""}
                 </td>
-                <td><input type="number" dir="ltr" min="0" max="500" step="0.5" name="w-${ex.id}"
+                <td><input type="number" dir="ltr" inputmode="decimal" min="0" max="500" step="0.5" name="w-${ex.id}"
                            value="${e.weight != null ? e.weight : ""}" placeholder="${UI.t("common.kg")}"
                            aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calWeight"), name: exName(ex.id) }))}"></td>
-                <td><input type="number" dir="ltr" min="1" max="30" step="1" name="r-${ex.id}"
+                <td><input type="number" dir="ltr" inputmode="numeric" min="1" max="30" step="1" name="r-${ex.id}"
                            value="${e.reps != null ? e.reps : ""}" placeholder="${UI.t("common.reps")}"
                            aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calReps"), name: exName(ex.id) }))}"></td>
-                <td><input type="number" dir="ltr" min="5" max="10" step="0.5" name="e-${ex.id}"
+                <td><input type="number" dir="ltr" inputmode="decimal" min="5" max="10" step="0.5" name="e-${ex.id}"
                            value="${e.rpe != null ? e.rpe : ""}" placeholder="8"
                            aria-label="${UI.esc(UI.t("profile.calFieldLabel", { field: UI.t("profile.calRpe"), name: exName(ex.id) }))}"></td>
               </tr>`;
@@ -402,7 +402,7 @@ UI.ready(() => {
         <div class="form-grid">
           ${["machine_stack", "cable_stack", "dumbbell", "barbell", "plate_loaded"].map(k => `
             <div class="field"><label for="inc-${k}">${UI.esc(loadTypeLabel(k))}</label>
-              <input id="inc-${k}" type="number" step="0.5" min="0.5" dir="ltr" data-inc="${k}"
+              <input id="inc-${k}" type="number" step="0.5" min="0.5" inputmode="decimal" dir="ltr" data-inc="${k}"
                 value="${(s.increments || {})[k] || LOAD_TYPES[k].increment}"></div>`).join("")}
         </div>
       </div>`;

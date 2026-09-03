@@ -34,6 +34,10 @@ input, select, textarea, button{ font-family: inherit; font-size: inherit; }
 html{ scroll-behavior: smooth; }
 body{
   margin:0;
+  /* Safari otherwise inflates body text when the phone is rotated to
+     landscape, which reflows the whole page mid-session. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   background: var(--bg);
   color: var(--text);
   line-height: 1.55;
@@ -56,6 +60,7 @@ button{ font-family:inherit; }
 .nav{
   position: sticky; top:0; z-index: 50;
   background: rgba(14,16,19,.85);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
@@ -215,7 +220,7 @@ section{ padding: 60px 0; }
   background: rgba(8,17,15,.78); color: var(--accent);
   border:1px solid rgba(31,209,168,.4);
   padding:3px 9px; border-radius:999px; font-size:.68rem; font-weight:800;
-  letter-spacing:.04em; backdrop-filter: blur(4px);
+  letter-spacing:.04em; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
 }
 .ex-card:hover .ex-media .play-badge{ background: var(--accent); color:#08110f; border-color: var(--accent); }
 /* SVG diagram fallback, shown only if a photo fails to load */
@@ -248,7 +253,8 @@ section{ padding: 60px 0; }
 
 /* ---------- Modal ---------- */
 .modal-overlay{
-  position: fixed; inset:0; background: rgba(5,6,8,.7); backdrop-filter: blur(3px);
+  position: fixed; inset:0; background: rgba(5,6,8,.7);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
   display:none; align-items:flex-start; justify-content:center; padding: 40px 16px; z-index:100; overflow-y:auto;
 }
 .modal-overlay.open{ display:flex; }
@@ -347,7 +353,16 @@ table.ex-table tr:hover td{ background: rgba(255,255,255,.02); }
 .stat-tile b{ display:block; font-size:1.4rem; }
 .stat-tile span{ color: var(--text-faint); font-size:.76rem; text-transform:uppercase; letter-spacing:.04em; }
 
-.tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+/* Four tabs do not fit across a 375px phone — they were pushing the whole
+   page 50px sideways. Scroll the strip instead of the document: a row of tabs
+   is exactly the thing a person expects to be able to swipe. */
+.tabs{
+  display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px;
+  overflow-x:auto; overflow-y:hidden; flex-wrap:nowrap;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch;
+}
+.tabs::-webkit-scrollbar{ display:none; }
+.tab-btn{ flex:0 0 auto; }
 .tab-btn{ background:none; border:none; color: var(--text-faint); padding:10px 16px; font-weight:700; cursor:pointer; font-size:.9rem; border-bottom:2px solid transparent; }
 .tab-btn.active{ color: var(--text); border-color: var(--accent); }
 .tab-panel{ display:none; }
@@ -507,6 +522,12 @@ video.thumb{ display:block; }
 .coach-card.sev-warn{ border-left-color:var(--warn); }
 .coach-card.sev-info{ border-left-color:var(--info); }
 .coach-card .ch{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:8px; }
+/* The category label does not wrap, so on a narrow card it took its full width
+   and left the headline about sixty pixels to live in — seven lines of one
+   word each. Below 620px it becomes a kicker above the headline instead. */
+@media (max-width: 620px){
+  .coach-card .ch{ flex-direction: column-reverse; align-items: flex-start; gap: 4px; }
+}
 .coach-card h3{ margin:0; font-size:1rem; }
 .coach-card p{ margin:0; font-size:.9rem; white-space:pre-line; }
 .coach-card .ca{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
@@ -602,6 +623,25 @@ video.thumb{ display:block; }
 .rest-bar .lbl b{ color:var(--text); display:block; }
 .rest-bar .bar{ position:absolute; left:0; bottom:0; height:3px; background:var(--accent); border-radius:0 0 var(--radius) var(--radius); transition:width .3s linear; }
 
+/* On a phone the four children — clock, label, skip, +30s — cannot sit on one
+   line: the label collapsed into a one-word-per-line column three hundred
+   pixels tall that buried the set underneath it, and "+30s" fell off the right
+   edge. Two rows instead: the clock and what you are resting for, then the two
+   controls side by side and wide enough to hit without looking. */
+@media (max-width: 560px){
+  .rest-bar{
+    display:grid; grid-template-columns:auto 1fr; gap:6px 14px;
+    padding:12px 14px; align-items:center;
+  }
+  .rest-bar .t{ font-size:1.5rem; min-width:0; }
+  .rest-bar .lbl{ font-size:.8rem; line-height:1.3; }
+  .rest-bar .lbl b{ display:inline; }
+  .rest-bar .lbl span{ display:block; color:var(--text-faint); }
+  .rest-bar .btn{ grid-column:span 1; width:100%; }
+  .rest-bar #restSkip{ grid-column:1; }
+  .rest-bar #restPlus{ grid-column:2; }
+}
+
 .wo-card{
   background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
   margin-bottom:16px; overflow:hidden;
@@ -612,7 +652,7 @@ video.thumb{ display:block; }
 .wo-head .meta{ flex:1; min-width:0; }
 .wo-head h3{ margin:0 0 4px; font-size:1rem; }
 .wo-head .sub{ font-size:.76rem; color:var(--text-faint); }
-.wo-target{ text-align:right; white-space:nowrap; }
+.wo-target{ text-align:end; white-space:nowrap; }
 .wo-target b{ display:block; font-size:1.2rem; font-weight:800; }
 .wo-target span{ font-size:.74rem; color:var(--text-faint); }
 
@@ -654,6 +694,15 @@ video.thumb{ display:block; }
 @media (max-width:560px){
   .set-row{ grid-template-columns:26px 1fr 1fr 1fr; row-gap:8px; }
   .set-row .log-btn{ grid-column:1 / -1; }
+
+  /* The prescription is `white-space: nowrap` and about 230px wide, which on
+     a 375px phone left the exercise name roughly fifteen pixels to live in —
+     "Chest Press Machine" came out as three lines of one word. Give the name
+     the top row and drop the prescription underneath it. */
+  .wo-head{ flex-wrap:wrap; }
+  .wo-head .meta{ flex:1 1 150px; }
+  .wo-target{ flex:1 0 100%; text-align:start; display:flex; align-items:baseline; gap:10px; }
+  .wo-target b{ display:inline; }
 }
 
 .wo-side .card{ margin-bottom:16px; }
@@ -895,10 +944,155 @@ canvas.chart{ width:100%; display:block; }
    usable on a phone, so the inputs shrink rather than the table scrolling. */
 .cal-table td{ vertical-align: middle; }
 .cal-table input{ width:100%; min-width:56px; padding:6px 8px; font-size:.82rem;
-  background:var(--bg-alt); color:var(--text); border:1px solid var(--line); border-radius:8px; }
+  background:var(--bg-alt); color:var(--text); border:1px solid var(--border); border-radius:8px; }
 .cal-table th:not(:first-child), .cal-table td:not(:first-child){ width:22%; }
 .cal-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 @media (max-width: 520px){
   .cal-table th:first-child, .cal-table td:first-child{ font-size:.78rem; }
   .cal-table input{ min-width:44px; padding:5px 6px; }
+}
+
+/* ---------- Long button labels on a narrow screen ----------
+   Buttons are `white-space: nowrap` so a label never breaks mid-phrase, which
+   is right on a desktop and wrong on a phone: a coach action reading "Bring
+   the deload forward to this week" came out 423px wide on a 375px screen and
+   pushed the whole page sideways. Below 620px the label is allowed to wrap
+   onto a second line instead of the page scrolling. */
+@media (max-width: 620px){
+  .btn{ white-space: normal; max-width: 100%; }
+  .coach-card .ca .btn{ text-align: center; }
+}
+
+/* ---------- The prescription table on a phone ----------
+   Five columns — exercise, sets x reps, next load, decision, details — need
+   about 580px. On a 375px screen the table scrolled sideways, which meant the
+   one number the page exists to deliver, the next load, sat off the edge of
+   the screen with nothing to suggest it was there.
+
+   Below 620px the row stops being a table row and becomes a small block: the
+   name on top, then the prescription and the load facing each other, then the
+   decision. Nothing is hidden and nothing has to be swiped for. */
+@media (max-width: 620px){
+  .rx-table, .rx-table tbody, .rx-table tr, .rx-table td { display: block; width: auto; }
+  .rx-table thead { display: none; }
+  /* `display: block` above outranks the user-agent's `[hidden] { display: none }`,
+     which would leave every collapsed reasoning row permanently open. */
+  .rx-table tr[hidden], .rx-table td[hidden] { display: none; }
+
+  .rx-table tr.rx-row{
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 12px;
+    padding: 12px 14px; align-items: center;
+  }
+  .rx-table tr.rx-row td{ padding: 0; border: none; }
+  .rx-table tr.rx-row td:nth-child(1){ grid-column: 1 / -1; }          /* thumb + name */
+  .rx-table tr.rx-row td:nth-child(2){ grid-column: 1; color: var(--text-faint); font-size: .84rem; }
+  .rx-table tr.rx-row td:nth-child(3){ grid-column: 2; text-align: end; }
+  .rx-table tr.rx-row td:nth-child(4){ grid-column: 1; }               /* decision pill */
+  /* The details chevron carries an inline text-align for RTL, so overriding
+     it here needs the same weight. */
+  .rx-table tr.rx-row td:nth-child(5){ grid-column: 2; text-align: end !important; }
+
+  .rx-table tr.rx-why td{ padding: 0 14px 16px; }
+  .rx-table tr:not(:last-child){ border-bottom: 1px solid var(--border); }
+  .rx-table tr.rx-why{ border-bottom: none; }
+}
+
+/* ---------- Horizontally scrolling tables ----------
+   The prescription table is five columns wide and a phone is not. It has
+   always scrolled sideways, but with no edge and no shadow there was nothing
+   to suggest that the weight column existed at all — the table simply looked
+   truncated. These are the classic background-attachment shadows: `local`
+   gradients that sit still against the content and `scroll` ones that stay
+   pinned to the box, so a shadow appears on whichever side has more table
+   behind it and disappears when you reach the end. */
+.table-scroll{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;   /* a sideways swipe should not navigate back */
+  background:
+    linear-gradient(to right, var(--card) 40%, rgba(20,22,26,0)) left center / 32px 100% no-repeat local,
+    linear-gradient(to left,  var(--card) 40%, rgba(20,22,26,0)) right center / 32px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.45), rgba(0,0,0,0)) left center / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.45), rgba(0,0,0,0)) right center / 14px 100% no-repeat scroll;
+}
+
+/* ============================================================================
+   Touch devices and phones
+   ----------------------------------------------------------------------------
+   Everything below is keyed to how the device is being pointed at rather than
+   to how wide the window is. A narrow desktop window is not a phone: it has a
+   mouse, it has hover, and tapping a 32px button with a cursor is fine. The
+   things that actually break are consequences of a finger and of Safari's
+   input handling, so `pointer: coarse` and `hover: none` are the honest
+   conditions to test.
+   ============================================================================ */
+
+/* iOS Safari zooms the page in whenever a focused form control has text
+   smaller than 16px, and it does not zoom back out afterwards. On the workout
+   page that meant every single weight and rep entry left the lifter zoomed
+   into a corner of their own session, mid-set, needing to pinch back out.
+   Sixteen pixels is the threshold, so on a touch device the fields get
+   sixteen pixels. Desktop keeps its denser typography. */
+@media (pointer: coarse) {
+  input, select, textarea,
+  .set-row input, .set-row select,
+  .cal-table input, .search-input, .field input, .field select {
+    font-size: 16px;
+  }
+
+  /* A finger is about 9mm across; 44px is the smallest target that can be hit
+     reliably without looking. Padding is used rather than height so nothing
+     is stretched out of shape — and the set row's own inputs matter most,
+     because they are tapped forty times a session with a bar in the way. */
+  .btn, .btn-sm, .tab-btn, .chip, .day-btn, .lang-switch, .nav-toggle,
+  .seg button, .readiness-scale button, .modal-close, .nav-links a,
+  .set-row input, .set-row select, .set-row .log-btn {
+    min-height: 44px;
+  }
+  .set-row input, .set-row select { padding-block: 10px; }
+  .tab-btn { padding: 12px 16px; }
+  .chip, .lang-switch { padding-block: 11px; }
+  .nav-toggle { min-width: 44px; }
+  .brand, .nav-user, .search-input, .plist button, .field select, .field input,
+  .profile-switch button { min-height: 44px; }
+  .nav-user { min-width: 44px; }
+  /* The "why this weight" disclosure is a 20px line of text, and it is the
+     one control on the page a lifter taps while curious rather than while
+     concentrating — it should not need aiming. */
+  .wo-why summary { padding-block: 12px; }
+  .cal-table input { min-height: 40px; }   /* four to a row; 44 would not fit */
+
+  /* Checkboxes are drawn by the browser at 16px and cannot be padded, so the
+     label around them carries the target instead. */
+  .toggle { min-height: 44px; }
+  .toggle input { width: 20px; height: 20px; }
+
+  /* The grey flash Safari paints over anything tappable, which on a dark
+     theme reads as a rendering fault rather than as feedback. The app already
+     gives its own :active and focus styles. */
+  a, button, input, select, textarea, summary, [role="tab"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* A tap on a touch screen leaves :hover applied until you tap somewhere else,
+   so a card you touched stays lifted and highlighted as though the cursor were
+   still on it. These are decoration; on a device with no pointer to hover
+   with, they should simply not exist. */
+@media (hover: none) {
+  .card:hover { border-color: var(--border); }
+  .ex-card:hover { transform: none; box-shadow: none; border-color: var(--border); }
+  .ex-card:hover .ex-media .ex-photo { transform: none; }
+  .ex-card:hover .ex-media .play-badge { background: rgba(8,17,15,.72); color: var(--text); border-color: var(--border); }
+  .nav-links a:hover { background: none; color: var(--text-dim); }
+  .nav-links a.active:hover { background: var(--accent); color: #08110f; }
+  table.ex-table tr:hover td, .rx-table tr.rx-row:hover td, .ex-line:hover { background: transparent; }
+}
+
+/* Landscape on a phone is 375px tall, and a 64px sticky header plus a sticky
+   rest bar leaves almost nothing for the session itself. */
+@media (max-height: 460px) and (pointer: coarse) {
+  .nav { position: static; }
+  .rest-bar { top: 0; }
+  .hero { padding: 32px 0 24px; }
 }

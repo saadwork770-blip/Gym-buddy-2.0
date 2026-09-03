@@ -147,13 +147,13 @@ UI.ready(() => {
             approx: plates.exact ? "" : I18n.t("coachPage.overrideApprox") })}</div>` : ""}
         <div class="form-grid" style="margin-top:16px;">
           <div class="field"><label for="ovWeight">${UI.t("coachPage.overrideWeight")}</label>
-            <input type="number" id="ovWeight" step="0.5" min="0" dir="ltr" value="${current}"></div>
+            <input type="number" id="ovWeight" step="0.5" min="0" inputmode="decimal" dir="ltr" value="${current}"></div>
           <div class="field"><label for="ovSets">${UI.t("coachPage.overrideSets")}</label>
-            <input type="number" id="ovSets" min="1" max="6" dir="ltr" value="${rx.sets || ex.defaultSets}"></div>
+            <input type="number" id="ovSets" min="1" max="6" inputmode="numeric" dir="ltr" value="${rx.sets || ex.defaultSets}"></div>
           <div class="field"><label for="ovLo">${UI.t("coachPage.overrideLo")}</label>
-            <input type="number" id="ovLo" min="1" max="50" dir="ltr" value="${rx.repLo || ex.defaultRepLo}"></div>
+            <input type="number" id="ovLo" min="1" max="50" inputmode="numeric" dir="ltr" value="${rx.repLo || ex.defaultRepLo}"></div>
           <div class="field"><label for="ovHi">${UI.t("coachPage.overrideHi")}</label>
-            <input type="number" id="ovHi" min="1" max="60" dir="ltr" value="${rx.repHi || ex.defaultRepHi}"></div>
+            <input type="number" id="ovHi" min="1" max="60" inputmode="numeric" dir="ltr" value="${rx.repHi || ex.defaultRepHi}"></div>
         </div>
         <div class="form-actions">
           <button class="btn btn-primary" id="ovSave">${UI.t("coachPage.overrideSave")}</button>

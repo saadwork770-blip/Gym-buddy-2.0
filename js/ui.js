@@ -177,9 +177,36 @@ const UI = (function () {
     document.body.appendChild(overlay);
     applyStaticStrings(overlay);
     const previouslyFocused = document.activeElement;
+
+    /* Lock the page behind the dialog. Without this a drag anywhere on the
+       overlay scrolls the document underneath it, so on a phone the dialog
+       appears to float over a page sliding about on its own. The scroll
+       position has to be restored by hand because `position: fixed` on the
+       body discards it. */
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const alreadyLocked = body.style.position === "fixed";
+    if (!alreadyLocked) {
+      body.style.position = "fixed";
+      body.style.top = `-${scrollY}px`;
+      body.style.width = "100%";
+    }
+
     const close = () => {
       overlay.remove();
       document.removeEventListener("keydown", onKey);
+      if (!alreadyLocked) {
+        body.style.position = "";
+        body.style.top = "";
+        body.style.width = "";
+        /* The page scrolls smoothly by preference, which would animate this
+           restore into a visible lurch. It is a restore, not a journey. */
+        const root = document.documentElement;
+        const priorBehavior = root.style.scrollBehavior;
+        root.style.scrollBehavior = "auto";
+        window.scrollTo(0, scrollY);
+        root.style.scrollBehavior = priorBehavior;
+      }
       if (previouslyFocused && previouslyFocused.focus) previouslyFocused.focus();
     };
     const onKey = e => {
@@ -479,11 +506,52 @@ const UI = (function () {
   /* ---------------- Rest timer sound ----------------
      A short synthesised tone, so there is no audio file to ship and nothing
      to load. Silently does nothing if the browser blocks audio. */
+  /* ------------------------------------------------------------------
+     Rest timer sound
+     ------------------------------------------------------------------
+     iOS will not let a page make a noise unless the audio context was
+     created or resumed inside a real user gesture, and a rest timer by
+     definition fires from a timer rather than from a tap. So the previous
+     version — a fresh AudioContext per beep, built when the countdown hit
+     zero — was silent on every iPhone, which is exactly the device someone
+     props against the rack while they rest.
+
+     One context is created and unlocked on the first touch or click
+     anywhere in the app, then reused. Safari also suspends the context when
+     the page goes to the background, so it is resumed before each beep.
+     ------------------------------------------------------------------ */
+
+  let audioCtx = null;
+
+  function audioContext() {
+    if (audioCtx) return audioCtx;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    try { audioCtx = new Ctx(); } catch (e) { return null; }
+    return audioCtx;
+  }
+
+  /** Called from a real gesture, which is the only moment iOS will allow. */
+  function unlockAudio() {
+    const ctx = audioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    if (ctx.state === "running") return;
+    /* Some WebKit versions only truly unlock once a buffer has played, so a
+       single silent sample is pushed through on the way past. */
+    try {
+      const src = ctx.createBufferSource();
+      src.buffer = ctx.createBuffer(1, 1, 22050);
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch (e) { /* nothing to do; the beep is a nicety */ }
+  }
+
   function beep(times) {
     try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
+      const ctx = audioContext();
+      if (!ctx) return;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
       const n = times || 2;
       for (let i = 0; i < n; i++) {
         const osc = ctx.createOscillator(), gain = ctx.createGain();
@@ -508,7 +576,7 @@ const UI = (function () {
 
   return {
     esc, t, tx, mountChrome, refreshChrome, applyStaticStrings, requireProfile, toast, modal, fmt, actionBadge,
-    exerciseThumb, exerciseClip, canPlayClips: () => CAN_PLAY_CLIPS, wireThumbHover, lineChart, volumeBars, prepCanvas, beep, ready, hexA,
+    exerciseThumb, exerciseClip, canPlayClips: () => CAN_PLAY_CLIPS, unlockAudio, wireThumbHover, lineChart, volumeBars, prepCanvas, beep, ready, hexA,
   };
 })();
 
@@ -526,4 +594,17 @@ UI.ready(UI.mountChrome);
 UI.ready(() => {
   const active = Store.getActiveId && Store.getActiveId();
   if (active) Store.requestPersistence(active);
+
+  /* The first tap anywhere is the only chance iOS gives us to open an audio
+     context, and it has to be taken whether or not the user is on the workout
+     page yet — by the time the rest timer needs a sound it is far too late. */
+  const arm = () => {
+    UI.unlockAudio();
+    document.removeEventListener("touchend", arm);
+    document.removeEventListener("mousedown", arm);
+    document.removeEventListener("keydown", arm);
+  };
+  document.addEventListener("touchend", arm, { passive: true });
+  document.addEventListener("mousedown", arm);
+  document.addEventListener("keydown", arm);
 });
