@@ -579,7 +579,7 @@ video.thumb{ display:block; }
 }
 .ex-line:hover{ background:rgba(255,255,255,.02); }
 .ex-line .nm{ flex:1; min-width:0; }
-.ex-line .nm b{ display:block; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ex-line .nm b{ display:block; font-weight:600; overflow-wrap:break-word; }
 .ex-line .nm span{ font-size:.74rem; color:var(--text-faint); }
 .ex-line .ld{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .ex-line .ld b{ display:block; font-weight:800; }
@@ -1276,7 +1276,13 @@ canvas.chart{ width:100%; display:block; }
   /* ---------- Session cards ---------- */
   .session-card .sh{ padding: 14px 15px; }
   .session-card .btn{ width: 100%; }
-  .ex-line{ padding-block: 11px; }
+  /* The name column used to fit on one line; now that Arabic carries the
+     English name in brackets, squeezing it beside the load column on a
+     narrow phone wraps it into a tall, cramped stack. Full width for the
+     name, load pushed onto its own line beneath, fixes it at the source
+     instead of truncating the very thing this was added to show. */
+  .ex-line{ padding-block: 11px; flex-wrap: wrap; }
+  .ex-line .nm{ flex-basis: 100%; }
 
   /* ---------- Footer ----------
      Two paragraphs of licensing under a tab bar is noise; it stays for anyone
