@@ -45,43 +45,16 @@
    rather than reading the English constant directly, so a language switch
    re-renders the whole app instead of leaving English islands behind. */
 
-/* ---------- Brand-aware exercise content ----------
-   The neutral library names the movement; a brand names the machine. Three
-   places are asked in order: the brand's own written overlay, then the name
-   composed from the machine and the series it is sold in, then the neutral
-   entry. Free weights reach the third every time, which is right — a dumbbell
-   is a dumbbell. */
-function brandKey(id, field) { return `brand.${activeBrand()}.exercise.${id}.${field}`; }
-
-/** exName for a given brand rather than the active one — what the "compare
-    brands" strip on the exercise detail page uses to caption a tile without
-    switching the profile's own setting. */
-function exNameForBrand(id, brand) {
-  const k = `brand.${brand}.exercise.${id}.name`;
-  if (I18n.has(k)) return I18n.t(k);
-  return brandMachineNameFor(id, brand) || I18n.t(`exercise.${id}.name`);
-}
-function exName(id) { return exNameForBrand(id, activeBrand()); }
-function exSteps(id) {
-  const k = brandKey(id, "steps");
-  return I18n.has(k) ? I18n.list(k) : I18n.list(`exercise.${id}.steps`);
-}
-function exTips(id) {
-  const k = brandKey(id, "tips");
-  return I18n.has(k) ? I18n.list(k) : I18n.list(`exercise.${id}.tips`);
-}
+function exName(id)  { return I18n.t(`exercise.${id}.name`); }
+function exSteps(id) { return I18n.list(`exercise.${id}.steps`); }
+function exTips(id)  { return I18n.list(`exercise.${id}.tips`); }
 function exMediaNote(id){ return I18n.has(`mediaNote.${id}`) ? I18n.t(`mediaNote.${id}`) : null; }
 
 function muscleLabel(m)   { return I18n.t(`muscle.${m}`); }
 function patternLabel(p)  { return I18n.t(`pattern.${p}`); }
 function loadTypeLabel(l) { return I18n.t(`loadType.${l}`); }
 function equipmentLabel(e){ return I18n.has(`equipment.${e}`) ? I18n.t(`equipment.${e}`) : e; }
-/** The equipment label for an exercise, which a brand may override. */
-function exEquipment(id) {
-  const ex = exerciseById(id);
-  return brandEquipment(id) || (ex ? equipmentLabel(ex.equipment) : "");
-}
-function brandLabel(id) { return I18n.t(`brandName.${id || activeBrand()}`); }
+function exEquipment(id)  { const ex = exerciseById(id); return ex ? equipmentLabel(ex.equipment) : ""; }
 function jointLabel(j)    { return I18n.t(`joint.${j}`); }
 function goalLabel(g)     { return I18n.has(`goal.${g}`) ? I18n.t(`goal.${g}`) : g; }
 function levelLabel(l)    { return I18n.has(`level.${l}`) ? I18n.t(`level.${l}`) : l; }
