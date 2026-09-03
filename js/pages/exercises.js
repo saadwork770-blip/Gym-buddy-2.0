@@ -144,19 +144,50 @@ UI.ready(() => {
     return DAY_TEMPLATE[ex.day] ? templateName(DAY_TEMPLATE[ex.day]) : patternLabel(ex.pattern);
   }
 
+  const SEARCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="10.3" cy="10.3" r="6.3"/><path d="M20 20 15 15"/>
+  </svg>`;
+
+  /* Plain English names for a search query, independent of the interface
+     language — a Life Fitness machine is found by searching "Life Fitness",
+     not by whatever brandName translates to today. Matches the ids in
+     data/brands.js's BRANDS; generic has no entry on purpose, since there is
+     no manufacturer to search for. */
+  const BRAND_SEARCH_NAME = {
+    technogym: "Technogym", lifefitness: "Life Fitness", hammer: "Hammer Strength",
+    cybex: "Cybex", matrix: "Matrix", precor: "Precor", nautilus: "Nautilus",
+    gym80: "gym80", panatta: "Panatta",
+  };
+
+  /* A live image search for this brand's real machine, in place of hosting a
+     copy of anybody's product photography ourselves. Returns null for the
+     generic brand (nothing to search for) and for any exercise with no
+     canonical machine name (free weights, bodyweight — nothing a brand
+     manufactures as a named product). */
+  function brandSearchUrl(id, b) {
+    const brandName = BRAND_SEARCH_NAME[b];
+    const machine = typeof MACHINE_NAME !== "undefined" ? MACHINE_NAME[id] : null;
+    if (!brandName || !machine) return null;
+    const series = typeof brandSeries === "function" ? brandSeries(id, b) : null;
+    const q = [brandName, series, machine, "gym machine"].filter(Boolean).join(" ");
+    return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(q)}`;
+  }
+
   /* A tile per brand: what this machine is called there, and a photo of it.
      Every tile shows a photo — an empty frame reads as broken, not honest —
      but only a tile whose brand has really been photographed (hasBrandPhotoOf)
      shows one of that brand's own machines. The rest show the same shared
-     photo the page opened with, and say so with a small corner tag rather
-     than by staying blank, because a full row of pictures under nine
-     different names is exactly the false impression a blank frame was meant
-     to avoid — the tag is what keeps it honest instead. */
+     photo the page opened with, marked with a small corner tag, plus a link
+     to a live image search for the real thing — sourced from the web on
+     request rather than copied into the app, which is the honest way to get
+     from "here is the general idea" to "here is what it really looks like". */
   function brandGalleryHtml(id) {
     const active = activeBrand();
     const cards = Object.keys(BRANDS).map(b => {
       const has = hasBrandPhotoOf(id, b);
       const label = brandEquipmentFor(id, b) || brandLabel(b);
+      const searchUrl = has ? null : brandSearchUrl(id, b);
       return `
         <div class="brand-gallery-card${b === active ? " active" : ""}">
           <div class="brand-gallery-thumb">
@@ -165,6 +196,8 @@ UI.ready(() => {
           </div>
           <div class="brand-gallery-name">${UI.esc(label)}</div>
           ${b === active ? `<span class="pill neutral">${UI.t("library.yourGym")}</span>` : ""}
+          ${searchUrl ? `<a class="brand-gallery-search-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer">
+              ${SEARCH_ICON}<span>${UI.t("library.searchRealPhotos")}</span></a>` : ""}
         </div>`;
     }).join("");
 
