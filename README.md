@@ -45,15 +45,21 @@ on is not. "Chest Press Machine" is what the exercise *is*; "Chest Press
 (Selection)" is what is written on the frame in a gym kitted out by Technogym —
 and a member looking for it reads the frame.
 
-So the library underneath is brand-neutral and each brand supplies an overlay.
-Pick yours in **Profile → Training settings → Equipment brand** and every
-machine is renamed, with setup cues describing the adjustments that machine
-actually has. Two ship today:
+So the library underneath is brand-neutral and each brand describes its own
+floor on top of it. Pick yours in **Profile → Training settings → Equipment
+brand** and every machine is renamed to what is printed on the frame: the
+machine, then the range it belongs to.
 
 | Brand | What changes |
 |---|---|
 | **No particular brand** (default) | Names the movement rather than the product. Right for a gym with mixed equipment. |
-| **Technogym** | 31 machine, cable and cardio entries renamed to the Selection, Pure Strength, Pulley, Multipower, Excite and Skill lines, with setup cues for those machines. |
+| **Technogym** | 31 machine, cable and cardio entries renamed to the Selection, Pure Strength, Pulley, Multipower, Excite and Skill lines — *and* setup cues rewritten for those machines. |
+| **Life Fitness** | Insignia Series stacks and cables, Signature Series plate-loaded. |
+| **Hammer Strength** | Select stacks and cables, Iso-Lateral plate-loaded. |
+| **Cybex** | Eagle NX stacks and cables. |
+| **Matrix** | Ultra Series stacks and cables, Magnum plate-loaded. |
+| **Precor** | Resolute stacks and cables, Discovery Series plate-loaded. |
+| **Nautilus**, **gym80**, **Panatta** | Named as the maker of the machine, with no series claimed. |
 
 Under Technogym the plan reads: Chest Press, Pectoral, Shoulder Press, Lat
 Machine, Low Row, Arm Curl, Leg Extension, Leg Curl, Abductor / Adductor,
@@ -63,9 +69,25 @@ pushdowns, face pulls and crossovers at the **Pulley**; the fixed-bar incline
 press on the **Multipower**; Run, Bike, Synchro and Climb on **Excite**; the
 rower is **Skillrow**.
 
+### What is and is not claimed
+
+Only Technogym gets bespoke technique. Writing thirty setup paragraphs for each
+of nine manufacturers would mean inventing most of them, and an invented cue is
+worse than none — somebody follows it at a machine that does not have that
+adjustment. So every other brand is composed from two things that can be
+checked: the name of the machine, which barely varies, and the series that
+maker builds that kind of machine in, taken from their own catalogue. The
+technique underneath stays the neutral one, which is true of all of them.
+
+Where a series could not be verified it is left out rather than guessed at.
+That is why Nautilus, gym80 and Panatta name only the maker; why Cybex names
+no plate-loaded line; and why **no brand but Technogym names a cardio series**,
+since a maker's treadmill range and its rower are often not the same one.
+
 Adding a brand is one file plus its Arabic half — `js/data/brands.js` and
-`js/i18n/brands.ar.js`. An overlay can be as small as a single exercise;
-anything it does not mention falls through to the neutral entry.
+`js/i18n/brands.ar.js`. A full written-out overlay can be as small as a single
+exercise; a series-only brand is four lines. Anything a brand does not mention
+falls through to the neutral entry.
 
 ### About the photographs
 
@@ -74,11 +96,13 @@ A brand can ship its own photography in `assets/photos/<brand>/`, and
 ever requests a file that is not there. Anything a brand has not photographed
 falls back to the shared set.
 
-**Technogym's list is deliberately empty.** Their product photography belongs
-to them and is not licensed for redistribution, so the pictures you see under
-that brand are still the shared public-domain ones: the movement in each is
-correct, the badge on the frame is not. The library page says so, and stops
-saying so once the photographs are your own.
+**Every brand's list is deliberately empty.** No manufacturer's product
+photography is licensed for redistribution — that is true of all nine, not
+just one — and brand-specific gym machinery is not covered by the public-domain
+libraries either. So the pictures you see under any brand are still the shared
+ones: the movement in each is correct, the badge on the frame is not. The
+library page says so, naming whichever brand you have picked, and stops saying
+so once the photographs are your own.
 
 The honest fix is your own camera. `tools/import-photos.js` takes two
 photographs of a machine in your gym — the start and the end of a rep — and
@@ -92,39 +116,6 @@ node tools/import-photos.js --brand technogym --dir ~/gym-photos # that brand on
 Shoot both frames from the same spot; the clip cross-fades between them, and a
 camera that moved reads as a jump rather than as a rep. Filed under a brand, they show only
 for profiles set to it — everybody else keeps the shared pictures.
-
-Version 1 turned that plan into a browsable website. Version 2.0 keeps every bit
-of that — the full program, the exercise library with real gym photographs and
-animated demonstrations, the local profile — and puts a coaching engine
-underneath it.
-
-The engine does three things the static version could not:
-
-1. **It picks your weights.** Not a fixed number printed on a page: the load for
-   your next session is derived from the reps and effort you logged in the last
-   one, and rounded to what the machine can actually select.
-2. **It rebuilds your week around the days you can train.** Choose one to six
-   days and it re-selects the split, re-orders the sessions so overlapping
-   muscle work lands as far apart as the week allows, and re-sizes each session
-   to the time you have.
-3. **It changes the workouts.** Stalled lifts, missing equipment, a joint that
-   hurts, volume above what you can recover from — each triggers a specific,
-   explained modification that you accept or reject. Between blocks it rotates
-   the program on its own, keeping your main lifts long enough to get strong at
-   them and varying the work around them.
-4. **It knows when you have been away.** Come back after five weeks and it
-   brings the loads down and the effort ceiling with them, rather than handing
-   you the bar you left with the word "increase" on it.
-
-It runs in **English and Arabic**, with full right-to-left layout — including
-the coaching prose, which is generated from your training data rather than
-written in advance.
-
-The library is **66 exercises**, every one with a real gym photograph and a
-silent looping demonstration.
-
-It is still a static site. No build step, no dependencies, no server, no
-account. Everything you log stays in your browser.
 
 ---
 

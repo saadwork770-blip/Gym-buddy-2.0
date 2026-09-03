@@ -366,9 +366,11 @@ UI.ready(() => {
       <div class="settings-group">
         <h3>${UI.t("profile.setBrand")}</h3>
         <p class="hint">${UI.t("profile.setBrandHint")}</p>
-        <div class="seg" id="brandSeg" role="group" aria-label="${UI.t("profile.setBrand")}">
-          ${Object.keys(BRANDS).map(b => `<button data-brand="${b}" class="${(s.equipmentBrand || "generic") === b ? "on" : ""}"
-            aria-pressed="${(s.equipmentBrand || "generic") === b}">${UI.esc(brandLabel(b))}</button>`).join("")}
+        <div class="field" style="max-width:360px;">
+          <select id="brandPick" aria-label="${UI.t("profile.setBrand")}">
+            ${Object.keys(BRANDS).map(b => `<option value="${b}" ${(s.equipmentBrand || "generic") === b ? "selected" : ""}
+              >${UI.esc(brandLabel(b))}</option>`).join("")}
+          </select>
         </div>
       </div>
 
@@ -423,12 +425,13 @@ UI.ready(() => {
       save({ sessionMinutes: Number(btn.dataset.min) });
       render();
     }));
-    panel.querySelectorAll("#brandSeg button").forEach(btn => btn.addEventListener("click", () => {
+    const brandPick = panel.querySelector("#brandPick");
+    if (brandPick) brandPick.addEventListener("change", () => {
       /* Changing brand renames every machine and rewrites its setup cues, so
          the page is redrawn rather than patched. */
-      save({ equipmentBrand: btn.dataset.brand });
+      save({ equipmentBrand: brandPick.value });
       render();
-    }));
+    });
     panel.querySelectorAll("[data-eq]").forEach(cb => cb.addEventListener("change", () => {
       const next = {};
       panel.querySelectorAll("[data-eq]").forEach(x => { next[x.dataset.eq] = x.checked; });

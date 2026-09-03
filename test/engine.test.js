@@ -946,6 +946,98 @@ suite("The tape measure says what the scale cannot");
     "a fat-loss profile with a scale history is asked for a waist measurement");
 }
 
+/* ---------- Equipment brands ---------- */
+
+suite("A brand renames the machine without inventing anything about it");
+{
+  const gb = load();
+  const p = gb.Store.createProfile({ ...baseProfile, name: "Brand" });
+  const brandOf = id => { gb.Store.updateSettings(p.id, { equipmentBrand: id }); };
+
+  brandOf("generic");
+  check(gb.exName("leg-extension") === "Leg Extension Machine"
+     || gb.exName("leg-extension") === "Leg Extension",
+    `no brand leaves the neutral name alone (${gb.exName("leg-extension")})`);
+
+  /* Technogym is the one brand with written-out content, so it wins over the
+     composer and brings its own setup cues with it. */
+  brandOf("technogym");
+  check(gb.exName("leg-extension") === "Leg Extension (Selection)",
+    `a written overlay is used as written (${gb.exName("leg-extension")})`);
+  check(gb.exSteps("leg-extension").some(l => /pivot/i.test(l)),
+    "and replaces the technique with cues for that machine");
+
+  /* Everyone else is composed: the machine's name, plus the series that maker
+     builds that kind of machine in. */
+  brandOf("cybex");
+  check(gb.exName("leg-extension") === "Leg Extension (Eagle NX)",
+    `a selectorized machine takes the selectorized series (${gb.exName("leg-extension")})`);
+  check(gb.exEquipment("leg-extension") === "Cybex Eagle NX",
+    `the equipment label carries both (${gb.exEquipment("leg-extension")})`);
+  /* Cybex has no plate-loaded series worth printing, so that machine falls
+     back to the plain name and only the maker is claimed. */
+  check(gb.exName("leg-press") === "Leg Press" && gb.exEquipment("leg-press") === "Cybex",
+    `an unnamed line inside a named brand claims nothing (${gb.exName("leg-press")} / ${gb.exEquipment("leg-press")})`);
+
+  brandOf("lifefitness");
+  check(gb.exName("leg-press") === "Leg Press (Signature Series)",
+    `each brand has its own plate-loaded line (${gb.exName("leg-press")})`);
+
+  /* A composed name must never rewrite the technique — the setup cues under it
+     were written for a generic machine and stay true for all of them. */
+  check(gb.exSteps("leg-extension").join(" ") === gb.I18n.list("exercise.leg-extension.steps").join(" "),
+    "a composed name leaves the neutral technique in place");
+
+  /* Nothing is claimed for a maker whose series naming could not be checked. */
+  brandOf("nautilus");
+  check(!/\(/.test(gb.exName("leg-extension")),
+    `an unverified brand claims no series (${gb.exName("leg-extension")})`);
+  check(gb.exEquipment("leg-extension") === "Nautilus",
+    "but still says whose machine it is");
+
+  /* Free weights are nobody's product in particular. */
+  brandOf("matrix");
+  check(gb.exName("seated-db-bicep-curl") === "Seated Dumbbell Bicep Curl",
+    `a dumbbell keeps its plain name under every brand (${gb.exName("seated-db-bicep-curl")})`);
+  check(gb.exEquipment("seated-db-bicep-curl") === "Dumbbell",
+    "and its plain equipment label");
+
+  /* Cardio was left unnamed on purpose rather than guessed at. */
+  const cardio = Object.keys(gb.BRANDS)
+    .filter(b => b !== "generic" && b !== "technogym")
+    .filter(b => { brandOf(b); return /\(/.test(gb.exName("rowing-machine")); });
+  check(cardio.length === 0,
+    `no brand invents a cardio series${cardio.length ? ": " + cardio.join(", ") : ""}`);
+
+  /* Every brand in the picker resolves a label in both languages, or the
+     settings page shows a raw key. */
+  const langGaps = [];
+  ["en", "ar"].forEach(lang => {
+    gb.I18n.setLang(lang);
+    Object.keys(gb.BRANDS).forEach(b => {
+      if (!gb.I18n.has(`brandName.${b}`)) langGaps.push(`${lang}:${b}`);
+    });
+  });
+  gb.I18n.setLang("en");
+  check(langGaps.length === 0,
+    `all ${Object.keys(gb.BRANDS).length} brands are named in both languages${langGaps.length ? " — missing: " + langGaps.join(", ") : ""}`);
+
+  /* And every machine the composer can reach has an Arabic name to compose
+     from, or an Arabic reader gets an English machine in brackets. */
+  const arGaps = Object.keys(gb.MACHINE_NAME).filter(id => !gb.I18n.keys("ar").includes(`brandMachine.${id}`));
+  check(arGaps.length === 0,
+    `all ${Object.keys(gb.MACHINE_NAME).length} machines are named in Arabic${arGaps.length ? " — missing: " + arGaps.slice(0, 5).join(", ") : ""}`);
+
+  /* The Arabic composed name is the Arabic machine with the Latin series after
+     it, which is the shape the Technogym names already use. */
+  gb.I18n.setLang("ar");
+  brandOf("matrix");
+  const arName = gb.exName("leg-extension");
+  gb.I18n.setLang("en");
+  check(/^[\u0600-\u06FF]/.test(arName) && arName.endsWith("(Ultra Series)"),
+    `Arabic reads the machine and then the frame (${arName})`);
+}
+
 /* ------------------------------------------------------------------ */
 
 console.log("");

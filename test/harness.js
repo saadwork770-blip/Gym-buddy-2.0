@@ -43,7 +43,7 @@ const EXPORTS = [
   "exName", "exSteps", "exTips", "muscleLabel", "patternLabel", "loadTypeLabel",
   "dayLabel", "dayShort", "jointLabel", "templateName", "splitName", "splitRationale",
   "EXERCISES", "SPLITS", "SESSION_TEMPLATES", "VOLUME_LANDMARKS", "PATTERNS", "exerciseSkill",
-  "BRANDS", "activeBrand", "exEquipment", "brandLabel",
+  "BRANDS", "activeBrand", "exEquipment", "brandLabel", "brandSeries", "brandMachineName", "MACHINE_NAME", "BRAND_SERIES",
   "MUSCLE_LABELS", "GOAL_PROFILES", "LEVEL_PROFILES", "LOAD_TYPES", "PROGRAM",
   "DAY_KEYS", "DAY_LABELS", "DAY_SHORT",
 ];

@@ -46,14 +46,17 @@
    re-renders the whole app instead of leaving English islands behind. */
 
 /* ---------- Brand-aware exercise content ----------
-   The neutral library names the movement; a brand overlay names the machine.
-   Look for the overlay first and fall through when a brand has nothing to say
-   about this exercise, which is the normal case for free weights. */
+   The neutral library names the movement; a brand names the machine. Three
+   places are asked in order: the brand's own written overlay, then the name
+   composed from the machine and the series it is sold in, then the neutral
+   entry. Free weights reach the third every time, which is right — a dumbbell
+   is a dumbbell. */
 function brandKey(id, field) { return `brand.${activeBrand()}.exercise.${id}.${field}`; }
 
 function exName(id) {
   const k = brandKey(id, "name");
-  return I18n.has(k) ? I18n.t(k) : I18n.t(`exercise.${id}.name`);
+  if (I18n.has(k)) return I18n.t(k);
+  return brandMachineName(id) || I18n.t(`exercise.${id}.name`);
 }
 function exSteps(id) {
   const k = brandKey(id, "steps");

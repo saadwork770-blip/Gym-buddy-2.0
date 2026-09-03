@@ -6,11 +6,22 @@
    (Selection)" is what is written on the frame in a gym kitted out by
    Technogym, and a member looking for it reads the frame.
 
-   So the library underneath stays brand-neutral, and each brand supplies an
-   overlay: a different name, a different equipment label, and setup cues that
-   describe the adjustments that machine actually has. Anything a brand does
-   not override falls through to the neutral entry, which is why an overlay can
-   be as small as one exercise.
+   So the library underneath stays brand-neutral and each brand describes its
+   own floor on top of it, in one of two ways.
+
+   A brand can supply a full overlay: a different name, a different equipment
+   label, and setup cues written for the adjustments that machine actually has.
+   Technogym does, because that content was written and checked one machine at
+   a time.
+
+   Or a brand can supply only its series naming, and let the composer in
+   MACHINE_NAME / BRAND_SERIES build "Leg Extension (Eagle NX)" out of the
+   machine's name and the range it is sold in. That is everything that can be
+   said truthfully about a floor nobody has stood on, and it is most of what a
+   member needs — the technique underneath is the same either way.
+
+   Anything a brand does not describe falls through to the neutral entry, which
+   is why an overlay can be as small as one exercise, or nothing at all.
 
    A brand can also supply its own photographs, in assets/photos/<id>/ — see
    data/brand-photos.js for which ones exist and tools/import-photos.js for how
@@ -27,6 +38,17 @@ const BRANDS = {
   /* Technogym's Selection, Pure Strength, Pulley, Multipower, Excite and
      Skill lines. */
   technogym: { id: "technogym", photoDir: "technogym" },
+
+  /* The rest are named from their series rather than written out machine by
+     machine — see BRAND_SERIES below for why that is enough. */
+  lifefitness: { id: "lifefitness", photoDir: "lifefitness" },
+  hammer:      { id: "hammer",      photoDir: "hammer" },
+  cybex:       { id: "cybex",       photoDir: "cybex" },
+  matrix:      { id: "matrix",      photoDir: "matrix" },
+  precor:      { id: "precor",      photoDir: "precor" },
+  nautilus:    { id: "nautilus",    photoDir: "nautilus" },
+  gym80:       { id: "gym80",       photoDir: "gym80" },
+  panatta:     { id: "panatta",     photoDir: "panatta" },
 };
 
 const DEFAULT_BRAND = "generic";
@@ -40,6 +62,121 @@ function activeBrand() {
   } catch (e) {
     return DEFAULT_BRAND;
   }
+}
+
+/* ---------- Machines and series ----------
+   Writing out thirty bespoke names and four technique paragraphs for each of
+   nine manufacturers would mean inventing most of them, and invented setup
+   cues are worse than none: somebody follows them at a machine that does not
+   have that adjustment. So only Technogym gets bespoke text, and every other
+   brand is composed from two things that are true.
+
+   The first is the name of the machine, which barely varies — a leg extension
+   is a leg extension on every floor in the world, and the sign above it says
+   so. The second is the series the manufacturer builds that kind of machine
+   in, which is what is actually printed on the frame beside the name.
+
+   Put together they give "Leg Extension (Eagle NX)", which is what a member
+   at a Cybex gym is standing in front of, without claiming anything about
+   that machine's pads and levers that has not been checked. The technique
+   underneath stays the neutral one, which is accurate for all of them.
+
+   Only series that could be verified against the manufacturer's own catalogue
+   are listed. A brand with nothing here still names its machines correctly —
+   it just does not claim a series it might not sell. */
+
+const MACHINE_NAME = {
+  "chest-press-machine": "Chest Press",
+  "lat-pulldown-wide": "Lat Pulldown",
+  "seated-cable-row": "Seated Row",
+  "shoulder-press-machine": "Shoulder Press",
+  "cable-triceps-pushdown": "Triceps Pushdown",
+  "leg-press": "Leg Press",
+  "seated-leg-curl": "Seated Leg Curl",
+  "leg-extension": "Leg Extension",
+  "hip-adduction-abduction": "Abductor / Adductor",
+  "standing-calf-raise-machine": "Standing Calf Raise",
+  "cable-crunch-ab-machine": "Abdominal Crunch",
+  "assisted-pull-up-machine": "Assisted Chin / Dip",
+  "chest-fly-pec-deck": "Pec Fly",
+  "cable-rope-face-pull": "Face Pull",
+  "hack-squat-machine": "Hack Squat",
+  "glute-kickback": "Glute Kickback",
+  "seated-calf-raise": "Seated Calf Raise",
+  "incline-treadmill-walk": "Treadmill",
+  "stationary-bike": "Upright Bike",
+  "elliptical": "Cross-Trainer",
+  "rowing-machine": "Rower",
+  "stairmaster": "Stair Climber",
+  "machine-chest-supported-row": "Low Row",
+  "cable-lateral-raise": "Seated Lateral Raise",
+  "reverse-pec-deck": "Rear Delt Fly",
+  "cable-crossover": "Cable Crossover",
+  "straight-arm-pulldown": "Straight-Arm Pulldown",
+  "preacher-curl": "Arm Curl",
+  "upright-row": "Upright Row",
+  "cable-rear-delt-fly": "Rear Delt Cable Fly",
+};
+
+/* Keyed by loadType, because that is the thing that decides which series a
+   machine belongs to: a selectorized stack, a cable station and a plate-loaded
+   frame are three different lines in every one of these catalogues.
+
+   Cardio is deliberately absent for everyone but Technogym. The cardio series
+   names could not be pinned down machine by machine — a maker's treadmill line
+   and its rower are often not the same range — so cardio keeps the plain name
+   rather than carrying a guess. */
+const BRAND_SERIES = {
+  lifefitness: {
+    machine_stack: "Insignia Series", cable_stack: "Insignia Series",
+    assisted: "Insignia Series", plate_loaded: "Signature Series",
+  },
+  hammer: {
+    machine_stack: "Select", cable_stack: "Select",
+    assisted: "Select", plate_loaded: "Iso-Lateral",
+  },
+  /* Cybex's plate-loaded range is catalogued as "Cybex Plate Loaded", which is
+     a category rather than a name — "Leg Press (Plate Loaded)" would tell a
+     member nothing they cannot see. Left out, so those machines keep the plain
+     name and the Cybex equipment label. */
+  cybex: {
+    machine_stack: "Eagle NX", cable_stack: "Eagle NX", assisted: "Eagle NX",
+  },
+  matrix: {
+    machine_stack: "Ultra Series", cable_stack: "Ultra Series",
+    assisted: "Ultra Series", plate_loaded: "Magnum",
+  },
+  precor: {
+    machine_stack: "Resolute", cable_stack: "Resolute",
+    assisted: "Resolute", plate_loaded: "Discovery Series",
+  },
+  gym80: {
+    machine_stack: "Sygnum", cable_stack: "Sygnum",
+    assisted: "Sygnum", plate_loaded: "Pure Kraft",
+  },
+  /* Nautilus and Panatta both build the whole range, but their series naming
+     could not be verified well enough to print on a machine label, so they
+     name the brand and nothing more. */
+  nautilus: {},
+  panatta: {},
+};
+
+/** The series the brand in force builds this machine in, or null. */
+function brandSeries(id, brand) {
+  const b = brand || activeBrand();
+  const meta = typeof metaFor === "function" ? metaFor(id) : null;
+  const map = BRAND_SERIES[b];
+  if (!map || !meta || !meta.loadType) return null;
+  return map[meta.loadType] || null;
+}
+
+/** "Leg Extension (Eagle NX)" — null when there is nothing to compose. */
+function brandMachineName(id) {
+  const series = brandSeries(id);
+  if (!series) return null;
+  const key = `brandMachine.${id}`;
+  if (typeof I18n === "undefined" || !I18n.has(key)) return null;
+  return `${I18n.t(key)} (${series})`;
 }
 
 /* ---------- The overlays ----------
@@ -496,14 +633,34 @@ const BRAND_CONTENT = {
       exercise[brand].exercise[id] = { name: e.name, steps: e.steps, tips: e.tips };
     });
   });
-  I18n.register("en", { brand: exercise });
+  I18n.register("en", { brand: exercise, brandMachine: MACHINE_NAME });
   I18n.register("en", {
-    brandName: { generic: "No particular brand", technogym: "Technogym" },
+    brandName: {
+      generic: "No particular brand",
+      technogym: "Technogym",
+      lifefitness: "Life Fitness",
+      hammer: "Hammer Strength",
+      cybex: "Cybex",
+      matrix: "Matrix",
+      precor: "Precor",
+      nautilus: "Nautilus",
+      gym80: "gym80",
+      panatta: "Panatta",
+    },
   });
 })();
 
-/** The equipment label for one exercise under the brand in force. */
+/** The equipment label for one exercise under the brand in force.
+    A brand that names a series gets "Cybex Eagle NX"; one that does not gets
+    its own name; a dumbbell gets neither, because a dumbbell is nobody's
+    product in particular. */
 function brandEquipment(id) {
-  const o = (BRAND_CONTENT[activeBrand()] || {})[id];
-  return o && o.equipment ? o.equipment : null;
+  const brand = activeBrand();
+  if (brand === DEFAULT_BRAND) return null;
+  const o = (BRAND_CONTENT[brand] || {})[id];
+  if (o && o.equipment) return o.equipment;
+  if (!MACHINE_NAME[id]) return null;
+  const name = I18n.t(`brandName.${brand}`);
+  const series = brandSeries(id, brand);
+  return series ? `${name} ${series}` : name;
 }

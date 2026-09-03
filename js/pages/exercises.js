@@ -13,6 +13,9 @@ UI.ready(() => {
     const brand = activeBrand();
     const own = ((typeof BRAND_PHOTOS !== "undefined" && BRAND_PHOTOS[brand]) || []).length;
     provenance.hidden = brand === "generic" || own >= EXERCISES.length;
+    /* Named here rather than in the markup because which manufacturer it has
+       to apologise for changes with the setting. */
+    if (!provenance.hidden) provenance.textContent = UI.t("library.photoProvenance", { brand: brandLabel(brand) });
   }
 
   const grid = document.getElementById("exGrid");

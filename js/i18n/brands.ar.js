@@ -2,14 +2,67 @@
    GymBuddy — i18n/brands.ar.js
    Arabic half of the brand overlays in data/brands.js.
 
-   Machine names keep the Latin product name in brackets — "جهاز ثني الساق
-   (Leg Curl)" — because that is what is printed on the frame, and somebody
-   looking for it on the gym floor is reading the machine rather than a
-   dictionary.
+   Two halves. The Technogym overlay is written out one machine at a time, and
+   brandMachine holds the plain Arabic machine names that every other brand's
+   composed name is built from.
+
+   Both keep the Latin product name in brackets — "جهاز ثني الساق (Leg Curl)" —
+   because that is what is printed on the frame, and somebody looking for it on
+   the gym floor is reading the machine rather than a dictionary.
    ============================================================================ */
 
 I18n.register("ar", {
-  brandName: { generic: "بدون علامة محدّدة", technogym: "Technogym" },
+  brandName: {
+    generic: "بدون علامة محدّدة",
+    technogym: "Technogym",
+    lifefitness: "Life Fitness",
+    hammer: "Hammer Strength",
+    cybex: "Cybex",
+    matrix: "Matrix",
+    precor: "Precor",
+    nautilus: "Nautilus",
+    gym80: "gym80",
+    panatta: "Panatta",
+  },
+
+  /* The machine on its own, without a series. The composer in data/brands.js
+     puts the series in brackets after it — "جهاز تمديد الساق (Eagle NX)" —
+     the same shape the Technogym names below already use, because the Latin
+     name is what is printed on the frame and what somebody hunting for the
+     machine is actually reading. */
+  brandMachine: {
+    "chest-press-machine": "جهاز ضغط الصدر",
+    "lat-pulldown-wide": "جهاز السحب الأمامي",
+    "seated-cable-row": "تجديف من الجلوس",
+    "shoulder-press-machine": "جهاز ضغط الكتف",
+    "cable-triceps-pushdown": "دفع الترايسبس",
+    "leg-press": "جهاز دفع الأرجل",
+    "seated-leg-curl": "جهاز ثني الساق",
+    "leg-extension": "جهاز تمديد الساق",
+    "hip-adduction-abduction": "جهاز التبعيد/التقريب",
+    "standing-calf-raise-machine": "جهاز السمانة من الوقوف",
+    "cable-crunch-ab-machine": "جهاز البطن",
+    "assisted-pull-up-machine": "جهاز العقلة المساعِد",
+    "chest-fly-pec-deck": "جهاز تجميع الصدر",
+    "cable-rope-face-pull": "سحب الحبل إلى الوجه",
+    "hack-squat-machine": "جهاز الهاك سكوات",
+    "glute-kickback": "جهاز الألية",
+    "seated-calf-raise": "جهاز السمانة من الجلوس",
+    "incline-treadmill-walk": "جهاز المشي",
+    "stationary-bike": "الدراجة الثابتة",
+    "elliptical": "الجهاز الإهليلجي",
+    "rowing-machine": "جهاز التجديف",
+    "stairmaster": "جهاز الدرج",
+    "machine-chest-supported-row": "جهاز التجديف المنخفض",
+    "cable-lateral-raise": "رفرفة جانبية من الجلوس",
+    "reverse-pec-deck": "جهاز الدالية الخلفية",
+    "cable-crossover": "تقاطع الكابلات",
+    "straight-arm-pulldown": "سحب بذراع ممدودة",
+    "preacher-curl": "جهاز مرجحة الذراع",
+    "upright-row": "التجديف العمودي",
+    "cable-rear-delt-fly": "رفرفة خلفية بالكابل",
+  },
+
   brand: {
     technogym: {
       exercise: {

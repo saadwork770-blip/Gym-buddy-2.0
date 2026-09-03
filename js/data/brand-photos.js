@@ -15,9 +15,11 @@
    ============================================================================ */
 
 const BRAND_PHOTOS = {
-  /* Empty on purpose. Technogym's own product photography is theirs and is
-     not licensed for redistribution, so nothing brand-specific ships here.
+  /* Empty on purpose, and the same is true of every other brand in the
+     picker: manufacturers' own product photography is theirs and is not
+     licensed for redistribution, so nothing brand-specific ships here.
      Photograph your gym's machines and tools/import-photos.js --brand
-     technogym will fill this in. */
+     <id> will fill this in — a brand with no entry at all falls back to
+     the shared set, which is what all nine of them do today. */
   "technogym": [],
 };
