@@ -169,6 +169,45 @@ debrief, and the readiness scoring.
 
 ---
 
+## Diet
+
+A second engine, same rule as the first: every number traces back to a stated
+formula, not a black box. `js/data/nutrition.js` holds the constants,
+`js/engine/nutrition.js` the pure functions, `diet.html` the page.
+
+**Calories.** Basal metabolic rate is the Mifflin-St Jeor equation — the one
+the Academy of Nutrition and Dietetics recommends over the older
+Harris-Benedict formula for most adults — from weight, height, age and sex.
+Total daily expenditure scales that by an activity multiplier read off the
+plan's own days/week rather than a second survey question a profile might
+answer differently than it trains. The calorie target is that number plus a
+goal-based adjustment (a 20% deficit for fat loss, a 10% surplus for muscle
+gain, unchanged for general fitness and a small surplus for strength) —
+and it is never let below a sex-specific floor (1500 / 1200 kcal), regardless
+of how large a deficit the percentage would otherwise ask for. A deficit that
+would go under that floor is raised back up to it, and says so: that is a
+bigger cut than an app should be the one recommending.
+
+**Macros.** Protein is set first, in grams per kilogram of bodyweight — the
+range the International Society of Sports Nutrition's position stand backs
+for people who resistance train, higher for a deficit where more protein
+measurably protects lean mass. Fat is a flat 25% of calories. Carbs take
+whatever calories are left.
+
+**Meals.** The day's targets split across breakfast/lunch/dinner/snack by a
+typical share of the day, renormalized to however many slots are actually in
+use. Each slot is then filled from a small, curated set of common Gulf-table
+foods with real per-serving macro estimates — the region the exercise
+library's own Arabic already anchors its gym-floor terms to — nearest-fit by
+calories, favoring protein, carbs or a balanced pick depending on which the
+slot needs most. It is not a solver: a solver would suggest combinations
+nobody would actually cook or order.
+
+None of this is medical or dietetic advice — the page says so, in the same
+place the training engine's own "what this is, and what it is not" note sits.
+
+---
+
 ## Volume landmarks
 
 Weekly hard sets per muscle are counted through a contribution table — a chest
@@ -366,6 +405,7 @@ missed that and produced a page of false failures.
 | `program.html` | The generated week, the day picker, the mesocycle strip, weekly volume |
 | `workout.html` | The live session: readiness check-in, per-set logging, rest timer, coaching cues |
 | `coach.html` | The insight feed and the full prescription table with its reasoning |
+| `diet.html` | Calorie and macro targets from your own numbers, with meal suggestions |
 | `progress.html` | Estimated 1RM curves, tonnage, bodyweight, waist, attendance, session history |
 | `exercises.html` | The library, plus movement pattern, joint load, pain flags and substitutions |
 | `profile.html` | Profile, training settings, bodyweight and tape-measure log, starting-load calibration, mesocycle, export/import |
@@ -461,6 +501,7 @@ js/data/library.js         The exercise library and the source program:
 js/data/coaching.js        What the engine reasons about: movement patterns,
                            load types, joint stress, muscle contribution,
                            volume landmarks, goal and experience profiles
+js/data/nutrition.js       BMR/TDEE/macro constants and the Gulf-table food list
 js/data/labels.js          Registers the English source text and resolves
                            deferred references into the current language
 js/templates.js            Session blueprints as pattern slots; split definitions
@@ -475,11 +516,12 @@ js/engine/periodization.js Mesocycle weeks, volume ramp and the deload
 js/engine/analysis.js      Imbalance, fatigue, rep drop-off, forecasting, ordering
 js/engine/adaptation.js    Substitutions, plateaus, volume and schedule proposals
 js/engine/coach.js         Insight feed, session cues, debriefs, readiness
+js/engine/nutrition.js     BMR, TDEE, calorie target, macros, meal suggestions
 
 js/pages/*.js              One controller per page
 
 test/harness.js            Loads the engines into Node
-test/engine.test.js        133 behavioural checks, including localisation
+test/engine.test.js        176 behavioural checks, including localisation
 test/audit.js              Browser audit: a11y, contrast, perf, XSS, responsive
 
 tools/build-media.js       Rebuilds photos and clips from free-exercise-db
