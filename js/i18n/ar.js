@@ -761,6 +761,15 @@ I18n.register("ar", {
   },
 
   food: {
+    "chicken-kabsa": { name: "كبسة دجاج", serving: "طبق واحد، ~350 غ أرز ودجاج" },
+    "chicken-mandi": { name: "مندي دجاج", serving: "طبق واحد، ~350 غ أرز ودجاج" },
+    "chicken-jareesh": { name: "جريش بالدجاج", serving: "طبق واحد، ~300 غ" },
+    "chicken-saleeg": { name: "سليق بالدجاج", serving: "طبق واحد، ~300 غ" },
+    "margoog": { name: "مرقوق", serving: "طبق واحد، ~350 غ" },
+    "foul-medames": { name: "فول مدمس", serving: "طبق واحد، ~250 غ مع زيت زيتون" },
+    "balila": { name: "بليلة (حمّص دافئ)", serving: "طبق واحد، ~200 غ" },
+    "shakshuka": { name: "شكشوكة", serving: "بيضتان في صلصة طماطم، ~300 غ" },
+    "sambousek-meat": { name: "سمبوسة لحم", serving: "3 قطع مخبوزة، ~120 غ" },
     "grilled-chicken-breast": { name: "صدر دجاج مشوي", serving: "150 غ مشوي" },
     "grilled-fish-hammour": { name: "هامور مشوي (سمك)", serving: "150 غ مشوي" },
     "shawarma-chicken-plate": { name: "طبق شاورما دجاج", serving: "طبق واحد، بلا خبز، صلصة خفيفة" },
@@ -778,7 +787,6 @@ I18n.register("ar", {
     "dates": { name: "تمر", serving: "5 حبات" },
     "banana": { name: "موز", serving: "حبة متوسطة" },
     "sweet-potato": { name: "بطاطا حلوة", serving: "200 غ مخبوزة" },
-    "freekeh": { name: "فريكة", serving: "كوب مطبوخ، ~180 غ" },
     "fattoush-salad": { name: "فتّوش", serving: "طبق واحد بصلصة زيت الزيتون" },
     "tabbouleh": { name: "تبّولة", serving: "كوب واحد" },
     "hummus-bowl": { name: "حمّص", serving: "150 غ مع قليل من زيت الزيتون" },

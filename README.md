@@ -196,10 +196,11 @@ whatever calories are left.
 
 **Meals.** The day's targets split across breakfast/lunch/dinner/snack by a
 typical share of the day, renormalized to however many slots are actually in
-use. Each slot is then filled from a small, curated set of common Gulf-table
-foods with real per-serving macro estimates — the region the exercise
-library's own Arabic already anchors its gym-floor terms to — nearest-fit by
-calories, favoring protein, carbs or a balanced pick depending on which the
+use. Each slot is then filled from a small, curated set of foods available in
+Saudi Arabia — the national and regional dishes (kabsa, mandi, jareesh,
+saleeg, margoog, foul, balila) alongside what sits next to them on a Saudi
+table — with real per-serving macro estimates, nearest-fit by calories,
+favoring protein, carbs or a balanced pick depending on which the
 slot needs most. It is not a solver: a solver would suggest combinations
 nobody would actually cook or order.
 
@@ -501,7 +502,7 @@ js/data/library.js         The exercise library and the source program:
 js/data/coaching.js        What the engine reasons about: movement patterns,
                            load types, joint stress, muscle contribution,
                            volume landmarks, goal and experience profiles
-js/data/nutrition.js       BMR/TDEE/macro constants and the Gulf-table food list
+js/data/nutrition.js       BMR/TDEE/macro constants and the Saudi food list
 js/data/labels.js          Registers the English source text and resolves
                            deferred references into the current language
 js/templates.js            Session blueprints as pattern slots; split definitions

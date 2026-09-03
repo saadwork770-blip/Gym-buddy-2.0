@@ -71,17 +71,41 @@ const CALORIE_FLOOR = { Male: 1500, Female: 1200, "Prefer not to say": 1350 };
 const KCAL_PER_G = { protein: 4, carb: 4, fat: 9 };
 
 /* ---------- Food suggestions ----------
-   A modest set of dishes common on a Gulf table — the same regional anchor
-   the exercise library's Arabic already uses for gym-floor terms — each with
-   a realistic per-serving macro estimate (USDA FoodData Central where the
-   dish maps to a plain ingredient; otherwise a typical restaurant/home
-   portion). Tagged by which meal it usually sits in and which macro it leads
-   with, so the diet page can pick combinations that lean toward whatever the
-   day's target is short of, rather than a fixed menu everyone gets.
+   Saudi Arabia specifically, not "the Middle East" in general — the national
+   and regional dishes (kabsa, mandi, jareesh, saleeg, margoog, foul, balila)
+   alongside what actually sits next to them on a Saudi table and on a Saudi
+   supermarket shelf: rice, grilled chicken and fish, dates, yogurt, hummus,
+   nuts. Each with a realistic per-serving macro estimate (USDA FoodData
+   Central where a dish maps to a plain ingredient; a typical home or
+   restaurant portion — a rice-and-meat plate as served, not a lab sample —
+   for composed dishes, since a household's kabsa is not a lab sample either).
+   Tagged by which meal it usually sits in and which macro it leads with, so
+   the diet page can pick combinations that lean toward whatever the day's
+   target is short of, rather than a fixed menu everyone gets.
 
    Every food's Arabic name mirrors the same gym-floor convention already
    used in the exercise library: written the way it is actually ordered. */
 const FOODS = [
+  // ---- Saudi dishes ----
+  { id: "chicken-kabsa", meals: ["lunch", "dinner"], lead: "carb",
+    serving: "1 plate, ~350g rice and chicken", kcal: 550, protein: 28, carb: 65, fat: 18 },
+  { id: "chicken-mandi", meals: ["lunch", "dinner"], lead: "carb",
+    serving: "1 plate, ~350g rice and chicken", kcal: 520, protein: 30, carb: 60, fat: 15 },
+  { id: "chicken-jareesh", meals: ["lunch", "dinner"], lead: "carb",
+    serving: "1 bowl, ~300g", kcal: 320, protein: 18, carb: 45, fat: 8 },
+  { id: "chicken-saleeg", meals: ["lunch", "dinner"], lead: "carb",
+    serving: "1 bowl, ~300g", kcal: 400, protein: 20, carb: 50, fat: 12 },
+  { id: "margoog", meals: ["lunch", "dinner"], lead: "balanced",
+    serving: "1 bowl, ~350g", kcal: 350, protein: 20, carb: 40, fat: 12 },
+  { id: "foul-medames", meals: ["breakfast"], lead: "carb",
+    serving: "1 bowl, ~250g with olive oil", kcal: 260, protein: 12, carb: 35, fat: 8 },
+  { id: "balila", meals: ["breakfast", "snack"], lead: "carb",
+    serving: "1 bowl, ~200g warm chickpeas", kcal: 210, protein: 11, carb: 35, fat: 3 },
+  { id: "shakshuka", meals: ["breakfast"], lead: "balanced",
+    serving: "2 eggs in tomato sauce, ~300g", kcal: 260, protein: 14, carb: 12, fat: 17 },
+  { id: "sambousek-meat", meals: ["snack"], lead: "balanced",
+    serving: "3 baked pieces, ~120g", kcal: 300, protein: 10, carb: 28, fat: 17 },
+
   // ---- protein-forward ----
   { id: "grilled-chicken-breast", meals: ["lunch", "dinner"], lead: "protein",
     serving: "150g grilled", kcal: 248, protein: 46, carb: 0, fat: 5 },
@@ -119,8 +143,6 @@ const FOODS = [
     serving: "1 medium", kcal: 105, protein: 1, carb: 27, fat: 0.4 },
   { id: "sweet-potato", meals: ["lunch", "dinner"], lead: "carb",
     serving: "200g baked", kcal: 180, protein: 4, carb: 41, fat: 0.2 },
-  { id: "freekeh", meals: ["lunch", "dinner"], lead: "carb",
-    serving: "1 cup cooked, ~180g", kcal: 227, protein: 8, carb: 44, fat: 2 },
 
   // ---- balanced / mixed ----
   { id: "fattoush-salad", meals: ["lunch", "dinner"], lead: "balanced",
