@@ -1,0 +1,14 @@
+# This site is shared by link, not published.
+#
+# It is a private training log for a handful of people, hosted on GitHub Pages
+# because that is the simplest way to put a static site on a phone. Nothing
+# here is meant to be found by searching — there is no audience for it beyond
+# the people who were sent the address.
+#
+# This is a request, not a wall: well-behaved crawlers honour it, and anyone
+# who has the link can still open the site. Every page also carries a
+# `noindex` meta tag, which is what actually keeps pages out of a results
+# page once they have been fetched.
+
+User-agent: *
+Disallow: /

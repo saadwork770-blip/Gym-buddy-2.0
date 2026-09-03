@@ -470,6 +470,8 @@ tools/media-map.json       Exercise id -> source entry
 tools/contact-sheet.js     Writes every exercise's name against its photo and
                            clip on one page, for reviewing the media by eye
 
+robots.txt                 Keeps the shared-by-link site out of search results
+
 assets/photos/*.jpg        Real gym photograph per exercise (66)
 assets/clips/*.webm        Silent looping demonstration per exercise (66)
 ```
@@ -489,6 +491,14 @@ assets/clips/*.webm        Silent looping demonstration per exercise (66)
   it once roughly a fortnight of training has accumulated. The app also requests
   persistent storage on boot, which lowers the odds where the browser honours it
   but is not a backup and does not pretend to be.
+- **The site is shared by link, not published.** `robots.txt` disallows every
+  crawler and all seven pages carry `<meta name="robots" content="noindex,
+  nofollow">`, so it should not turn up in search results. That is a request to
+  well-behaved crawlers and a way of staying out of an index — it is not access
+  control. Anyone who has the address can open the site, and because the
+  repository is public the address is discoverable from it. Real gating would
+  mean a private repository plus a host that can authenticate, which is a
+  different setup from this one.
 - **v1 profiles are migrated automatically** on first load. Nothing you already
   logged is lost.
 - **Your language choice is stored locally too**, in the same browser storage as
