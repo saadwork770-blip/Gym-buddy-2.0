@@ -1,7 +1,48 @@
-# GymBuddy 2.0
+# GymBuddy 2.0 — Technogym edition
 
 An adaptive training companion built from a real training plan —
-**"4-Day Fat Loss Program — Fitness Time (Standard Commercial Gym)."**
+**"4-Day Fat Loss Program — Fitness Time (Standard Commercial Gym)"** — with
+its exercise library rewritten for a gym kitted out by **Technogym**.
+
+This branch is the same coaching engine as the main edition. What differs is
+the thirty machine, cable and cardio entries: they are named for the Technogym
+range a member actually walks past, and their setup cues describe those
+machines rather than a generic equivalent.
+
+| The plan says | You are standing at |
+|---|---|
+| Chest Press, Pectoral, Shoulder Press, Lat Machine, Low Row, Arm Curl, Leg Press, Leg Extension, Leg Curl, Abductor / Adductor, Rotary Calf, Abdominal Crunch, Glute, Rear Delt | **Selection** |
+| Hack Squat, Seated Calf, plate-loaded Leg Press | **Pure Strength** |
+| Rows, pushdowns, face pulls, crossovers, lateral raises | **Pulley** |
+| Incline press on a fixed bar path | **Multipower** |
+| Run, Bike, Synchro, Climb | **Excite** |
+| Rower | **Skillrow** |
+
+The setup cues follow the conventions of those machines: the numbered seat
+scale worth remembering, the range-of-motion selector, the thigh pad that is
+the only thing keeping you in the seat on a lat pulldown.
+
+### About the photographs
+
+The pictures are **not** of Technogym machines, and the app says so on the
+library page. Technogym's product photography belongs to Technogym and is not
+licensed for redistribution, so this edition keeps the public-domain
+photographs the main edition uses: the movement in each one is correct, the
+badge on the frame is not.
+
+The honest fix is your own camera. `tools/import-photos.js` takes two
+photographs of a machine in your gym — the start and the end of a rep — and
+turns them into the same photo-and-clip pair the build pipeline produces:
+
+```bash
+node tools/import-photos.js leg-press start.jpg end.jpg
+node tools/import-photos.js --dir ~/gym-photos     # <id>-start.jpg / <id>-end.jpg
+```
+
+Shoot both frames from the same spot; the clip cross-fades between them, and a
+camera that moved reads as a jump rather than as a rep. Once every machine is
+your own photograph, delete the `library.photoProvenance` line from the
+dictionaries — it will no longer be telling the truth.
 
 Version 1 turned that plan into a browsable website. Version 2.0 keeps every bit
 of that — the full program, the exercise library with real gym photographs and
@@ -469,6 +510,8 @@ tools/build-media.js       Rebuilds photos and clips from free-exercise-db
 tools/media-map.json       Exercise id -> source entry
 tools/contact-sheet.js     Writes every exercise's name against its photo and
                            clip on one page, for reviewing the media by eye
+tools/import-photos.js     Replaces a stock photo with one you took of your
+                           own gym's machine, and rebuilds its clip
 
 robots.txt                 Keeps the shared-by-link site out of search results
 

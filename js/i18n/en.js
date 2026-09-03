@@ -569,6 +569,7 @@ I18n.register("en", {
     metaTitle: "Exercise Library — GymBuddy 2.0",
     kicker: "Exercise Library",
     title: "Every movement the coach can put in your plan",
+    photoProvenance: "A note on the photographs: the exercises describe Technogym machines, but the pictures are generic commercial-gym equivalents from a public-domain library. Technogym's own photography is not licensed for redistribution, so it is not used here. The movement in each picture is the right one; the badge on the frame is not. tools/import-photos.js will swap in photos of your own gym's machines.",
     intro: "Each entry carries a real gym photo, a looping animated demonstration and step-by-step form cues — plus the movement pattern, load type and joint load the coaching engine reasons about. <b>Open any card</b> for the full detail.",
     search: "Search by name, equipment or pattern…",
     empty: "No exercises match your filters.",

@@ -614,7 +614,7 @@ suite("Stored plans re-render in whichever language you switch to");
   g4.I18n.setLang("ar");
   const arabicNote = g4.I18n.tx(note);
   check(/[\u0600-\u06FF]/.test(arabicNote), "the same stored note renders in Arabic after switching");
-  check(!/[A-Za-z]{4,}/.test(arabicNote),
+  check(!/[A-Za-z]{4,}/.test(stripProperNouns(arabicNote)),
     `no English words survive inside the Arabic note (got: ${arabicNote.slice(0, 60)}…)`);
 
   // Same check across every generated string in the plan.
@@ -624,8 +624,7 @@ suite("Stored plans re-render in whichever language you switch to");
   (plan.restDays || []).forEach(r => strings.push(g4.I18n.tx(r.suggestion)));
   plan.sessions.forEach(sn => sn.blocks.forEach(b => strings.push(g4.I18n.tx(b.reason))));
   (plan.volumeReport || []).forEach(r => strings.push(g4.I18n.tx(r.message)));
-  // "RPE" and "1RM" are deliberately left in Latin script.
-  const withEnglish = strings.filter(x => /[A-Za-z]{4,}/.test(x.replace(/RPE|1RM|BW/g, "")));
+  const withEnglish = strings.filter(x => /[A-Za-z]{4,}/.test(stripProperNouns(x)));
   check(withEnglish.length === 0,
     `no English leaks into any of the ${strings.length} generated plan strings${withEnglish.length ? ` — e.g. "${withEnglish[0].slice(0, 70)}"` : ""}`);
 
@@ -956,6 +955,25 @@ results.forEach(r => {
 });
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);
+
+/**
+ * Latin text that is SUPPOSED to survive translation.
+ *
+ * "RPE" and "1RM" are units of the trade, written the same way in both
+ * languages. The rest are proper nouns: the name printed on the side of the
+ * machine you are standing at. Translating "Selection" into Arabic would not
+ * help somebody find it on the gym floor — it would stop them.
+ */
+function stripProperNouns(text) {
+  return text
+    /* The name printed on the side of the machine, kept in brackets after the
+       Arabic one: "جهاز ثني الساق (Leg Curl)". A lifter looking for it on the
+       gym floor is reading the frame, not a dictionary — so a bracketed
+       Latin-only run is allowed, and anything outside the brackets is not.
+       That keeps the check able to catch a genuinely untranslated sentence. */
+    .replace(/\([A-Za-z0-9 ./&'-]+\)/g, "")
+    .replace(/RPE|1RM|BW/g, "");
+}
 
 function today(offsetDays) {
   const d = new Date();

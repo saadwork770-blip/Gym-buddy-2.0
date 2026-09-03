@@ -132,66 +132,74 @@ const ICONS = {
 const EXERCISES = [
   // ===== DAY 1 — Upper Body A =====
   {
-    id: "chest-press-machine", name: "Chest Press Machine", day: 1, dayLabel: "Upper Body A",
-    equipment: "Machine", muscle: "chest", icon: "machine", sets: "4 x 10–12",
+    id: "chest-press-machine", name: "Chest Press (Selection)", day: 1, dayLabel: "Upper Body A",
+    equipment: "Technogym Selection", muscle: "chest", icon: "machine", sets: "4 x 10–12",
     steps: [
-      "Adjust the seat so the handles line up with mid-chest height.",
-      "Sit back with shoulder blades pulled down and back against the pad.",
-      "Grip the handles and press forward until your arms are extended without locking the elbows.",
-      "Pause briefly, then return under control to the start position.",
-      "Keep the movement controlled — no jerking or bouncing off the stack."
+      "Set the seat so the handles sit at mid-chest. Note the number on the seat scale — it is the same every session.",
+      "Sit back against the pad with your shoulder blades pulled down and together, feet flat.",
+      "Press the handles forward until the arms are long, stopping short of locking the elbows.",
+      "Return under control until you feel the chest stretch, without letting the stack touch down.",
     ],
     tips: [
+      "If the machine has a range-of-motion selector, set the start so your hands begin level with your chest, not behind it.",
       "Rest 90–120 sec between sets (compound lift).",
-      "Add weight or 1–2 reps once you hit the top of the rep range with good form on all sets."
     ]
   },
   {
-    id: "lat-pulldown-wide", name: "Lat Pulldown (Wide Grip)", day: 1, dayLabel: "Upper Body A",
-    equipment: "Cable", muscle: "back", icon: "cable", sets: "4 x 10–12",
+    id: "lat-pulldown-wide", name: "Lat Machine (Selection)", day: 1, dayLabel: "Upper Body A",
+    equipment: "Technogym Selection", muscle: "back", icon: "cable", sets: "4 x 10–12",
     steps: [
-      "Set the knee pad snug against your thighs and grip the bar wider than shoulder width.",
-      "Sit tall, lean back slightly, and pull the bar down to upper chest level.",
-      "Drive your elbows down and back, squeezing your shoulder blades together.",
-      "Control the bar back up to a full stretch without letting the stack slam.",
+      "Set the thigh pad so it pins your legs firmly — that pad is what stops you standing up under the load.",
+      "Take the wide bar with a grip a little outside shoulder width, then sit with your chest tall.",
+      "Pull the bar to your collarbone by driving your elbows down, not by leaning back.",
+      "Let the bar rise until the arms are long and the shoulders reach up, then repeat.",
     ],
     tips: [
-      "Rest 90–120 sec between sets (compound lift).",
-      "Focus on pulling with your back, not your arms."
+      "The Selection Lat Machine's handles rotate as you pull — let them, rather than fighting to keep the bar square.",
+      "If your gym has the Vertical Traction machine, it trains the same pattern with a fixed arm path.",
     ]
   },
   {
-    id: "seated-cable-row", name: "Seated Cable Row", day: 1, dayLabel: "Upper Body A",
-    equipment: "Cable", muscle: "back", icon: "cable", sets: "3 x 12",
+    id: "seated-cable-row", name: "Seated Row (Pulley)", day: 1, dayLabel: "Upper Body A",
+    equipment: "Technogym Pulley", muscle: "back", icon: "cable", sets: "3 x 12",
     steps: [
-      "Sit with knees slightly bent, feet braced on the platform, and grab the handle.",
-      "Start with arms extended and a tall, neutral spine.",
-      "Pull the handle to your torso, driving elbows back and squeezing shoulder blades together.",
-      "Return slowly to the stretched position without rounding your lower back."
+      "Sit at the low pulley with your feet on the plate and a slight bend in the knees.",
+      "Take the handle with your arms long and your chest up, torso close to upright.",
+      "Pull to your navel by driving the elbows back, letting the shoulder blades come together.",
+      "Return until the arms are straight and the blades open, without rocking backwards.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation-style row)."]
+    tips: [
+      "Your torso should stay still. If it is rowing along with the handle, drop the pin a plate.",
+      "Rest 90–120 sec between sets (compound lift).",
+    ]
   },
   {
-    id: "shoulder-press-machine", name: "Shoulder Press Machine", day: 1, dayLabel: "Upper Body A",
-    equipment: "Machine", muscle: "shoulders", icon: "machine", sets: "3 x 10–12",
+    id: "shoulder-press-machine", name: "Shoulder Press (Selection)", day: 1, dayLabel: "Upper Body A",
+    equipment: "Technogym Selection", muscle: "shoulders", icon: "machine", sets: "3 x 10–12",
     steps: [
-      "Set the seat height so the handles start level with your shoulders.",
-      "Press the handles straight overhead until arms are extended without locking out hard.",
-      "Lower under control back to the starting position at shoulder level.",
-      "Keep your back flat against the pad throughout — avoid arching."
+      "Set the seat so the handles start at about shoulder height — high enough to press, not so low that you dive under them.",
+      "Sit with your back flat on the pad and your feet planted.",
+      "Press up until the arms are long without locking out, keeping the ribs down.",
+      "Lower under control until your hands are back level with your shoulders.",
     ],
-    tips: ["Rest 90–120 sec between sets (compound lift)."]
+    tips: [
+      "If your lower back arches off the pad to finish a rep, that rep was the stack talking, not the shoulders.",
+      "Rest 90–120 sec between sets (compound lift).",
+    ]
   },
   {
-    id: "cable-triceps-pushdown", name: "Cable Triceps Pushdown", day: 1, dayLabel: "Upper Body A",
-    equipment: "Cable", muscle: "arms", icon: "cable", sets: "3 x 12–15",
+    id: "cable-triceps-pushdown", name: "Triceps Pushdown (Pulley)", day: 1, dayLabel: "Upper Body A",
+    equipment: "Technogym Pulley", muscle: "arms", icon: "cable", sets: "3 x 12–15",
     steps: [
-      "Attach a bar or rope to the high pulley and grip with elbows tucked at your sides.",
-      "Keeping upper arms still, extend your elbows to push the attachment down.",
-      "Squeeze your triceps at the bottom, then return slowly to the start.",
-      "Don't let your elbows drift forward or flare out."
+      "Set the pulley to its highest position and clip on a bar or rope.",
+      "Stand close with your elbows pinned to your ribs and your forearms parallel to the floor.",
+      "Push down until your arms are straight, spreading a rope apart at the bottom.",
+      "Let your hands rise only until your forearms are level again — the elbows never travel.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "If your elbows drift forward or your shoulders roll in, the lats have taken over the set.",
+      "Rest 60–90 sec between sets (isolation).",
+    ]
   },
   {
     id: "seated-db-bicep-curl", name: "Seated Dumbbell Bicep Curl", day: 1, dayLabel: "Upper Body A",
@@ -207,106 +215,132 @@ const EXERCISES = [
 
   // ===== DAY 2 — Lower Body A =====
   {
-    id: "leg-press", name: "Leg Press", day: 2, dayLabel: "Lower Body A",
-    equipment: "Machine", muscle: "legs", icon: "machine", sets: "4 x 12",
+    id: "leg-press", name: "Leg Press (Pure Strength)", day: 2, dayLabel: "Lower Body A",
+    equipment: "Technogym Pure Strength", muscle: "legs", icon: "machine", sets: "4 x 12",
     steps: [
-      "Sit in the machine with feet shoulder-width on the platform, mid-foot centered.",
-      "Release the safety and lower the platform until knees reach roughly 90°.",
-      "Press through your heels to extend your legs without locking your knees.",
-      "Control the descent back down — no bouncing the weight at the bottom."
+      "Set the back pad so your knees start bent to roughly ninety degrees, no deeper.",
+      "Place your feet mid-platform at shoulder width, whole foot in contact.",
+      "Release the safety catches, then press until the legs are long without snapping the knees straight.",
+      "Lower until your knees reach the start angle, keeping your lower back flat against the pad.",
     ],
-    tips: ["Rest 90–120 sec between sets (compound lift)."]
+    tips: [
+      "The moment your hips curl up off the pad you have gone too deep — that is where lower backs get hurt.",
+      "Re-engage the catches before you get out, every time.",
+    ]
   },
   {
-    id: "seated-leg-curl", name: "Seated Leg Curl", day: 2, dayLabel: "Lower Body A",
-    equipment: "Machine", muscle: "legs", icon: "machine", sets: "3 x 12",
+    id: "seated-leg-curl", name: "Leg Curl (Selection)", day: 2, dayLabel: "Lower Body A",
+    equipment: "Technogym Selection", muscle: "legs", icon: "machine", sets: "3 x 12",
     steps: [
-      "Adjust the machine so the back pad of the roller sits just above your heels.",
-      "Sit with knees aligned to the machine's pivot point and legs extended.",
-      "Curl your heels down and under, contracting your hamstrings fully.",
-      "Return slowly to the start without letting the stack slam."
+      "Set the seat back and the thigh pad so your knees sit level with the pivot and your legs are held down.",
+      "Set the ankle roller just above your heels.",
+      "Curl your heels down and under until the hamstrings are fully shortened.",
+      "Return slowly to a long-leg position without letting the stack drop.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "The thigh pad should be snug. If your hips lift on the hard reps, tighten it.",
+      "Rest 60–90 sec between sets (isolation).",
+    ]
   },
   {
-    id: "leg-extension", name: "Leg Extension", day: 2, dayLabel: "Lower Body A",
-    equipment: "Machine", muscle: "legs", icon: "machine", sets: "3 x 12–15",
+    id: "leg-extension", name: "Leg Extension (Selection)", day: 2, dayLabel: "Lower Body A",
+    equipment: "Technogym Selection", muscle: "legs", icon: "machine", sets: "3 x 12–15",
     steps: [
-      "Sit with the back pad set so your knees line up with the machine's pivot.",
-      "Hook your ankles behind the lower roller pad.",
-      "Extend your knees to lift the pad until legs are straight, without hyperextending.",
-      "Lower under control back to the starting position."
+      "Set the seat back so your knee joint lines up with the machine's pivot — the marked point on the side frame.",
+      "Set the ankle pad to rest just above your shoes, not on your shins.",
+      "Straighten your legs smoothly and pause for a beat at the top.",
+      "Lower under control to the start angle without letting the plates touch down.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "Lining the knee up with the pivot is what keeps the load on the muscle rather than on the joint.",
+      "Rest 60–90 sec between sets (isolation).",
+    ]
   },
   {
-    id: "hip-adduction-abduction", name: "Hip Adduction/Abduction Machine", day: 2, dayLabel: "Lower Body A",
-    equipment: "Machine", muscle: "legs", icon: "machine", sets: "2 x 15 each",
+    id: "hip-adduction-abduction", name: "Abductor / Adductor (Selection)", day: 2, dayLabel: "Lower Body A",
+    equipment: "Technogym Selection", muscle: "legs", icon: "machine", sets: "2 x 15 each",
     steps: [
-      "Set the machine to the adduction (inner-thigh) or abduction (outer-thigh) mode as needed.",
-      "Sit with the pads against the outside (abduction) or inside (adduction) of your knees.",
-      "Push the pads outward (abduction) or squeeze them inward (adduction) through a full range.",
-      "Return slowly to the start under control."
+      "Sit right back in the seat with your spine against the pad.",
+      "Set the pads: outside your knees to push out (abductor), inside them to squeeze in (adductor).",
+      "Move the pads through the full range and hold the end position for a beat.",
+      "Return slowly — this is the half most people give away.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "Technogym builds these as two separate machines. Do both; they train opposite jobs.",
+      "Rest 60–90 sec between sets (isolation).",
+    ]
   },
   {
-    id: "standing-calf-raise-machine", name: "Standing Calf Raise Machine", day: 2, dayLabel: "Lower Body A",
-    equipment: "Machine", muscle: "legs", icon: "machine", sets: "3 x 15",
+    id: "standing-calf-raise-machine", name: "Rotary Calf (Selection)", day: 2, dayLabel: "Lower Body A",
+    equipment: "Technogym Selection", muscle: "legs", icon: "machine", sets: "3 x 15",
     steps: [
-      "Position your shoulders under the pads with the balls of your feet on the platform.",
-      "Let your heels drop below the platform for a full stretch.",
-      "Rise onto your toes as high as possible, squeezing your calves at the top.",
-      "Lower slowly back to the stretched position."
+      "Set the shoulder pads so you stand tall with a slight bend in the knees.",
+      "Put the balls of your feet on the platform edge with your heels free.",
+      "Press up onto your toes as high as the machine allows and hold for a count.",
+      "Lower your heels below the platform until you feel the calf stretch.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "Calves answer to the pause at the top and the stretch at the bottom, not to the number on the stack.",
+      "Rest 60–90 sec between sets (isolation).",
+    ]
   },
   {
-    id: "cable-crunch-ab-machine", name: "Cable Crunch or Ab Machine", day: 2, dayLabel: "Lower Body A",
-    equipment: "Cable", muscle: "core", icon: "cable", sets: "3 x 15",
+    id: "cable-crunch-ab-machine", name: "Abdominal Crunch (Selection)", day: 2, dayLabel: "Lower Body A",
+    equipment: "Technogym Selection", muscle: "core", icon: "cable", sets: "3 x 15",
     steps: [
-      "Kneel below a high cable with a rope attachment held at either side of your head (or sit in an ab machine and grip the handles).",
-      "Brace your core and curl your torso down, bringing your elbows toward your knees.",
-      "Focus on flexing the spine through your abs, not pulling with your arms.",
-      "Return slowly to the start under control."
+      "Set the seat so the chest pad sits across your upper chest and your feet are hooked under the rollers.",
+      "Take the handles beside your head without pulling on your neck.",
+      "Curl your ribs down toward your hips — a short, hard contraction, not a bend at the hips.",
+      "Return only until the stack is nearly down, keeping tension on the abs.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "Range is short by design. If you are travelling a long way, you are hinging at the hip, not crunching.",
+      "Rest 45–60 sec between sets.",
+    ]
   },
 
   // ===== DAY 4 — Upper Body B =====
   {
-    id: "smith-machine-incline-press", name: "Smith Machine Incline Press", day: 4, dayLabel: "Upper Body B",
-    equipment: "Machine", muscle: "chest", icon: "machine", sets: "4 x 10",
+    id: "smith-machine-incline-press", name: "Incline Press (Multipower)", day: 4, dayLabel: "Upper Body B",
+    equipment: "Technogym Multipower", muscle: "chest", icon: "machine", sets: "4 x 10",
     steps: [
-      "Set an incline bench (around 30–45°) under the Smith machine bar.",
-      "Unrack the bar with hands slightly wider than shoulder width.",
-      "Lower the bar under control to the upper chest.",
-      "Press back up to full extension without locking the elbows hard."
+      "Set an adjustable bench to about thirty degrees under the Multipower bar.",
+      "Lie back so the bar tracks down to your upper chest, and set the safety stops just below that.",
+      "Unhook the bar, lower it to your upper chest under control, and touch lightly.",
+      "Press back up without locking out hard, and re-hook only at the very end of the set.",
     ],
-    tips: ["Rest 90–120 sec between sets (compound lift)."]
+    tips: [
+      "The fixed bar path is the point: you can push closer to failure safely than with free weights.",
+      "Rest 90–120 sec between sets (compound lift).",
+    ]
   },
   {
-    id: "assisted-pull-up-machine", name: "Assisted Pull-Up Machine (or Lat Pulldown, close grip)", day: 4, dayLabel: "Upper Body B",
-    equipment: "Machine", muscle: "back", icon: "machine", sets: "4 x 10",
+    id: "assisted-pull-up-machine", name: "Assisted Chin / Vertical Traction", day: 4, dayLabel: "Upper Body B",
+    equipment: "Technogym Selection", muscle: "back", icon: "machine", sets: "4 x 10",
     steps: [
-      "Kneel on the platform and set an assistance level that lets you complete the target reps with control.",
-      "Grip the handles with a close, neutral or shoulder-width grip.",
-      "Pull your chest up toward the handles, driving elbows down and back.",
-      "Lower with control to a full arm extension.",
-      "Alternative: use the Lat Pulldown with a close grip if the assisted machine is unavailable."
+      "Set the assistance: a HIGHER number on the stack means MORE help, which is the opposite of every other machine here.",
+      "Kneel or stand on the pad and take the overhead grip.",
+      "Pull until your chin clears your hands, keeping your chest up.",
+      "Lower all the way to straight arms before the next rep.",
     ],
-    tips: ["Rest 90–120 sec between sets (compound lift)."]
+    tips: [
+      "As you get stronger the number goes DOWN. The coach tracks it that way round.",
+      "No assisted unit? Technogym's Vertical Traction trains the same pattern seated.",
+    ]
   },
   {
-    id: "chest-fly-pec-deck", name: "Chest Fly (Pec Deck)", day: 4, dayLabel: "Upper Body B",
-    equipment: "Machine", muscle: "chest", icon: "machine", sets: "3 x 12–15",
+    id: "chest-fly-pec-deck", name: "Pectoral (Selection)", day: 4, dayLabel: "Upper Body B",
+    equipment: "Technogym Selection", muscle: "chest", icon: "machine", sets: "3 x 12–15",
     steps: [
-      "Set the seat so the handles align with mid-chest height.",
-      "Place forearms/hands on the pads with a slight bend in the elbows.",
-      "Bring the pads together in front of your chest, squeezing your pecs.",
-      "Return slowly to a comfortable stretch without letting the weight slam."
+      "Set the seat so the handles sit at chest height, and use the range-of-motion selector so you start with a stretch you can control.",
+      "Sit back with your shoulder blades down and a soft, fixed bend in the elbows.",
+      "Bring the pads together in front of your chest and hold for a beat.",
+      "Open slowly until you feel the chest lengthen, keeping the elbow angle unchanged throughout.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "The elbow angle never changes on a fly. If it opens and closes, it has become a press.",
+      "Rest 60–90 sec between sets (isolation).",
+    ]
   },
   {
     id: "dumbbell-lateral-raise", name: "Dumbbell Lateral Raise", day: 4, dayLabel: "Upper Body B",
@@ -320,15 +354,18 @@ const EXERCISES = [
     tips: ["Rest 60–90 sec between sets (isolation move)."]
   },
   {
-    id: "cable-rope-face-pull", name: "Cable Rope Face Pull", day: 4, dayLabel: "Upper Body B",
-    equipment: "Cable", muscle: "shoulders", icon: "cable", sets: "3 x 15",
+    id: "cable-rope-face-pull", name: "Face Pull (Pulley)", day: 4, dayLabel: "Upper Body B",
+    equipment: "Technogym Pulley", muscle: "shoulders", icon: "cable", sets: "3 x 15",
     steps: [
-      "Set a rope attachment at upper chest to head height on the cable machine.",
-      "Grip the rope with both hands, palms facing in, and step back for tension.",
-      "Pull the rope toward your face, flaring elbows out and squeezing shoulder blades together.",
-      "Return slowly to the start under control."
+      "Set the pulley to just above head height and clip on the rope.",
+      "Step back until the cable is tight, arms long, thumbs pointing back.",
+      "Pull the rope toward your forehead, spreading your hands apart as your elbows travel back.",
+      "Finish with your knuckles beside your ears, hold, then return slowly.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "The single best thing you can do for shoulders that press a lot. Keep it light and clean.",
+      "Rest 45–60 sec between sets.",
+    ]
   },
   {
     id: "db-overhead-triceps-extension", name: "Dumbbell Overhead Triceps Extension", day: 4, dayLabel: "Upper Body B",
@@ -344,15 +381,18 @@ const EXERCISES = [
 
   // ===== DAY 5 — Lower Body B =====
   {
-    id: "hack-squat-machine", name: "Hack Squat Machine", day: 5, dayLabel: "Lower Body B",
-    equipment: "Machine", muscle: "legs", icon: "machine", sets: "4 x 10–12",
+    id: "hack-squat-machine", name: "Hack Squat (Pure Strength)", day: 5, dayLabel: "Lower Body B",
+    equipment: "Technogym Pure Strength", muscle: "legs", icon: "machine", sets: "4 x 10–12",
     steps: [
-      "Position yourself under the shoulder pads with feet shoulder-width on the platform.",
-      "Release the safety catches and lower under control until knees reach roughly 90°.",
-      "Press through your heels and mid-foot to extend your legs back up.",
-      "Avoid locking the knees hard at the top."
+      "Set the shoulder pads so you stand with a soft knee and your back flat on the ramp.",
+      "Place your feet mid-platform, shoulder width, toes turned slightly out.",
+      "Unlock the catches and lower until your thighs reach about parallel.",
+      "Drive back up through your whole foot without locking the knees at the top.",
     ],
-    tips: ["Rest 90–120 sec between sets (compound lift)."]
+    tips: [
+      "Feet lower on the platform hits the quads harder; higher shares it with the glutes. Pick one and keep it.",
+      "Rest 90–120 sec between sets (compound lift).",
+    ]
   },
   {
     id: "romanian-deadlift", name: "Romanian Deadlift (Dumbbell or Barbell)", day: 5, dayLabel: "Lower Body B",
@@ -377,26 +417,32 @@ const EXERCISES = [
     tips: ["Bodyweight or light dumbbells to start.", "Rest 90–120 sec between sets (compound-style movement)."]
   },
   {
-    id: "glute-kickback", name: "Glute Kickback Machine or Cable", day: 5, dayLabel: "Lower Body B",
-    equipment: "Cable", muscle: "glutes", icon: "cable", sets: "3 x 12 each",
+    id: "glute-kickback", name: "Glute (Selection)", day: 5, dayLabel: "Lower Body B",
+    equipment: "Technogym Selection", muscle: "glutes", icon: "cable", sets: "3 x 12 each",
     steps: [
-      "Attach an ankle cuff to a low cable, or use a glute kickback machine, and secure it around your ankle.",
-      "Hinge slightly forward and hold onto the machine frame for balance.",
-      "Kick your leg straight back and up, squeezing your glute at the top.",
-      "Return with control to the starting position without letting the weight yank your leg forward."
+      "Set the pad and the roller so your working leg starts with the hip bent, chest supported.",
+      "Brace against the pad so your lower back stays still.",
+      "Drive the working leg back and up until the hip is straight — no further.",
+      "Return slowly to the start, then repeat before swapping sides.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "Extra range at the top comes from arching your back, not from your glute. Stop at straight.",
+      "Rest 45–60 sec between sets.",
+    ]
   },
   {
-    id: "seated-calf-raise", name: "Seated Calf Raise", day: 5, dayLabel: "Lower Body B",
-    equipment: "Machine", muscle: "legs", icon: "machine", sets: "3 x 15",
+    id: "seated-calf-raise", name: "Seated Calf (Pure Strength)", day: 5, dayLabel: "Lower Body B",
+    equipment: "Technogym Pure Strength", muscle: "legs", icon: "machine", sets: "3 x 15",
     steps: [
-      "Sit with the balls of your feet on the platform and the pads resting on your lower thighs.",
-      "Let your heels drop for a full stretch at the bottom.",
-      "Press through the balls of your feet to raise your heels as high as possible.",
-      "Squeeze at the top, then lower slowly under control."
+      "Sit with the balls of your feet on the platform and the thigh pads locked down over your knees.",
+      "Release the catch and let your heels sink until you feel the stretch.",
+      "Press up onto your toes as far as the machine allows and hold briefly.",
+      "Lower slowly back into the stretch.",
     ],
-    tips: ["Rest 60–90 sec between sets (isolation move)."]
+    tips: [
+      "Bent knees put the soleus in charge, which is the half of the calf standing raises miss.",
+      "Rest 60–90 sec between sets (isolation).",
+    ]
   },
   {
     id: "plank", name: "Plank", day: 5, dayLabel: "Lower Body B",
@@ -412,59 +458,74 @@ const EXERCISES = [
 
   // ===== Cardio finishers (used across multiple days) =====
   {
-    id: "incline-treadmill-walk", name: "Incline Treadmill Walk", day: null, dayLabel: "Cardio Finisher",
-    equipment: "Cardio Machine", muscle: "cardio", icon: "treadmill", sets: "15 min, moderate pace",
+    id: "incline-treadmill-walk", name: "Excite Run — incline walk", day: null, dayLabel: "Cardio Finisher",
+    equipment: "Technogym Excite", muscle: "cardio", icon: "treadmill", sets: "15 min, moderate pace",
     steps: [
-      "Set a moderate incline (roughly 6–12%) and a brisk but sustainable walking pace.",
-      "Keep an upright posture — avoid gripping the handrails to take weight off your legs.",
-      "Maintain a steady pace you can hold for the full duration.",
-      "Cool down with 1–2 minutes at a flat, easy pace at the end."
+      "Step on, clip the safety key to your waistband, and start at a walking pace.",
+      "Raise the incline until the effort is real but you could still hold a conversation.",
+      "Walk tall and let your arms swing; do not hang off the handrails.",
+      "Drop the incline for the last two minutes rather than stopping dead.",
     ],
-    tips: ["Low-impact option that's easier on the knees/joints than running.", "Used as a warm-up mode too: 5–8 min light pace before every session."]
+    tips: [
+      "Holding the rails removes most of the work and all of the point. Lower the incline instead.",
+      "Low impact on the knees while still moving real calories — the right first choice at a heavier bodyweight.",
+    ]
   },
   {
-    id: "stationary-bike", name: "Stationary Bike", day: null, dayLabel: "Cardio Finisher",
-    equipment: "Cardio Machine", muscle: "cardio", icon: "bike", sets: "15–20 min, steady pace",
+    id: "stationary-bike", name: "Excite Bike", day: null, dayLabel: "Cardio Finisher",
+    equipment: "Technogym Excite", muscle: "cardio", icon: "bike", sets: "15–20 min, steady pace",
     steps: [
-      "Adjust the seat height so your knee has a slight bend at the bottom of the pedal stroke.",
-      "Start pedaling at a steady, moderate resistance you can sustain for the full session.",
-      "Keep your core braced and shoulders relaxed rather than hunched over the handlebars.",
-      "Ease off resistance for a short cooldown in the last 1–2 minutes."
+      "Set the saddle so your knee stays slightly bent at the bottom of the pedal stroke.",
+      "Note the saddle number on the post — it is the same every session.",
+      "Ride at a steady cadence you can hold for the whole block.",
+      "Spin easy for the last two minutes to cool down.",
     ],
-    tips: ["Low-impact — a good early option while building a fitness base."]
+    tips: [
+      "A saddle set too low is the most common cause of sore knees on a bike.",
+      "The Recline version puts your back against a pad if sitting upright is uncomfortable.",
+    ]
   },
   {
-    id: "elliptical", name: "Elliptical", day: null, dayLabel: "Cardio Finisher",
-    equipment: "Cardio Machine", muscle: "cardio", icon: "elliptical", sets: "15–20 min, steady pace",
+    id: "elliptical", name: "Excite Synchro", day: null, dayLabel: "Cardio Finisher",
+    equipment: "Technogym Excite", muscle: "cardio", icon: "elliptical", sets: "15–20 min, steady pace",
     steps: [
-      "Step onto the pedals and grip the moving handles for full-body engagement, or hold the stationary rails.",
-      "Drive through your legs in a smooth, controlled elliptical motion.",
-      "Keep your posture tall rather than leaning heavily on the handles.",
-      "Hold a steady, sustainable pace for the full duration."
+      "Step on with a foot on each platform and take the moving handles.",
+      "Start pedalling and let the machine find its rhythm before adding resistance.",
+      "Push and pull with the arms as much as you drive with the legs.",
+      "Ease the resistance down over the last two minutes.",
     ],
-    tips: ["Low-impact alternative to running — easy on the joints."]
+    tips: [
+      "Almost no impact through the joints, which is why it suits heavier bodyweights and sore knees.",
+      "The Vario version lengthens your stride as you speed up if you want more variety.",
+    ]
   },
   {
-    id: "rowing-machine", name: "Rowing Machine", day: null, dayLabel: "Cardio Finisher",
-    equipment: "Cardio Machine", muscle: "cardio", icon: "rower", sets: "20 min",
+    id: "rowing-machine", name: "Skillrow", day: null, dayLabel: "Cardio Finisher",
+    equipment: "Technogym Skill", muscle: "cardio", icon: "rower", sets: "20 min",
     steps: [
-      "Strap your feet in, grab the handle, and start with legs bent, arms extended.",
-      "Drive the sequence: legs first, then lean back slightly, then pull the handle to your torso.",
-      "Reverse the sequence smoothly to return: arms out, lean forward, then bend the knees.",
-      "Keep a steady, controlled rhythm rather than rushing the stroke."
+      "Strap your feet in with the strap across the widest part of your foot.",
+      "Drive with the legs first, then swing the torso back, then pull the handle to your ribs.",
+      "Reverse it exactly: arms away, torso forward, then let the knees bend.",
+      "Aim for a long, unhurried stroke rather than a fast, short one.",
     ],
-    tips: ["Full-body, low-impact cardio option."]
+    tips: [
+      "Legs, back, arms — then arms, back, legs. Getting that order right is most of rowing.",
+      "Whole-body and no impact, but it will find a weak lower back if you have one.",
+    ]
   },
   {
-    id: "stairmaster", name: "Stairmaster", day: null, dayLabel: "Cardio Finisher",
-    equipment: "Cardio Machine", muscle: "cardio", icon: "stairmaster", sets: "15 min",
+    id: "stairmaster", name: "Excite Climb", day: null, dayLabel: "Cardio Finisher",
+    equipment: "Technogym Excite", muscle: "cardio", icon: "stairmaster", sets: "15 min",
     steps: [
-      "Step onto the pedals and set a sustainable stepping pace.",
-      "Stand tall and let your legs do the work rather than leaning on the handrails.",
-      "Keep your steps controlled rather than rushed or bouncy.",
-      "Maintain a steady pace for the full duration, cooling down briefly at the end."
+      "Step on and start slowly — the steps keep moving whether you are ready or not.",
+      "Stand tall and take full steps rather than short shuffles.",
+      "Rest your hands lightly on the rails for balance, not for support.",
+      "Slow the pace for the last two minutes instead of stepping straight off.",
     ],
-    tips: ["Higher-effort cardio option — build up gradually."]
+    tips: [
+      "Leaning on the rails turns a hard machine into an easy one. Slow it down instead.",
+      "Higher effort than a walk for the same time — build up to it rather than starting here.",
+    ]
   },
 ];
 
@@ -551,16 +612,19 @@ const SUPPLEMENTARY_EXERCISES = [
     tips: ["Free-weight alternative when the shoulder press machine is taken.", "Rest 90–120 sec between sets."],
   },
   {
-    id: "machine-chest-supported-row", name: "Chest-Supported Machine Row", day: null,
-    dayLabel: "Library", equipment: "Machine", muscle: "back", icon: "machine",
+    id: "machine-chest-supported-row", name: "Low Row (Selection)", day: null,
+    dayLabel: "Library", equipment: "Technogym Selection", muscle: "back", icon: "machine",
     sets: "3 x 10–12",
     steps: [
-      "Set the chest pad so the handles sit at mid-chest with your arms extended.",
-      "Brace your chest against the pad — this takes your lower back out of the movement.",
-      "Row the handles back, driving your elbows behind your torso.",
-      "Squeeze your shoulder blades together, then return to a full stretch.",
+      "Set the seat so the handles are level with your lower ribs and your chest rests against the pad.",
+      "Take the handles with your arms long and your chest pressed into the pad.",
+      "Pull the handles back until your elbows pass your ribs, squeezing the shoulder blades together.",
+      "Return until the arms are straight and the shoulder blades separate, keeping your chest on the pad.",
     ],
-    tips: ["The lower-back-friendly row: use this if seated cable rows bother your back.", "Rest 90 sec between sets."],
+    tips: [
+      "The chest pad is the point of this machine: if your torso is coming off it, the weight is too heavy.",
+      "Rest 90–120 sec between sets (compound lift).",
+    ],
   },
   {
     id: "db-romanian-deadlift", name: "Dumbbell Romanian Deadlift", day: null,
@@ -611,18 +675,18 @@ const SUPPLEMENTARY_EXERCISES = [
     tips: ["Neutral grip is usually kinder to a sore elbow than a supinated curl."],
   },
   {
-    id: "cable-lateral-raise", name: "Seated Cable Lateral Raise", day: null,
-    dayLabel: "Library", equipment: "Cable", muscle: "shoulders", icon: "cable",
+    id: "cable-lateral-raise", name: "Seated Lateral Raise (Pulley)", day: null,
+    dayLabel: "Library", equipment: "Technogym Pulley", muscle: "shoulders", icon: "cable",
     sets: "3 x 12–15",
     steps: [
-      "Sit on a low bench between two low pulleys and take the left handle in your right hand and the right handle in your left, so the cables cross in front of your shins.",
-      "With a slight, fixed bend in each elbow, raise both arms out to the side to shoulder height.",
-      "Lead with the elbows and keep your shoulders down away from your ears.",
-      "Lower slowly — crossed cables keep tension at the bottom, where dumbbells lose it entirely.",
+      "Sit on a bench between two low pulleys and take the left handle in your right hand and the right in your left, so the cables cross in front of your shins.",
+      "Fix a slight bend in each elbow and sit tall.",
+      "Raise both arms out to the side to shoulder height, leading with the elbows.",
+      "Lower slowly — crossed cables keep tension at the bottom where dumbbells lose it.",
     ],
     tips: [
       "Sitting takes the legs and lower back out of it, so nothing helps you cheat the weight up.",
-      "Smoother resistance curve than dumbbells; good when 2 kg jumps feel too big.",
+      "Rest 45–60 sec between sets.",
     ],
   },
   {
@@ -638,16 +702,19 @@ const SUPPLEMENTARY_EXERCISES = [
     tips: ["Progress to straight legs once 15 controlled knee raises are easy."],
   },
   {
-    id: "reverse-pec-deck", name: "Reverse Pec Deck", day: null,
-    dayLabel: "Library", equipment: "Machine", muscle: "shoulders", icon: "machine",
+    id: "reverse-pec-deck", name: "Rear Delt (Selection)", day: null,
+    dayLabel: "Library", equipment: "Technogym Selection", muscle: "shoulders", icon: "machine",
     sets: "3 x 15",
     steps: [
-      "Turn to face the pec deck's back pad and set the handles to shoulder height.",
-      "Grip the handles with a slight elbow bend and arms extended in front of you.",
-      "Sweep your arms out and back, squeezing your rear delts and mid-back.",
-      "Return under control without letting the stack drop.",
+      "Set the seat so the handles are at shoulder height and your chest rests against the front pad.",
+      "Take the handles with your thumbs up and your elbows almost straight.",
+      "Sweep your arms out and back until they are level with your shoulders — no further.",
+      "Return under control without letting the stack rest between reps.",
     ],
-    tips: ["Machine alternative to face pulls when every cable station is occupied."],
+    tips: [
+      "Lead with the little finger, not the hand: it keeps the work on the rear delt instead of the traps.",
+      "This is the machine that pays back the hours you spend pressing. Do not rush it.",
+    ],
   },
   {
     id: "seated-db-shrug", name: "Seated Dumbbell Shrug", day: null,
@@ -725,15 +792,18 @@ const EXPANSION_EXERCISES = [
     ],
   },
   {
-    id: "cable-crossover", name: "Cable Crossover", day: null, dayLabel: "Library",
-    equipment: "Cable", muscle: "chest", icon: "cable", sets: "3 x 12–15",
+    id: "cable-crossover", name: "Cable Crossover (Pulley)", day: null, dayLabel: "Library",
+    equipment: "Technogym Pulley", muscle: "chest", icon: "cable", sets: "3 x 12–15",
     steps: [
-      "Set both pulleys high, take a handle in each hand and step forward into a split stance.",
-      "With a slight bend in the elbows, bring your hands down and together in front of your hips.",
-      "Squeeze your chest at the point where your hands meet.",
-      "Return slowly to a stretch without letting the weight pull your shoulders back.",
+      "Set both pulleys high and take a handle in each hand.",
+      "Step forward into a split stance with a soft, fixed bend in the elbows.",
+      "Bring your hands together and slightly down in front of you, crossing a little at the end.",
+      "Open slowly until you feel the chest stretch, keeping the elbow angle unchanged.",
     ],
-    tips: ["Cables keep tension through the whole range where dumbbell flyes lose it at the top."],
+    tips: [
+      "Vary the pulley height between blocks — high hits the lower chest, low the upper.",
+      "Rest 60–90 sec between sets (isolation).",
+    ],
   },
   {
     id: "arnold-press", name: "Arnold Press", day: null, dayLabel: "Library",
@@ -786,15 +856,18 @@ const EXPANSION_EXERCISES = [
     tips: ["The supinated grip lets the biceps help, so most people manage more of these than pull-ups."],
   },
   {
-    id: "straight-arm-pulldown", name: "Straight-Arm Pulldown", day: null, dayLabel: "Library",
-    equipment: "Cable", muscle: "back", icon: "cable", sets: "3 x 12–15",
+    id: "straight-arm-pulldown", name: "Straight-Arm Pulldown (Pulley)", day: null, dayLabel: "Library",
+    equipment: "Technogym Pulley", muscle: "back", icon: "cable", sets: "3 x 12–15",
     steps: [
-      "Stand facing a high pulley with a straight bar or rope, arms extended in front of you.",
-      "Hinge forward slightly and keep a fixed, soft bend in your elbows.",
-      "Pull the bar down in an arc to your thighs using your lats, not your triceps.",
-      "Return slowly, letting your lats stretch at the top without shrugging.",
+      "Set the pulley high and take a straight bar with your arms extended in front of you.",
+      "Hinge forward slightly and lock a soft bend into your elbows.",
+      "Sweep the bar down to your thighs using only the shoulder joint.",
+      "Let it rise until you feel the lats lengthen overhead.",
     ],
-    tips: ["Isolates the lats with no elbow flexion, so the arms cannot take over."],
+    tips: [
+      "This is a lat exercise with no elbow bend at all — if the arms are working, lighten it.",
+      "Rest 45–60 sec between sets.",
+    ],
   },
   {
     id: "bent-over-barbell-row", name: "Bent-Over Barbell Row", day: null, dayLabel: "Library",
@@ -908,15 +981,18 @@ const EXPANSION_EXERCISES = [
     ],
   },
   {
-    id: "preacher-curl", name: "Preacher Curl", day: null, dayLabel: "Library",
-    equipment: "Machine", muscle: "arms", icon: "machine", sets: "3 x 10–12",
+    id: "preacher-curl", name: "Arm Curl (Selection)", day: null, dayLabel: "Library",
+    equipment: "Technogym Selection", muscle: "arms", icon: "machine", sets: "3 x 10–12",
     steps: [
-      "Set the seat so your armpits rest against the top of the pad with your arms flat on it.",
-      "Grip the handles and start from a near-full stretch, not a locked-out elbow.",
-      "Curl up until your forearms are just past vertical.",
-      "Lower slowly all the way back to the stretch — this is where the pad earns its keep.",
+      "Set the seat so your armpits rest on the top of the pad and your upper arms lie flat on it.",
+      "Take the handles with your elbows slightly bent — never start from a locked-out arm.",
+      "Curl until your forearms are vertical, keeping your upper arms glued to the pad.",
+      "Lower slowly until just short of straight, then go again.",
     ],
-    tips: ["The pad removes all swing, so the biceps get exactly the load you selected."],
+    tips: [
+      "The pad exists to stop your elbows travelling. If they are sliding up it, the weight is winning.",
+      "Rest 60–90 sec between sets (isolation).",
+    ],
   },
   {
     id: "concentration-curl", name: "Concentration Curl", day: null, dayLabel: "Library",
@@ -955,26 +1031,32 @@ const EXPANSION_EXERCISES = [
     ],
   },
   {
-    id: "upright-row", name: "Upright Row", day: null, dayLabel: "Library",
-    equipment: "Machine", muscle: "shoulders", icon: "machine", sets: "3 x 12–15",
+    id: "upright-row", name: "Upright Row (Pulley)", day: null, dayLabel: "Library",
+    equipment: "Technogym Pulley", muscle: "shoulders", icon: "machine", sets: "3 x 12–15",
     steps: [
-      "Hold the bar with an overhand grip about shoulder width — narrower grips crowd the shoulder.",
-      "Pull the bar straight up close to your body, leading with your elbows.",
-      "Stop when your upper arms reach shoulder height. Higher buys nothing and costs the joint.",
-      "Lower under control to full extension.",
+      "Set the pulley low and take a straight bar at about shoulder width — not narrow.",
+      "Stand tall with the bar resting against your thighs.",
+      "Pull it up the front of your body to lower-chest height, leading with the elbows.",
+      "Lower under control all the way back to your thighs.",
     ],
-    tips: ["Stop at shoulder height and use a wider grip: taken high and narrow, this is a shoulder-impingement exercise."],
+    tips: [
+      "Stop at the lower chest. Pulling to the chin is where shoulders get pinched.",
+      "Skip this one entirely if your shoulders complain; the lateral raise trains the same thing safely.",
+    ],
   },
   {
-    id: "cable-rear-delt-fly", name: "Cable Rear Delt Fly", day: null, dayLabel: "Library",
-    equipment: "Cable", muscle: "shoulders", icon: "cable", sets: "3 x 15",
+    id: "cable-rear-delt-fly", name: "Rear Delt Fly (Pulley)", day: null, dayLabel: "Library",
+    equipment: "Technogym Pulley", muscle: "shoulders", icon: "cable", sets: "3 x 15",
     steps: [
-      "Set two pulleys to shoulder height and take the left handle in your right hand and vice versa.",
-      "Stand centred with arms crossed in front of you and a slight bend in the elbows.",
-      "Sweep your arms out and back in a wide arc, squeezing your rear delts.",
-      "Return under control without letting your shoulders round forward.",
+      "Set both pulleys to shoulder height and cross the cables, right handle in the left hand.",
+      "Stand tall with your arms out in front and a soft bend in the elbows.",
+      "Sweep your arms out and back until they are level with your shoulders.",
+      "Return under control without letting your shoulders roll forward.",
     ],
-    tips: ["Rear delts are the most under-trained head of the shoulder and the one that fixes posture."],
+    tips: [
+      "Think about pulling your shoulder blades apart at the back, not about moving your hands.",
+      "Rest 45–60 sec between sets.",
+    ],
   },
   {
     id: "ab-roller", name: "Ab Wheel Rollout", day: null, dayLabel: "Library",
