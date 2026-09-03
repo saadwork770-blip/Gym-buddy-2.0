@@ -170,14 +170,18 @@ function brandSeries(id, brand) {
   return map[meta.loadType] || null;
 }
 
-/** "Leg Extension (Eagle NX)" — null when there is nothing to compose. */
-function brandMachineName(id) {
-  const series = brandSeries(id);
+/** "Leg Extension (Eagle NX)" for a given brand — null when there is nothing
+    to compose. Takes an explicit brand (rather than always reading the active
+    one) so the "compare brands" strip can render every tile without switching
+    the profile's own setting. */
+function brandMachineNameFor(id, brand) {
+  const series = brandSeries(id, brand);
   if (!series) return null;
   const key = `brandMachine.${id}`;
   if (typeof I18n === "undefined" || !I18n.has(key)) return null;
   return `${I18n.t(key)} (${series})`;
 }
+function brandMachineName(id) { return brandMachineNameFor(id, activeBrand()); }
 
 /* ---------- The overlays ----------
    English is the source text, registered into the English dictionary the same
@@ -650,12 +654,13 @@ const BRAND_CONTENT = {
   });
 })();
 
-/** The equipment label for one exercise under the brand in force.
+/** The equipment label for one exercise under a given brand — this is what
+    lets the "compare brands" strip on the exercise detail page caption each
+    tile without switching the profile's own setting.
     A brand that names a series gets "Cybex Eagle NX"; one that does not gets
     its own name; a dumbbell gets neither, because a dumbbell is nobody's
     product in particular. */
-function brandEquipment(id) {
-  const brand = activeBrand();
+function brandEquipmentFor(id, brand) {
   if (brand === DEFAULT_BRAND) return null;
   const o = (BRAND_CONTENT[brand] || {})[id];
   if (o && o.equipment) return o.equipment;
@@ -664,3 +669,5 @@ function brandEquipment(id) {
   const series = brandSeries(id, brand);
   return series ? `${name} ${series}` : name;
 }
+/** The same, for whichever brand is active. */
+function brandEquipment(id) { return brandEquipmentFor(id, activeBrand()); }

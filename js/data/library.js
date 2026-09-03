@@ -531,23 +531,30 @@ const MEDIA_NOTES = {
    covered. Everything else falls back to the shared set — so a brand can start
    with one photograph and grow, rather than needing all sixty-six before any
    of them count. */
-function brandPhotoDir() {
-  const b = typeof BRANDS !== "undefined" && BRANDS[activeBrand()];
+function brandPhotoDirOf(brand) {
+  const b = typeof BRANDS !== "undefined" && BRANDS[brand];
   if (!b || !b.photoDir) return null;
   return b.photoDir;
 }
-function hasBrandPhoto(id) {
-  const dir = brandPhotoDir();
+function brandPhotoDir() { return brandPhotoDirOf(activeBrand()); }
+
+function hasBrandPhotoOf(id, brand) {
+  const dir = brandPhotoDirOf(brand);
   if (!dir) return false;
-  const list = (typeof BRAND_PHOTOS !== "undefined" && BRAND_PHOTOS[activeBrand()]) || [];
+  const list = (typeof BRAND_PHOTOS !== "undefined" && BRAND_PHOTOS[brand]) || [];
   return list.indexOf(id) !== -1;
 }
-function photoFor(id){
-  return hasBrandPhoto(id) ? `assets/photos/${brandPhotoDir()}/${id}.jpg` : `assets/photos/${id}.jpg`;
+function hasBrandPhoto(id) { return hasBrandPhotoOf(id, activeBrand()); }
+
+function photoForBrand(id, brand){
+  return hasBrandPhotoOf(id, brand) ? `assets/photos/${brandPhotoDirOf(brand)}/${id}.jpg` : `assets/photos/${id}.jpg`;
 }
-function clipFor(id){
-  return hasBrandPhoto(id) ? `assets/clips/${brandPhotoDir()}/${id}.webm` : `assets/clips/${id}.webm`;
+function photoFor(id){ return photoForBrand(id, activeBrand()); }
+
+function clipForBrand(id, brand){
+  return hasBrandPhotoOf(id, brand) ? `assets/clips/${brandPhotoDirOf(brand)}/${id}.webm` : `assets/clips/${id}.webm`;
 }
+function clipFor(id){ return clipForBrand(id, activeBrand()); }
 
 function exerciseById(id){ return EXERCISES.find(e => e.id === id); }
 function exercisesForDay(day){ return EXERCISES.filter(e => e.day === day); }
