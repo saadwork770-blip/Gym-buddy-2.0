@@ -835,7 +835,8 @@ canvas.chart{ width:100%; display:block; }
 .skip-link {
   position: absolute; inset-inline-start: 8px; top: -60px; z-index: 100;
   background: var(--accent); color: #08110f; font-weight: 800;
-  padding: 10px 18px; border-radius: 0 0 8px 8px; transition: top .15s;
+  padding: 12px 18px; border-radius: 0 0 8px 8px; transition: top .15s;
+  display: inline-flex; align-items: center; min-height: 44px;
 }
 .skip-link:focus { top: 0; }
 
@@ -1095,4 +1096,227 @@ canvas.chart{ width:100%; display:block; }
   .nav { position: static; }
   .rest-bar { top: 0; }
   .hero { padding: 32px 0 24px; }
+}
+
+/* ============================================================================
+   ==  Phone layout  ==========================================================
+   ============================================================================
+   Everything above this point was designed for a browser window and then made
+   to survive a narrow one. That is not the same thing as being designed for a
+   phone, and it showed: a marketing hero filling the first screen every time
+   the app opened, headings at forty-six pixels, one card per screenful, and a
+   hamburger standing between the lifter and the page they open five times a
+   session.
+
+   This section is the phone design. It is scoped to `max-width: 700px` so the
+   desktop layout is untouched, and it does three things: gives the app a
+   shell (a bottom tab bar and a slim header), a type scale that belongs on a
+   395-point screen, and a density that puts real content above the fold.
+   ============================================================================ */
+
+/* ---------- Safe areas ----------
+   `viewport-fit=cover` lets the page use the full screen, which is what makes
+   a dark app look like an app on an iPhone rather than a page in a letterbox.
+   The cost is that the notch and the home indicator now overlap the layout,
+   so every fixed edge has to pay the inset back. */
+:root{
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --tabbar-h: 56px;
+}
+
+/* ---------- Bottom tab bar ---------- */
+.tabbar{ display: none; }
+
+@media (max-width: 700px){
+  .tabbar{
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 90;
+    padding-bottom: var(--safe-bottom);
+    background: rgba(14,16,19,.92);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    backdrop-filter: saturate(180%) blur(18px);
+    border-top: 1px solid var(--border);
+  }
+  .tabbar a{
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; height: var(--tabbar-h); color: var(--text-faint);
+    font-size: .625rem; font-weight: 700; letter-spacing: .01em;
+    text-decoration: none; transition: color .15s ease;
+  }
+  .tabbar a svg{ width: 23px; height: 23px; }
+  .tabbar a.active{ color: var(--accent); }
+  .tabbar a:active{ opacity: .55; }
+  /* Arabic labels need a touch more room and no letter-spacing. */
+  [dir="rtl"] .tabbar a{ font-size: .66rem; letter-spacing: 0; }
+
+  /* Content has to clear the bar, and the footer is the last thing above it. */
+  body{ padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom)); }
+
+  /* ---------- Slim header ----------
+     The bar below takes over navigation, so the header keeps only identity and
+     the two controls that are not destinations: language and profile. */
+  .nav .wrap{ height: 52px; padding-inline: 14px; gap: 10px; }
+  .nav{ padding-top: var(--safe-top); }
+  .nav-toggle, .nav-links{ display: none !important; }
+  .brand{ font-size: .98rem; gap: 8px; margin-inline-end: auto; }
+  .brand .mark{ width: 24px; height: 24px; }
+  .brand .ver{ font-size: .58rem; }
+  .lang-switch{ padding: 8px 12px; font-size: .76rem; }
+  .nav-user{ padding: 0; border: none; background: none; }
+  .nav-avatar{ width: 34px; height: 34px; font-size: .84rem; }
+
+  /* ---------- Type scale ----------
+     Forty-six-pixel headlines are a desktop idea. On a phone held at arm's
+     length the same hierarchy is carried by about half the size, and the space
+     that frees up is what lets a screen hold more than one card. */
+  h1, .hero h1{ font-size: 1.65rem; line-height: 1.18; letter-spacing: -.02em; }
+  h2{ font-size: 1.3rem; line-height: 1.22; }
+  h3{ font-size: 1.02rem; }
+  h4{ font-size: .92rem; }
+  body{ font-size: .95rem; line-height: 1.5; }
+  p{ font-size: .95rem; margin-bottom: .75em; }
+  .hint{ font-size: .8rem; }
+  .section-head h2{ font-size: 1.45rem; }
+  .section-head p{ font-size: .9rem; color: var(--text-faint); }
+  .section-head .kicker{ font-size: .68rem; }
+  [dir="rtl"] body{ line-height: 1.65; }
+
+  /* ---------- Density ---------- */
+  .wrap{ padding-inline: 14px; }
+  section{ padding-block: 18px; }
+  .section-head{ margin-bottom: 14px; }
+  .card, .chart-card{ padding: 15px; border-radius: 16px; }
+  .coach-card{ padding: 15px 16px; border-radius: 16px; }
+  .grid, .grid-3, .grid-4{ gap: 12px; }
+  .kpi-grid{ gap: 10px; margin-bottom: 18px; }
+  .kpi{ padding: 14px; border-radius: 14px; }
+  .kpi b{ font-size: 1.35rem; }
+  .kpi span{ font-size: .64rem; }
+  .stat-row{ gap: 10px; }
+  .stat-tile{ padding: 12px; }
+  .stat-tile b{ font-size: 1.25rem; }
+  .stat-tile span{ font-size: .66rem; }
+
+  /* ---------- Hero ----------
+     A returning lifter does not need the pitch. The headline and the button
+     stay; the paragraph explaining what the app is goes, because by the second
+     visit it is just a screenful of scrolling between them and the session. */
+  .hero{ padding: 20px 0 18px; }
+  .hero .lead{ display: none; }
+  /* The week overview is genuinely useful, so it stays — it just stacks under
+     the buttons now instead of sitting beside them. */
+  .hero-card{ margin-top: 18px; padding: 15px; border-radius: 16px; }
+  /* Copy that explains what the app is, to somebody already using it. */
+  body.has-profile .marketing{ display: none; }
+  .hero-grid{ gap: 18px; }
+  .eyebrow{ font-size: .66rem; padding: 6px 12px; }
+  .hero .btn{ width: 100%; }
+  .hero-actions{ display: flex; flex-direction: column; gap: 10px; }
+  .hero-stats{ margin-top: 18px; }
+
+  /* ---------- Day picker ----------
+     Seven days in a 4+3 grid wraps into an odd stub. Seven equal columns is
+     both tidier and closer to how a week actually reads. */
+  .day-picker{ display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .day-btn{ min-width: 0; }
+  .day-btn{ padding: 10px 2px; font-size: .78rem; border-radius: 12px; }
+  .day-btn small{ font-size: .55rem; margin-top: 1px; }
+
+  /* ---------- Profile card ----------
+     A 78px avatar centred above a name, a meta line and two full-width buttons
+     took the entire first screen, which pushed the tabs — the actual content of
+     the page — below the fold. The same information reads fine as one row, and
+     "delete" stops sitting at the same visual weight as "edit". */
+  .profile-card{ text-align: start; }
+  .profile-card .avatar{
+    width: 52px; height: 52px; font-size: 1.15rem; margin: 0;
+    grid-area: av; align-self: center;
+  }
+  .profile-card > .avatar, .profile-card > .name, .profile-card > .meta{ margin-bottom: 0; }
+  .profile-card{
+    display: grid; gap: 2px 12px;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "av name" "av meta" "edit edit" "del del" "switch switch";
+    align-items: center;
+  }
+  .profile-card .name{ grid-area: name; align-self: end; font-size: 1.05rem; }
+  .profile-card .meta{ grid-area: meta; align-self: start; margin-bottom: 0; }
+  .profile-card #editBtn{ grid-area: edit; margin-top: 14px; }
+  /* Deleting a profile erases a training history that cannot be recovered. It
+     stays reachable and stays red, but it does not get to sit at the same size
+     as the button next to it. */
+  .profile-card #deleteBtn{
+    grid-area: del; margin-top: 6px !important;
+    font-size: .82rem; border-color: transparent; opacity: .85;
+  }
+  .profile-card .profile-switch{ grid-area: switch; }
+
+  /* ---------- Filter strips ----------
+     Nine muscle-group chips and five more below them wrapped into six rows and
+     pushed the first exercise off the bottom of the screen. One swipeable row
+     each keeps the whole filter set to about eighty pixels, and swiping a row
+     of pills is a gesture nobody needs taught. */
+  .filters{
+    display: flex; flex-wrap: nowrap; gap: 8px; margin-bottom: 12px;
+    overflow-x: auto; overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    /* Bleed to the screen edges so the row reads as scrollable rather than
+       as a row that happens to be clipped. */
+    margin-inline: -14px; padding-inline: 14px;
+  }
+  .filters::-webkit-scrollbar{ display: none; }
+  .filters .chip{ flex: 0 0 auto; }
+
+  /* ---------- Session cards ---------- */
+  .session-card .sh{ padding: 14px 15px; }
+  .session-card .btn{ width: 100%; }
+  .ex-line{ padding-block: 11px; }
+
+  /* ---------- Footer ----------
+     Two paragraphs of licensing under a tab bar is noise; it stays for anyone
+     who scrolls to the very end, just quietly. */
+  footer{ font-size: .72rem; opacity: .75; padding-block: 18px; }
+}
+
+/* Very small phones — the iPhone SE and the mini. */
+@media (max-width: 380px){
+  .tabbar a{ font-size: .58rem; }
+  .tabbar a svg{ width: 21px; height: 21px; }
+  h1, .hero h1{ font-size: 1.5rem; }
+  .day-btn{ font-size: .72rem; }
+  /* The wordmark goes; the page's own heading carries the identity. The link
+     keeps a full-sized target around the mark rather than shrinking to it. */
+  .brand span{ display: none; }
+  .brand{ margin-inline-end: auto; min-width: 44px; justify-content: flex-start; }
+}
+
+/* ---------- Press feedback ----------
+   With no cursor there is no hover, and without hover a tap on a dark card
+   gives nothing back at all. A brief dim is the whole of the feedback iOS
+   itself uses, and it is enough. */
+@media (hover: none){
+  .btn:active, .day-btn:active, .chip:active, .seg button:active,
+  .readiness-scale button:active, .tab-btn:active, .plist button:active,
+  .toggle:active, .set-row .log-btn:active{
+    opacity: .62; transform: scale(.985);
+  }
+  .card:active, .coach-card:active, .ex-card:active, .session-card:active{
+    transform: scale(.995);
+  }
+  .btn, .day-btn, .chip, .card, .ex-card, .coach-card, .seg button,
+  .set-row .log-btn, .toggle{
+    transition: opacity .12s ease, transform .12s ease, border-color .15s ease;
+  }
+}
+
+/* Momentum scrolling, and no rubber-band on the horizontal strips. */
+@media (pointer: coarse){
+  html, body{ -webkit-overflow-scrolling: touch; }
+  .tabs, .table-scroll{ overscroll-behavior-x: contain; }
 }

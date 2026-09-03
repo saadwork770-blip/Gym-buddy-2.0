@@ -29,6 +29,28 @@ const UI = (function () {
     { href: "profile.html",   key: "nav.profile" },
   ];
 
+  /* Tab-bar glyphs. Stroked at the same weight as the logo so the bar reads as
+     one set rather than as five borrowed icons. Drawn inline because the site
+     makes no external requests. */
+  const TAB_ICON = {
+    home:      '<path d="M3 10.2 12 3l9 7.2V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    program:   '<rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 3v3M16 3v3M7.5 14h4M7.5 17h7"/>',
+    workout:   '<path d="M3 12h2M19 12h2M6.5 8.5v7M17.5 8.5v7M9.5 6.5v11M14.5 6.5v11M9.5 12h5"/>',
+    coach:     '<path d="M12 3a7 7 0 0 1 7 7c0 2.4-1.2 3.9-2.3 5.1-.8.9-1.2 1.6-1.2 2.6v.3H8.5v-.3c0-1-.4-1.7-1.2-2.6C6.2 13.9 5 12.4 5 10a7 7 0 0 1 7-7Z"/><path d="M9.5 21h5"/>',
+    profile:   '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c.6-3.9 3.7-6 7.5-6s6.9 2.1 7.5 6"/>',
+  };
+
+  /* The five destinations a phone gets in the bar. Progress and Exercises are
+     reachable from the pages that link to them; a six- or seven-item bar stops
+     being tappable and starts being a menu. */
+  const TABS = [
+    { href: "index.html",    key: "nav.home",    icon: "home" },
+    { href: "program.html",  key: "nav.program", icon: "program" },
+    { href: "workout.html",  key: "nav.workout", icon: "workout" },
+    { href: "coach.html",    key: "nav.coach",   icon: "coach" },
+    { href: "profile.html",  key: "nav.profile", icon: "profile" },
+  ];
+
   const LOGO = `<svg class="mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
       <line x1="8" y1="32" x2="56" y2="32"/><rect x="4" y="24" width="8" height="16" rx="2"/>
       <rect x="52" y="24" width="8" height="16" rx="2"/><rect x="14" y="18" width="6" height="28" rx="2"/>
@@ -37,6 +59,9 @@ const UI = (function () {
   function mountChrome() {
     const current = location.pathname.split("/").pop() || "index.html";
     const profile = Store.getActiveProfile();
+    /* Lets the stylesheet drop the introductory copy for somebody who has
+       already been introduced. */
+    document.body.classList.toggle("has-profile", !!profile);
     const phase = profile ? Periodization.phaseFor(profile) : null;
 
     const other = I18n.languages().find(l => l.id !== I18n.lang());
@@ -77,6 +102,25 @@ const UI = (function () {
       // inside already-rendered markup.
       location.reload();
     });
+
+    /* ---- Bottom tab bar (phones) ----
+       A hamburger is a menu you have to open before you can go anywhere, which
+       on a page you visit five times a session is five extra taps. The bar is
+       CSS-hidden above phone widths, so the desktop nav is untouched. */
+    if (!document.querySelector(".tabbar")) {
+      const here = current === "" ? "index.html" : current;
+      const bar = document.createElement("nav");
+      bar.className = "tabbar";
+      bar.setAttribute("aria-label", I18n.t("nav.primary"));
+      bar.innerHTML = TABS.map(t => {
+        const active = t.href === here;
+        return `<a href="${t.href}" class="${active ? "active" : ""}"${active ? ' aria-current="page"' : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICON[t.icon]}</svg>
+          <span>${esc(I18n.t(t.key))}</span></a>`;
+      }).join("");
+      document.body.appendChild(bar);
+    }
 
     if (!document.querySelector("body > footer")) {
       const footer = document.createElement("footer");

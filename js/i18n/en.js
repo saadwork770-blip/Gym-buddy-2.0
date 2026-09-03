@@ -12,7 +12,7 @@ I18n.register("en", {
     home: "Home", program: "Program", workout: "Workout", coach: "Coach",
     progress: "Progress", exercises: "Exercises", profile: "Profile",
     createProfile: "Create profile", menu: "Toggle menu", switchTo: "Switch to {lang}",
-    skipToContent: "Skip to content",
+    skipToContent: "Skip to content", primary: "Main",
   },
 
   footer: {
@@ -569,7 +569,7 @@ I18n.register("en", {
     metaTitle: "Exercise Library — GymBuddy 2.0",
     kicker: "Exercise Library",
     title: "Every movement the coach can put in your plan",
-    intro: "Each entry carries a real gym photo, a looping animated demonstration and step-by-step form cues — plus the movement pattern, load type and joint load the coaching engine reasons about. <b>Hover a card</b> to play its animation, or click for the full detail.",
+    intro: "Each entry carries a real gym photo, a looping animated demonstration and step-by-step form cues — plus the movement pattern, load type and joint load the coaching engine reasons about. <b>Open any card</b> for the full detail.",
     search: "Search by name, equipment or pattern…",
     empty: "No exercises match your filters.",
     filterAll: "Everything", filterInPlan: "In my plan", filterCompound: "Compounds",
@@ -702,6 +702,8 @@ I18n.register("en", {
     statExercises: "Exercises & cardio options", statDays: "Training days supported", statSplits: "Split templates",
     origTitle: "The original plan, still intact",
     origNote: "Pick four training days and version 2.0 reproduces this plan exactly, move for move — then starts adjusting it from what you log.",
+    todayIs: "Today · {name}",
+    todayRest: "Rest day",
     startCta: "Start {name}", weekCta: "See this week", coachCta: "What the coach is thinking",
     statSessions: "Sessions logged", statDaysWeek: "Days a week", statAttendance: "4-week attendance",
     noDays: "No training days picked yet.", pickDays: "Pick your days",

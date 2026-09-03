@@ -37,6 +37,19 @@ UI.ready(() => {
   const today = plan.empty ? null : plan.sessions.find(s => s.dayKey === todayKey);
   const adherence = Store.adherence(p, 4);
 
+  /* The headline that sells the app is for somebody who has not got it yet.
+     Once there is a profile, the top of the page should answer the question
+     the app is actually opened to answer: what am I doing today? */
+  const eyebrow = document.querySelector(".hero .eyebrow");
+  const heading = document.querySelector(".hero h1");
+  if (eyebrow) { eyebrow.textContent = phase.label; eyebrow.removeAttribute("data-i18n"); }
+  if (heading) {
+    heading.textContent = today
+      ? UI.t("home.todayIs", { name: templateName(today.templateId) })
+      : UI.t("home.todayRest");
+    heading.removeAttribute("data-i18n");
+  }
+
   actions.innerHTML = `
     ${today ? `<a href="workout.html?day=${todayKey}" class="btn btn-primary">${
                 UI.t("home.startCta", { name: templateName(today.templateId) })}</a>`
@@ -49,7 +62,7 @@ UI.ready(() => {
     <div class="stat"><b>${I18n.num(adherence.pct)}%</b><span>${UI.t("home.statAttendance")}</span></div>`;
 
   card.innerHTML = `
-    <h2>${UI.esc(phase.label)}</h2>
+    <h2>${UI.t("program.title")}</h2>
     ${plan.empty
       ? `<p style="margin:10px 0 0;">${UI.t("home.noDays")}</p>
          <a href="program.html" class="btn btn-primary btn-sm" style="margin-top:12px;">${UI.t("home.pickDays")}</a>`
