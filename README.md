@@ -241,6 +241,23 @@ rather than shipping a `<video>` that renders as an empty box. In the library
 grid a clip is only fetched on first hover; loading sixty of them up front would
 be megabytes for nothing.
 
+**The photographs are a public-domain library's, not yours.** They show a real
+commercial-gym machine of the right kind — the movement is correct — but not
+necessarily the one at your gym, and no manufacturer's own product photography
+is licensed for redistribution, so none is used here regardless of what the
+machine at your gym happens to be branded. `tools/import-photos.js` is the fix:
+photograph your own gym's machine from two or more angles and it rebuilds that
+exercise's photo and clip from your own frames — a short walk-around loop
+(a stop on each angle, a cross-fade into the next, looping closed) rather than
+the cross-faded start/end position the stock pipeline builds. Two photos still
+works exactly as before; more angles reads as an actual look at the machine
+rather than a demonstration of one rep.
+
+```bash
+node tools/import-photos.js leg-press front.jpg side.jpg angle.jpg
+node tools/import-photos.js --dir ~/gym-photos   # <id>-1.jpg, <id>-2.jpg, ...
+```
+
 ---
 
 ## Arabic and right-to-left
@@ -469,8 +486,9 @@ tools/build-media.js       Rebuilds photos and clips from free-exercise-db
 tools/media-map.json       Exercise id -> source entry
 tools/contact-sheet.js     Writes every exercise's name against its photo and
                            clip on one page, for reviewing the media by eye
-tools/import-photos.js     Replaces a stock photo with one you took of your
-                           own gym's machine, and rebuilds its clip
+tools/import-photos.js     Replaces a stock photo and clip with a walk-around
+                           built from two or more angles you photographed
+                           yourself of your own gym's machine
 
 robots.txt                 Keeps the shared-by-link site out of search results
 
