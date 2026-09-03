@@ -733,6 +733,37 @@ video.thumb{ display:block; }
 .chart-card .hint{ margin-bottom:14px; }
 canvas.chart{ width:100%; display:block; }
 
+/* ---------- Diet ---------- */
+.macro-bar{
+  display:flex; height:14px; border-radius:99px; overflow:hidden;
+  background:var(--bg-alt); border:1px solid var(--border); margin:14px 0 18px;
+}
+.macro-seg{ height:100%; transition:width .2s ease; }
+.macro-seg.protein{ background:var(--accent); }
+.macro-seg.carb{ background:var(--info); }
+.macro-seg.fat{ background:var(--warn); }
+.macro-legend{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+.macro-item{ display:flex; align-items:flex-start; gap:10px; }
+.macro-item b{ font-size:.98rem; }
+.macro-item span{ display:block; font-size:.78rem; color:var(--text-faint); }
+.macro-dot{ width:11px; height:11px; border-radius:50%; margin-top:5px; flex:none; }
+.macro-dot.protein{ background:var(--accent); }
+.macro-dot.carb{ background:var(--info); }
+.macro-dot.fat{ background:var(--warn); }
+
+.meal-card{ margin-bottom:16px; }
+.meal-head{ display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px 14px; margin-bottom:10px; }
+.meal-head h4{ margin:0; font-size:1.02rem; }
+.meal-foods{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.meal-foods li{
+  display:grid; grid-template-columns:1fr auto; gap:2px 14px; align-items:baseline;
+  padding-top:10px; border-top:1px solid var(--border);
+}
+.meal-foods li:first-child{ padding-top:0; border-top:none; }
+.mf-name{ font-weight:600; grid-column:1; }
+.mf-serving{ grid-column:2; text-align:end; font-size:.82rem; color:var(--text-dim); }
+.mf-macro{ grid-column:1 / -1; font-size:.8rem; }
+
 .log-entry{
   display:flex; gap:16px; align-items:center; padding:14px 0; border-bottom:1px solid var(--border);
   flex-wrap:wrap;
@@ -1133,7 +1164,7 @@ canvas.chart{ width:100%; display:block; }
 @media (max-width: 700px){
   .tabbar{
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     position: fixed; inset-inline: 0; bottom: 0; z-index: 90;
     padding-bottom: var(--safe-bottom);
     background: rgba(14,16,19,.92);

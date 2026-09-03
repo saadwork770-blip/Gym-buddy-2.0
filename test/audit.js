@@ -18,7 +18,7 @@
    ============================================================================ */
 
 const BASE = process.argv[2] || "http://localhost:8099";
-const PAGES = ["index", "program", "workout", "coach", "progress", "exercises", "profile"];
+const PAGES = ["index", "program", "workout", "coach", "diet", "progress", "exercises", "profile"];
 
 let chromium;
 try { ({ chromium } = require("playwright")); }

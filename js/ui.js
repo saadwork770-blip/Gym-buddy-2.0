@@ -24,6 +24,7 @@ const UI = (function () {
     { href: "program.html",   key: "nav.program" },
     { href: "workout.html",   key: "nav.workout" },
     { href: "coach.html",     key: "nav.coach" },
+    { href: "diet.html",      key: "nav.diet" },
     { href: "progress.html",  key: "nav.progress" },
     { href: "exercises.html", key: "nav.exercises" },
     { href: "profile.html",   key: "nav.profile" },
@@ -38,19 +39,21 @@ const UI = (function () {
     exercises: '<circle cx="11" cy="11" r="7"/><path d="M16.2 16.2 21 21"/>',
     workout:   '<path d="M3 12h2M19 12h2M6.5 8.5v7M17.5 8.5v7M9.5 6.5v11M14.5 6.5v11M9.5 12h5"/>',
     coach:     '<path d="M12 3a7 7 0 0 1 7 7c0 2.4-1.2 3.9-2.3 5.1-.8.9-1.2 1.6-1.2 2.6v.3H8.5v-.3c0-1-.4-1.7-1.2-2.6C6.2 13.9 5 12.4 5 10a7 7 0 0 1 7-7Z"/><path d="M9.5 21h5"/>',
+    diet:      '<path d="M7 3v7a2 2 0 0 0 4 0V3"/><path d="M9 3v18"/><path d="M17 3c-1.6 0-2.5 1.6-2.5 4s.9 4 2.5 4v10"/>',
     profile:   '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c.6-3.9 3.7-6 7.5-6s6.9 2.1 7.5 6"/>',
   };
 
-  /* Six destinations now. Exercises used to be reachable only from the home
-     page's pre-profile "browse" button, or the desktop nav this same media
-     query hides — so once a profile existed, there was no way back into the
-     library on a phone at all. Progress has the same gap and stays off the
-     bar for now; a seven-item row is a menu, not a thumb reach. */
+  /* Seven destinations now. Exercises and Diet used to be reachable only from
+     the home page's pre-profile links, or the desktop nav this same media
+     query hides — so once a profile existed, there was no way back into
+     either on a phone at all. Progress has the same gap and stays off the
+     bar for now; an eight-item row is a menu, not a thumb reach. */
   const TABS = [
     { href: "index.html",     key: "nav.home",      icon: "home" },
     { href: "program.html",   key: "nav.program",   icon: "program" },
     { href: "exercises.html", key: "nav.exercises", icon: "exercises" },
     { href: "workout.html",   key: "nav.workout",   icon: "workout" },
+    { href: "diet.html",      key: "nav.diet",      icon: "diet" },
     { href: "coach.html",     key: "nav.coach",     icon: "coach" },
     { href: "profile.html",   key: "nav.profile",   icon: "profile" },
   ];

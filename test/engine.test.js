@@ -24,9 +24,9 @@ function check(condition, message) {
 /* ------------------------------------------------------------------ */
 
 const g = load();
-const { Store, Progression, Periodization, Scheduler, Adaptation, exerciseById,
+const { Store, Progression, Periodization, Scheduler, Adaptation, Nutrition, exerciseById,
         DAY_KEYS, VOLUME_LANDMARKS, SESSION_TEMPLATES, I18n, exName, templateName,
-        splitName } = g;
+        splitName, FOODS } = g;
 
 const baseProfile = {
   name: "Test Athlete", sex: "Male", age: 30, heightCm: 178, weightKg: 114,
@@ -944,6 +944,136 @@ suite("The tape measure says what the scale cannot");
   check(g12.Coach.buildFeed(g12.Store.getProfile(noTape.id))
         .some(msg => msg.key && msg.key.startsWith("girth-start")),
     "a fat-loss profile with a scale history is asked for a waist measurement");
+}
+
+/* ---------- Diet ---------- */
+
+suite("BMR and TDEE follow the stated formulas exactly");
+{
+  const male = { sex: "Male", age: 30, heightCm: 178, weightKg: 85, goal: "General fitness" };
+  const bmrMale = 10 * 85 + 6.25 * 178 - 5 * 30 + 5;
+  check(Math.abs(Nutrition.bmr(male) - bmrMale) < 0.01,
+    `Mifflin-St Jeor for a man matches the textbook formula exactly (${Nutrition.bmr(male).toFixed(1)} vs ${bmrMale.toFixed(1)})`);
+
+  const female = { sex: "Female", age: 30, heightCm: 178, weightKg: 85, goal: "General fitness" };
+  const bmrFemale = 10 * 85 + 6.25 * 178 - 5 * 30 - 161;
+  check(Math.abs(Nutrition.bmr(female) - bmrFemale) < 0.01,
+    "the only difference between the sexes is the +5 / -161 constant");
+  check(Nutrition.bmr(male) - Nutrition.bmr(female) === 166,
+    "which is a fixed 166 kcal gap for identical weight, height and age");
+
+  const unspecified = { sex: "Prefer not to say", age: 30, heightCm: 178, weightKg: 85, goal: "General fitness" };
+  check(Math.abs(Nutrition.bmr(unspecified) - (Nutrition.bmr(male) + Nutrition.bmr(female)) / 2) < 0.01,
+    "declining to say sex gets the midpoint of the two constants, not a guess");
+
+  [[1, "sedentary"], [3, "light"], [5, "moderate"], [6, "active"], [7, "veryActive"]].forEach(([days, key]) => {
+    check(Nutrition.activityLevel(days).labelKey === key,
+      `${days} day${days === 1 ? "" : "s"}/week lands in the "${key}" bracket`);
+  });
+  check(Nutrition.tdee(male, 4).value === Nutrition.bmr(male) * 1.55,
+    "TDEE is exactly BMR times that bracket's multiplier, nothing added silently");
+}
+
+suite("Calorie targets move the right way for each goal, and never below the floor");
+{
+  const base = { sex: "Male", age: 30, heightCm: 178, weightKg: 85 };
+  const t = Nutrition.tdee(base, 4).value;
+
+  const cut = Nutrition.calorieTarget(t, { ...base, goal: "Fat loss" });
+  check(cut.value < t, `fat loss lands below maintenance (${Math.round(cut.value)} < ${Math.round(t)})`);
+  check(Math.abs(cut.value - t * 0.8) < 0.01, "specifically 20% below, matching CALORIE_ADJUST.fat_loss");
+
+  const bulk = Nutrition.calorieTarget(t, { ...base, goal: "Muscle gain" });
+  check(bulk.value > t, `muscle gain lands above maintenance (${Math.round(bulk.value)} > ${Math.round(t)})`);
+
+  const maint = Nutrition.calorieTarget(t, { ...base, goal: "General fitness" });
+  check(maint.value === t, "general fitness is maintenance exactly, no adjustment");
+
+  /* A small, light profile pushed into a 20% deficit is exactly the case the
+     floor exists for. */
+  const small = { sex: "Female", age: 20, heightCm: 150, weightKg: 42, goal: "Fat loss" };
+  const smallTdee = Nutrition.tdee(small, 1).value;
+  const smallCut = Nutrition.calorieTarget(smallTdee, small);
+  check(smallCut.raw < 1200, `the unfloored math really would ask for under 1200 kcal here (${Math.round(smallCut.raw)})`);
+  check(smallCut.value === 1200 && smallCut.floored === true,
+    `the floor catches it and reports that it did (${Math.round(smallCut.value)} kcal, floored)`);
+
+  const roomy = Nutrition.calorieTarget(3000, { ...base, goal: "Fat loss" });
+  check(roomy.floored === false, "a deficit nowhere near the floor is not flagged as floored");
+}
+
+suite("Macros are internally consistent — they sum back to the calorie target");
+{
+  const profile = { sex: "Male", age: 30, heightCm: 178, weightKg: 90, goal: "Fat loss" };
+  const kcalTarget = 2400;
+  const m = Nutrition.macros(kcalTarget, profile);
+
+  check(Math.abs(m.protein.grams - 90 * 2.2) < 0.01,
+    `protein is set in g/kg first — 2.2 g/kg for a cutting profile (${m.protein.grams.toFixed(1)}g)`);
+  check(Math.abs(m.fat.kcal - kcalTarget * 0.25) < 0.01, "fat is 25% of total calories");
+  const summed = m.protein.kcal + m.carb.kcal + m.fat.kcal;
+  check(Math.abs(summed - kcalTarget) < 1,
+    `all three macros' calories add back up to the target (${summed.toFixed(0)} vs ${kcalTarget})`);
+  check(m.carb.grams > 0, "carbs take whatever is left, and there is something left for a normal target");
+
+  /* A target so low that protein and fat alone would exceed it should not
+     produce negative carbs. */
+  const tiny = Nutrition.macros(500, { sex: "Female", age: 25, heightCm: 160, weightKg: 100, goal: "Fat loss" });
+  check(tiny.carb.grams === 0 && tiny.carb.kcal === 0, "carbs floor at zero rather than going negative");
+}
+
+suite("A profile's full nutrition plan hangs together");
+{
+  const profile = { sex: "Male", age: 28, heightCm: 180, weightKg: 80, goal: "Muscle gain" };
+  const plan = Nutrition.planFor(profile, { empty: false, dayCount: 5 });
+  check(plan.daysPerWeek === 5, "reads days/week from the actual plan rather than asking again");
+  check(plan.tdee.value === plan.bmr * plan.tdee.level.multiplier, "TDEE inside the bundle matches the standalone formula");
+  check(plan.calorieTarget.value === plan.tdee.value * 1.10, "muscle gain's 10% surplus is applied to that TDEE");
+
+  const empty = Nutrition.planFor(profile, { empty: true });
+  check(empty.daysPerWeek === 3, "an empty plan (no days chosen yet) falls back to a moderate 3 days rather than crashing");
+
+  const slots = ["breakfast", "lunch", "dinner", "snack"];
+  const targets = Nutrition.mealTargets(plan, slots);
+  const kcalSum = slots.reduce((s, k) => s + targets[k].kcal, 0);
+  check(Math.abs(kcalSum - plan.calorieTarget.value) < 1,
+    `meal-slot calories add back up to the day's target (${Math.round(kcalSum)} vs ${Math.round(plan.calorieTarget.value)})`);
+  const proteinSum = slots.reduce((s, k) => s + targets[k].protein, 0);
+  check(Math.abs(proteinSum - plan.macros.protein.grams) < 0.5, "and so does the protein split across slots");
+
+  check(targets.lunch.kcal > targets.snack.kcal, "lunch, the biggest MEAL_SHARE, outweighs a snack");
+
+  const fewerSlots = Nutrition.mealTargets(plan, ["lunch", "dinner"]);
+  const twoSum = fewerSlots.lunch.kcal + fewerSlots.dinner.kcal;
+  check(Math.abs(twoSum - plan.calorieTarget.value) < 1,
+    "dropping to two meals a day renormalizes their share to still cover the whole day, not just lunch+dinner's raw fraction");
+}
+
+suite("Meal suggestions are drawn from foods that actually belong in that slot");
+{
+  const profile = { sex: "Male", age: 30, heightCm: 178, weightKg: 85, goal: "Fat loss" };
+  const plan = Nutrition.planFor(profile, { empty: false, dayCount: 4 });
+  const targets = Nutrition.mealTargets(plan, ["breakfast", "lunch", "dinner", "snack"]);
+
+  ["breakfast", "lunch", "dinner", "snack"].forEach(slot => {
+    const picks = Nutrition.suggestMeal(targets[slot], slot);
+    check(picks.length > 0, `${slot} gets at least one suggestion`);
+    check(picks.every(f => f.meals.includes(slot)), `every ${slot} suggestion is actually tagged for ${slot}`);
+    const ids = picks.map(f => f.id);
+    check(new Set(ids).size === ids.length, `${slot} does not suggest the same food twice`);
+  });
+
+  /* Every food referenced anywhere has a translated name and serving size in
+     both languages — the same parity guarantee exercises get. */
+  const missing = [];
+  FOODS.forEach(f => {
+    ["en", "ar"].forEach(lang => {
+      if (!I18n.keys(lang).includes(`food.${f.id}.name`)) missing.push(`${lang}:${f.id}.name`);
+      if (!I18n.keys(lang).includes(`food.${f.id}.serving`)) missing.push(`${lang}:${f.id}.serving`);
+    });
+  });
+  check(missing.length === 0,
+    `all ${FOODS.length} foods are named in both languages${missing.length ? " — missing: " + missing.slice(0, 6).join(", ") : ""}`);
 }
 
 /* ------------------------------------------------------------------ */

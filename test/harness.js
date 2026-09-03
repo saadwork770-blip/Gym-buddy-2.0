@@ -23,6 +23,7 @@ const FILES = [
   "js/i18n/content.ar.js",
   "js/data/library.js",
   "js/data/coaching.js",
+  "js/data/nutrition.js",
   "js/data/labels.js",
   "js/templates.js",
   "js/engine/periodization.js",
@@ -31,11 +32,12 @@ const FILES = [
   "js/engine/analysis.js",
   "js/engine/adaptation.js",
   "js/engine/coach.js",
+  "js/engine/nutrition.js",
   "js/storage.js",
 ];
 
 const EXPORTS = [
-  "Store", "Scheduler", "Progression", "Periodization", "Coach", "Adaptation",
+  "Store", "Scheduler", "Progression", "Periodization", "Coach", "Adaptation", "Nutrition",
   "I18n", "Analysis", "exerciseById", "exercisesForDay", "exercisesByPattern", "templateOverlap",
   "exName", "exSteps", "exTips", "muscleLabel", "patternLabel", "loadTypeLabel",
   "dayLabel", "dayShort", "jointLabel", "templateName", "splitName", "splitRationale",
@@ -43,6 +45,7 @@ const EXPORTS = [
   "exEquipment",
   "MUSCLE_LABELS", "GOAL_PROFILES", "LEVEL_PROFILES", "LOAD_TYPES", "PROGRAM",
   "DAY_KEYS", "DAY_LABELS", "DAY_SHORT",
+  "FOODS", "BMR_SEX_CONSTANT", "ACTIVITY_LEVEL", "CALORIE_ADJUST", "CALORIE_FLOOR", "MEAL_SHARE",
 ];
 
 /** A fresh sandbox with empty storage — call once per test file, or per suite

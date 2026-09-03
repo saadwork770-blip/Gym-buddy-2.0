@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GymBuddy">
+<meta name="theme-color" content="#0e1013">
+<!-- Shared by link only: keep this out of search results. See robots.txt. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Calorie and macro targets calculated from your own numbers, with meal suggestions.">
+<title data-i18n="diet.metaTitle">Diet — GymBuddy 2.0</title>
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<main id="main">
+<section style="padding-top:40px;">
+  <div class="wrap" id="root">
+    <div class="section-head">
+      <div class="kicker" data-i18n="diet.kicker">Nutrition</div>
+      <h2 data-i18n="diet.title">Diet</h2>
+      <p data-i18n="diet.intro"></p>
+    </div>
+
+    <div class="kpi-grid" id="kpis"></div>
+
+    <div class="card" id="reasoning" style="margin-bottom:26px;"></div>
+
+    <div class="card" id="macroCard" style="margin-bottom:26px;">
+      <h3 data-i18n="diet.macroTitle">Daily targets</h3>
+      <p class="hint" id="macroHint"></p>
+      <div id="macroBar" class="macro-bar" aria-hidden="true"></div>
+      <div class="macro-legend" id="macroLegend"></div>
+    </div>
+
+    <h3 style="margin:36px 0 6px;" data-i18n="diet.mealsTitle">Meal suggestions</h3>
+    <p class="hint" style="margin-bottom:14px;" data-i18n="diet.mealsHint"></p>
+    <div id="meals"></div>
+
+    <p class="hint" id="disclaimer" style="margin-top:30px;"></p>
+  </div>
+</section>
+</main>
+
+<script src="js/i18n.js"></script>
+<script src="js/i18n/en.js"></script>
+<script src="js/i18n/ar.js"></script>
+<script src="js/i18n/content.ar.js"></script>
+<script src="js/data/library.js"></script>
+<script src="js/data/coaching.js"></script>
+<script src="js/data/nutrition.js"></script>
+<script src="js/data/labels.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/engine/periodization.js"></script>
+<script src="js/engine/progression.js"></script>
+<script src="js/engine/scheduler.js"></script>
+<script src="js/engine/analysis.js"></script>
+<script src="js/engine/adaptation.js"></script>
+<script src="js/engine/coach.js"></script>
+<script src="js/engine/nutrition.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/pages/diet.js"></script>
+</body>
+</html>
