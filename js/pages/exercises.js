@@ -5,19 +5,6 @@
    ============================================================================ */
 
 UI.ready(() => {
-  /* The note about whose machines are pictured is only true while the brand in
-     force has no photography of its own. Once somebody has imported theirs it
-     would be describing a state that no longer exists. */
-  const provenance = document.querySelector(".media-provenance");
-  if (provenance) {
-    const brand = activeBrand();
-    const own = ((typeof BRAND_PHOTOS !== "undefined" && BRAND_PHOTOS[brand]) || []).length;
-    provenance.hidden = brand === "generic" || own >= EXERCISES.length;
-    /* Named here rather than in the markup because which manufacturer it has
-       to apologise for changes with the setting. */
-    if (!provenance.hidden) provenance.textContent = UI.t("library.photoProvenance", { brand: brandLabel(brand) });
-  }
-
   const grid = document.getElementById("exGrid");
   const emptyState = document.getElementById("emptyState");
   const searchInput = document.getElementById("search");
@@ -144,69 +131,6 @@ UI.ready(() => {
     return DAY_TEMPLATE[ex.day] ? templateName(DAY_TEMPLATE[ex.day]) : patternLabel(ex.pattern);
   }
 
-  const SEARCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"
-      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <circle cx="10.3" cy="10.3" r="6.3"/><path d="M20 20 15 15"/>
-  </svg>`;
-
-  /* Plain English names for a search query, independent of the interface
-     language — a Life Fitness machine is found by searching "Life Fitness",
-     not by whatever brandName translates to today. Matches the ids in
-     data/brands.js's BRANDS; generic has no entry on purpose, since there is
-     no manufacturer to search for. */
-  const BRAND_SEARCH_NAME = {
-    technogym: "Technogym", lifefitness: "Life Fitness", hammer: "Hammer Strength",
-    cybex: "Cybex", matrix: "Matrix", precor: "Precor", nautilus: "Nautilus",
-    gym80: "gym80", panatta: "Panatta",
-  };
-
-  /* A live image search for this brand's real machine, in place of hosting a
-     copy of anybody's product photography ourselves. Returns null for the
-     generic brand (nothing to search for) and for any exercise with no
-     canonical machine name (free weights, bodyweight — nothing a brand
-     manufactures as a named product). */
-  function brandSearchUrl(id, b) {
-    const brandName = BRAND_SEARCH_NAME[b];
-    const machine = typeof MACHINE_NAME !== "undefined" ? MACHINE_NAME[id] : null;
-    if (!brandName || !machine) return null;
-    const series = typeof brandSeries === "function" ? brandSeries(id, b) : null;
-    const q = [brandName, series, machine, "gym machine"].filter(Boolean).join(" ");
-    return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(q)}`;
-  }
-
-  /* A tile per brand: what this machine is called there, and a photo of it.
-     Every tile shows a photo — an empty frame reads as broken, not honest —
-     but only a tile whose brand has really been photographed (hasBrandPhotoOf)
-     shows one of that brand's own machines. The rest show the same shared
-     photo the page opened with, marked with a small corner tag, plus a link
-     to a live image search for the real thing — sourced from the web on
-     request rather than copied into the app, which is the honest way to get
-     from "here is the general idea" to "here is what it really looks like". */
-  function brandGalleryHtml(id) {
-    const active = activeBrand();
-    const cards = Object.keys(BRANDS).map(b => {
-      const has = hasBrandPhotoOf(id, b);
-      const label = brandEquipmentFor(id, b) || brandLabel(b);
-      const searchUrl = has ? null : brandSearchUrl(id, b);
-      return `
-        <div class="brand-gallery-card${b === active ? " active" : ""}">
-          <div class="brand-gallery-thumb">
-            <img src="${photoForBrand(id, b)}" alt="${UI.esc(exNameForBrand(id, b))}" loading="lazy">
-            ${!has ? `<span class="brand-gallery-tag">${UI.t("library.genericPhotoTag")}</span>` : ""}
-          </div>
-          <div class="brand-gallery-name">${UI.esc(label)}</div>
-          ${b === active ? `<span class="pill neutral">${UI.t("library.yourGym")}</span>` : ""}
-          ${searchUrl ? `<a class="brand-gallery-search-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer">
-              ${SEARCH_ICON}<span>${UI.t("library.searchRealPhotos")}</span></a>` : ""}
-        </div>`;
-    }).join("");
-
-    return `
-      <h4>${UI.t("library.compareBrands")}</h4>
-      <p class="hint" style="margin:0 0 10px;">${UI.t("library.compareBrandsHint")}</p>
-      <div class="brand-gallery"><div class="brand-gallery-track">${cards}</div></div>`;
-  }
-
   function openDetail(id) {
     const ex = exerciseById(id);
     if (!ex) return;
@@ -221,8 +145,7 @@ UI.ready(() => {
       <figure class="clip-figure">
         ${UI.exerciseClip(ex.id, exName(ex.id))}
         <figcaption>${UI.esc(exMediaNote(ex.id) || I18n.t("library.clipCaption"))}</figcaption>
-      </figure>
-      ${brandGalleryHtml(ex.id)}`;
+      </figure>`;
 
     const m = UI.modal(`
       <div class="modal-head" style="--accent-cat:${color}"><div>
@@ -281,11 +204,6 @@ UI.ready(() => {
           day: ex.day ? I18n.t("library.dayOf", { n: ex.day, name: templateNameForDay(ex) })
                       : patternLabel(ex.pattern) })}</div>
       </div>`, { wide: false });
-
-    /* Land on your own gym's tile rather than wherever the fixed brand order
-       happens to put it, so "scroll right" has somewhere to scroll from. */
-    const activeCard = m.el.querySelector(".brand-gallery-card.active");
-    if (activeCard) activeCard.scrollIntoView({ block: "nearest", inline: "center" });
 
     if (!p) return;
 

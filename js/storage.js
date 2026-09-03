@@ -71,7 +71,6 @@ function defaultSettings() {
     splitOverride: null,
     autoRegulate: true,
     increments: {},          // per-load-type overrides, e.g. { machine_stack: 2.5 }
-    equipmentBrand: "generic",  // whose machines the gym is kitted out with
     unit: "kg",
   };
 }

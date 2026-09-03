@@ -525,36 +525,9 @@ const MEDIA_NOTES = {
     "Pictured: treadmill walking. This program calls for a moderate incline rather than a flat walk.",
 };
 
-/* ---------- Media paths ----------
-   A brand that has its own photography keeps it in assets/photos/<brand>/ and
-   assets/clips/<brand>/, and data/brand-photos.js says which exercises it has
-   covered. Everything else falls back to the shared set — so a brand can start
-   with one photograph and grow, rather than needing all sixty-six before any
-   of them count. */
-function brandPhotoDirOf(brand) {
-  const b = typeof BRANDS !== "undefined" && BRANDS[brand];
-  if (!b || !b.photoDir) return null;
-  return b.photoDir;
-}
-function brandPhotoDir() { return brandPhotoDirOf(activeBrand()); }
-
-function hasBrandPhotoOf(id, brand) {
-  const dir = brandPhotoDirOf(brand);
-  if (!dir) return false;
-  const list = (typeof BRAND_PHOTOS !== "undefined" && BRAND_PHOTOS[brand]) || [];
-  return list.indexOf(id) !== -1;
-}
-function hasBrandPhoto(id) { return hasBrandPhotoOf(id, activeBrand()); }
-
-function photoForBrand(id, brand){
-  return hasBrandPhotoOf(id, brand) ? `assets/photos/${brandPhotoDirOf(brand)}/${id}.jpg` : `assets/photos/${id}.jpg`;
-}
-function photoFor(id){ return photoForBrand(id, activeBrand()); }
-
-function clipForBrand(id, brand){
-  return hasBrandPhotoOf(id, brand) ? `assets/clips/${brandPhotoDirOf(brand)}/${id}.webm` : `assets/clips/${id}.webm`;
-}
-function clipFor(id){ return clipForBrand(id, activeBrand()); }
+/* ---------- Media paths ---------- */
+function photoFor(id){ return `assets/photos/${id}.jpg`; }
+function clipFor(id){ return `assets/clips/${id}.webm`; }
 
 function exerciseById(id){ return EXERCISES.find(e => e.id === id); }
 function exercisesForDay(day){ return EXERCISES.filter(e => e.day === day); }

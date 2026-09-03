@@ -1,32 +1,35 @@
 /* ============================================================================
    GymBuddy — tools/import-photos.js
    ----------------------------------------------------------------------------
-   Replaces a stock exercise photograph with one you took yourself, and rebuilds
-   the looping demonstration from it.
+   Replaces a stock exercise photograph with photographs you took yourself of
+   your own gym's machine, and builds a short walk-around clip from them.
 
-   This exists because of a licensing fact rather than a technical one. The
-   exercises in this edition describe Technogym machines, but Technogym's
-   product photography is theirs and is not licensed for redistribution, so the
-   pictures that ship here are generic commercial-gym equivalents from a
-   public-domain library. The movement is right; the machine in the picture is
-   not the one in your gym.
+   This exists because of two honesty problems, one about the machine and one
+   about the demonstration, and both have the same fix.
 
-   The fix is a phone and five minutes. Photograph each machine yourself — you
-   are allowed to photograph equipment you are using — and this turns those
-   photographs into the same photo-plus-clip pair the build pipeline produces.
+   The pictures that ship here come from a public-domain library of generic
+   commercial-gym equipment, not from any particular gym — the movement is
+   right, but the exact machine in the picture may not be the one you use.
+   And the clip built from just two of those stock photos is a cross-fade
+   between a start and end position, not real footage — useful for showing a
+   rep, useless for showing what the machine actually looks like from the
+   angles you'd recognize it by.
 
-       # one exercise, two photos: the start and the finish of the rep
-       node tools/import-photos.js leg-press start.jpg end.jpg
+   The fix for both is a phone and five minutes. Photograph the machine from
+   two or more angles — you are allowed to photograph equipment you are using
+   — and this turns those photographs into a short, silent, looping clip that
+   walks around it, replacing the stock photo and clip for everybody.
 
-       # a whole folder, named <exercise-id>-start.jpg / <exercise-id>-end.jpg
+       # one exercise, two or more angles, in the order they should play
+       node tools/import-photos.js leg-press front.jpg side.jpg angle.jpg
+
+       # a whole folder, named <exercise-id>-1.jpg, <exercise-id>-2.jpg, ...
        node tools/import-photos.js --dir ~/gym-photos
 
-       # file them under a brand, so only that brand's users see them
-       node tools/import-photos.js --brand technogym --dir ~/technogym-photos
-
-   Shoot both frames from the same spot, ideally on a tripod or propped against
-   something: the clip cross-fades between them, and a camera that moved between
-   shots reads as a jump rather than as a rep.
+   Shoot from a few steps apart rather than panning while filming — each shot
+   is a still, and the clip cross-fades between them, so a real pan just reads
+   as motion blur rather than as a walk-around. Two photos still works fine
+   (start/end of a rep, or just front/side of the machine); more reads better.
 
    Needs Playwright's Chromium (for the canvas work) and the ffmpeg build that
    ships with it, exactly as tools/build-media.js does.
@@ -40,19 +43,19 @@ const ROOT = path.join(__dirname, "..");
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 const MAP = require("./media-map.json");
 
-/* Same rep timing as the main build, so an imported clip is indistinguishable
-   in rhythm from a generated one. */
-const FPS = 25, HOLD_START = 11, CONCENTRIC = 4, HOLD_END = 7, ECCENTRIC = 8;
+/* A stop on each photo, then an eased cross-fade into the next — including
+   the last photo back to the first, so the loop has no seam. Independent of
+   how many photos there are: three angles plays the same tempo as two, just
+   longer end to end. */
+const FPS = 25, HOLD = 10, TRANSITION = 6;
 
 function usage(msg) {
   if (msg) console.error(msg + "\n");
   console.error(`Usage:
-  node tools/import-photos.js [--brand <id>] <exercise-id> <start.jpg> <end.jpg>
-  node tools/import-photos.js [--brand <id>] --dir <folder>   (expects <id>-start.jpg / <id>-end.jpg)
+  node tools/import-photos.js <exercise-id> <photo1.jpg> <photo2.jpg> [photo3.jpg ...]
+  node tools/import-photos.js --dir <folder>   (expects <id>-1.jpg, <id>-2.jpg, ...)
 
-  --brand files the photographs under that brand only, so a gym kitted out by
-  someone else keeps the shared pictures. Without it they replace the shared
-  set for everybody.
+At least two photos; there is no ceiling on more.
 
 Known exercise ids are the keys of tools/media-map.json (${Object.keys(MAP).length} of them).`);
   process.exit(2);
@@ -65,42 +68,39 @@ function knownId(id) {
   return false;
 }
 
-/** Every (id, startPath, endPath) the arguments ask for. */
+/** Every (id, [photo paths in play order]) the arguments ask for. */
 function collectJobs(argv) {
   if (argv[0] === "--dir") {
     const dir = argv[1];
     if (!dir || !fs.existsSync(dir)) usage("--dir needs a folder that exists.");
-    const jobs = [];
-    fs.readdirSync(dir).forEach(f => {
-      const m = f.match(/^(.+)-start\.(jpe?g|png)$/i);
+    const files = fs.readdirSync(dir);
+    const byId = {};
+    files.forEach(f => {
+      const m = f.match(/^(.+)-(\d+)\.(jpe?g|png)$/i);
       if (!m) return;
-      const id = m[1];
-      const end = fs.readdirSync(dir).find(x => new RegExp(`^${id}-end\\.(jpe?g|png)$`, "i").test(x));
-      if (!end) { console.warn(`  skipped ${id}: found a start frame but no matching -end`); return; }
-      jobs.push({ id, start: path.join(dir, f), end: path.join(dir, end) });
+      (byId[m[1]] || (byId[m[1]] = [])).push({ n: Number(m[2]), file: f });
     });
-    if (!jobs.length) usage(`No <id>-start.<ext> / <id>-end.<ext> pairs found in ${dir}.`);
+    const jobs = Object.entries(byId).map(([id, list]) => ({
+      id, photos: list.sort((a, b) => a.n - b.n).map(x => path.join(dir, x.file)),
+    })).filter(j => {
+      if (j.photos.length >= 2) return true;
+      console.warn(`  skipped ${j.id}: only one numbered photo found, need at least two`);
+      return false;
+    });
+    if (!jobs.length) usage(`No <id>-1.<ext>, <id>-2.<ext>, ... sets found in ${dir}.`);
     return jobs;
   }
-  const [id, start, end] = argv;
-  if (!id || !start || !end) usage();
-  return [{ id, start, end }];
+  const [id, ...photos] = argv;
+  if (!id || photos.length < 2) usage();
+  return [{ id, photos }];
 }
 
 async function main() {
-  let argv = process.argv.slice(2);
-  let brand = null;
-  const bi = argv.indexOf("--brand");
-  if (bi !== -1) {
-    brand = argv[bi + 1];
-    if (!brand) usage("--brand needs a brand id, e.g. technogym.");
-    argv = argv.slice(0, bi).concat(argv.slice(bi + 2));
-  }
-
+  const argv = process.argv.slice(2);
   const jobs = collectJobs(argv).filter(j => knownId(j.id));
   if (!jobs.length) process.exit(2);
 
-  jobs.forEach(j => [j.start, j.end].forEach(f => {
+  jobs.forEach(j => j.photos.forEach(f => {
     if (!fs.existsSync(f)) usage(`Missing image: ${f}`);
   }));
 
@@ -111,99 +111,69 @@ async function main() {
     process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   const page = await browser.newPage();
 
-  const photoDir = path.join(ROOT, "assets/photos", brand || "");
-  const clipDir = path.join(ROOT, "assets/clips", brand || "");
+  const photoDir = path.join(ROOT, "assets/photos");
+  const clipDir = path.join(ROOT, "assets/clips");
   fs.mkdirSync(photoDir, { recursive: true });
   fs.mkdirSync(clipDir, { recursive: true });
 
   let done = 0;
-  const imported = [];
   for (const job of jobs) {
-    const a = fs.readFileSync(job.start).toString("base64");
-    const b = fs.readFileSync(job.end).toString("base64");
-    const out = await renderFrames(page, a, b);
+    const photosB64 = job.photos.map(f => fs.readFileSync(f).toString("base64"));
+    const out = await renderFrames(page, photosB64);
     fs.writeFileSync(path.join(photoDir, `${job.id}.jpg`), out.poster);
     encodeWebm(out.frames, path.join(clipDir, `${job.id}.webm`));
-    imported.push(job.id);
     done++;
-    console.log(`  ${job.id} — photo and clip rebuilt from your own frames`);
+    console.log(`  ${job.id} — photo and clip rebuilt from your ${job.photos.length} own frame${job.photos.length === 1 ? "" : "s"}`);
   }
   await browser.close();
 
-  if (brand) updateManifest(brand, imported);
-
   console.log(`\n${done} exercise${done === 1 ? "" : "s"} imported.`);
   console.log("Check them with:  node tools/contact-sheet.js && open tools/contact-sheet.html");
-  if (done && brand) {
-    console.log(`\njs/data/brand-photos.js now lists these under "${brand}", so only a`);
-    console.log("profile set to that brand sees them. Everyone else keeps the shared set.");
-  } else if (done) {
+  if (done) {
     console.log("\nOnce every machine in your gym is your own photograph, drop the");
     console.log("`library.photoProvenance` line from the dictionaries — it will no");
     console.log("longer be telling the truth.");
   }
 }
 
-/**
- * Record which exercises a brand now has its own photographs for.
- *
- * The site is static and cannot ask whether a file exists, so this list is how
- * it knows — an id in here is served from the brand folder, anything else
- * falls back to the shared set. Rewritten rather than appended so a deleted
- * photograph disappears from the list too.
- */
-function updateManifest(brand, ids) {
-  const file = path.join(ROOT, "js/data/brand-photos.js");
-  const src = fs.readFileSync(file, "utf8");
-  const dir = path.join(ROOT, "assets/photos", brand);
-  const onDisk = fs.existsSync(dir)
-    ? fs.readdirSync(dir).filter(f => f.endsWith(".jpg")).map(f => f.replace(/\.jpg$/, "")).sort()
-    : [];
-  const listed = onDisk.map(id => `    ${JSON.stringify(id)},`).join("\n");
-  const block = `  ${JSON.stringify(brand)}: [\n${listed}\n  ],`;
-  /* The key may be written quoted or bare; match either so a second import
-     replaces the entry instead of adding a duplicate that shadows it. */
-  const re = new RegExp(`  (?:"${brand}"|${brand}): \\[[^\\]]*\\],`);
-  const next = re.test(src) ? src.replace(re, block)
-                            : src.replace(/const BRAND_PHOTOS = \{/, `const BRAND_PHOTOS = {\n${block}`);
-  fs.writeFileSync(file, next);
-  console.log(`  manifest: ${onDisk.length} photograph${onDisk.length === 1 ? "" : "s"} under "${brand}"`);
-}
-
-/* Identical to the pipeline in build-media.js: the canvas does the decode,
-   resize and JPEG encode, and ffmpeg only muxes the frames into VP8. */
-async function renderFrames(page, aB64, bB64) {
-  const result = await page.evaluate(async ({ aB64, bB64, HOLD_START, CONCENTRIC, HOLD_END, ECCENTRIC }) => {
+/* Identical spirit to the pipeline in build-media.js — the canvas does the
+   decode, resize and JPEG encode, and ffmpeg only muxes the frames into VP8
+   — generalized from exactly two photographs to a walk-around of however
+   many were given: a stop on each, an eased cross-fade into the next, and
+   the last one fades back into the first so the loop closes without a jump. */
+async function renderFrames(page, photosB64) {
+  const result = await page.evaluate(async ({ photosB64, HOLD, TRANSITION }) => {
     const load = src => new Promise((res, rej) => {
       const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = src;
     });
-    const a = await load("data:image/jpeg;base64," + aB64);
-    const b = await load("data:image/jpeg;base64," + bB64);
+    const images = await Promise.all(photosB64.map(b64 => load("data:image/jpeg;base64," + b64)));
 
-    const W = 420, H = Math.round(a.height * (W / a.width));
+    const first = images[0];
+    const W = 420, H = Math.round(first.height * (W / first.width));
     const cv = document.createElement("canvas");
     cv.width = W; cv.height = H - (H % 2);
     const g = cv.getContext("2d");
     const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-    const frame = alpha => {
-      g.globalAlpha = 1; g.drawImage(a, 0, 0, cv.width, cv.height);
-      if (alpha > 0) { g.globalAlpha = alpha; g.drawImage(b, 0, 0, cv.width, cv.height); }
+    const frame = (from, to, alpha) => {
+      g.globalAlpha = 1; g.drawImage(from, 0, 0, cv.width, cv.height);
+      if (alpha > 0) { g.globalAlpha = alpha; g.drawImage(to, 0, 0, cv.width, cv.height); }
       g.globalAlpha = 1;
       return cv.toDataURL("image/jpeg", 0.9).split(",")[1];
     };
 
     const frames = [];
-    for (let i = 0; i < HOLD_START; i++) frames.push(frame(0));
-    for (let i = 1; i <= CONCENTRIC; i++) frames.push(frame(ease(i / CONCENTRIC)));
-    for (let i = 0; i < HOLD_END; i++) frames.push(frame(1));
-    for (let i = 1; i <= ECCENTRIC; i++) frames.push(frame(1 - ease(i / ECCENTRIC)));
+    images.forEach((img, i) => {
+      const next = images[(i + 1) % images.length];
+      for (let k = 0; k < HOLD; k++) frames.push(frame(img, next, 0));
+      for (let k = 1; k <= TRANSITION; k++) frames.push(frame(img, next, ease(k / TRANSITION)));
+    });
 
     const pv = document.createElement("canvas");
-    pv.width = 640; pv.height = Math.round(a.height * (640 / a.width));
-    pv.getContext("2d").drawImage(a, 0, 0, pv.width, pv.height);
+    pv.width = 640; pv.height = Math.round(first.height * (640 / first.width));
+    pv.getContext("2d").drawImage(first, 0, 0, pv.width, pv.height);
     return { frames, poster: pv.toDataURL("image/jpeg", 0.82).split(",")[1] };
-  }, { aB64, bB64, HOLD_START, CONCENTRIC, HOLD_END, ECCENTRIC });
+  }, { photosB64, HOLD, TRANSITION });
 
   return {
     frames: result.frames.map(f => Buffer.from(f, "base64")),

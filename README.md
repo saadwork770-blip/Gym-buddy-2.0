@@ -38,87 +38,6 @@ account. Everything you log stays in your browser.
 
 ---
 
-## Equipment brands
-
-The same movement is the same movement everywhere, but the machine it is done
-on is not. "Chest Press Machine" is what the exercise *is*; "Chest Press
-(Selection)" is what is written on the frame in a gym kitted out by Technogym —
-and a member looking for it reads the frame.
-
-So the library underneath is brand-neutral and each brand describes its own
-floor on top of it. Pick yours in **Profile → Training settings → Equipment
-brand** and every machine is renamed to what is printed on the frame: the
-machine, then the range it belongs to.
-
-| Brand | What changes |
-|---|---|
-| **No particular brand** (default) | Names the movement rather than the product. Right for a gym with mixed equipment. |
-| **Technogym** | 31 machine, cable and cardio entries renamed to the Selection, Pure Strength, Pulley, Multipower, Excite and Skill lines — *and* setup cues rewritten for those machines. |
-| **Life Fitness** | Insignia Series stacks and cables, Signature Series plate-loaded. |
-| **Hammer Strength** | Select stacks and cables, Iso-Lateral plate-loaded. |
-| **Cybex** | Eagle NX stacks and cables. |
-| **Matrix** | Ultra Series stacks and cables, Magnum plate-loaded. |
-| **Precor** | Resolute stacks and cables, Discovery Series plate-loaded. |
-| **Nautilus**, **gym80**, **Panatta** | Named as the maker of the machine, with no series claimed. |
-
-Under Technogym the plan reads: Chest Press, Pectoral, Shoulder Press, Lat
-Machine, Low Row, Arm Curl, Leg Extension, Leg Curl, Abductor / Adductor,
-Rotary Calf, Abdominal Crunch, Glute and Rear Delt on **Selection**; Hack Squat,
-Seated Calf and the plate-loaded Leg Press on **Pure Strength**; rows,
-pushdowns, face pulls and crossovers at the **Pulley**; the fixed-bar incline
-press on the **Multipower**; Run, Bike, Synchro and Climb on **Excite**; the
-rower is **Skillrow**.
-
-### What is and is not claimed
-
-Only Technogym gets bespoke technique. Writing thirty setup paragraphs for each
-of nine manufacturers would mean inventing most of them, and an invented cue is
-worse than none — somebody follows it at a machine that does not have that
-adjustment. So every other brand is composed from two things that can be
-checked: the name of the machine, which barely varies, and the series that
-maker builds that kind of machine in, taken from their own catalogue. The
-technique underneath stays the neutral one, which is true of all of them.
-
-Where a series could not be verified it is left out rather than guessed at.
-That is why Nautilus, gym80 and Panatta name only the maker; why Cybex names
-no plate-loaded line; and why **no brand but Technogym names a cardio series**,
-since a maker's treadmill range and its rower are often not the same one.
-
-Adding a brand is one file plus its Arabic half — `js/data/brands.js` and
-`js/i18n/brands.ar.js`. A full written-out overlay can be as small as a single
-exercise; a series-only brand is four lines. Anything a brand does not mention
-falls through to the neutral entry.
-
-### About the photographs
-
-A brand can ship its own photography in `assets/photos/<brand>/`, and
-`js/data/brand-photos.js` records which exercises it has covered so nothing
-ever requests a file that is not there. Anything a brand has not photographed
-falls back to the shared set.
-
-**Every brand's list is deliberately empty.** No manufacturer's product
-photography is licensed for redistribution — that is true of all nine, not
-just one — and brand-specific gym machinery is not covered by the public-domain
-libraries either. So the pictures you see under any brand are still the shared
-ones: the movement in each is correct, the badge on the frame is not. The
-library page says so, naming whichever brand you have picked, and stops saying
-so once the photographs are your own.
-
-The honest fix is your own camera. `tools/import-photos.js` takes two
-photographs of a machine in your gym — the start and the end of a rep — and
-turns them into the same photo-and-clip pair the build pipeline produces:
-
-```bash
-node tools/import-photos.js leg-press start.jpg end.jpg          # the shared set
-node tools/import-photos.js --brand technogym --dir ~/gym-photos # that brand only
-```
-
-Shoot both frames from the same spot; the clip cross-fades between them, and a
-camera that moved reads as a jump rather than as a rep. Filed under a brand, they show only
-for profiles set to it — everybody else keeps the shared pictures.
-
----
-
 ## The coaching engine
 
 Each module is a plain script under `js/engine/`. None of it is a black box:
@@ -322,6 +241,23 @@ rather than shipping a `<video>` that renders as an empty box. In the library
 grid a clip is only fetched on first hover; loading sixty of them up front would
 be megabytes for nothing.
 
+**The photographs are a public-domain library's, not yours.** They show a real
+commercial-gym machine of the right kind — the movement is correct — but not
+necessarily the one at your gym, and no manufacturer's own product photography
+is licensed for redistribution, so none is used here regardless of what the
+machine at your gym happens to be branded. `tools/import-photos.js` is the fix:
+photograph your own gym's machine from two or more angles and it rebuilds that
+exercise's photo and clip from your own frames — a short walk-around loop
+(a stop on each angle, a cross-fade into the next, looping closed) rather than
+the cross-faded start/end position the stock pipeline builds. Two photos still
+works exactly as before; more angles reads as an actual look at the machine
+rather than a demonstration of one rep.
+
+```bash
+node tools/import-photos.js leg-press front.jpg side.jpg angle.jpg
+node tools/import-photos.js --dir ~/gym-photos   # <id>-1.jpg, <id>-2.jpg, ...
+```
+
 ---
 
 ## Arabic and right-to-left
@@ -519,7 +455,6 @@ js/i18n.js                 Translation core: message objects, deferred
 js/i18n/en.js              English strings (source of truth)
 js/i18n/ar.js              Arabic strings
 js/i18n/content.ar.js      Arabic exercise library + the plan's own guidelines
-js/i18n/brands.ar.js       Arabic half of the brand overlays
 
 js/data/library.js         The exercise library and the source program:
                            names, steps, tips, media paths, the four-day plan
@@ -528,10 +463,6 @@ js/data/coaching.js        What the engine reasons about: movement patterns,
                            volume landmarks, goal and experience profiles
 js/data/labels.js          Registers the English source text and resolves
                            deferred references into the current language
-js/data/brands.js          Per-brand exercise overlays: names, equipment
-                           labels and setup cues for one make of machine
-js/data/brand-photos.js    Generated: which exercises each brand has its
-                           own photographs for
 js/templates.js            Session blueprints as pattern slots; split definitions
 js/storage.js              localStorage persistence, schema v2, v1 migration
 js/ui.js                   Page chrome, formatting, charts, toasts, modals
@@ -555,8 +486,9 @@ tools/build-media.js       Rebuilds photos and clips from free-exercise-db
 tools/media-map.json       Exercise id -> source entry
 tools/contact-sheet.js     Writes every exercise's name against its photo and
                            clip on one page, for reviewing the media by eye
-tools/import-photos.js     Replaces a stock photo with one you took of your
-                           own gym's machine, and rebuilds its clip
+tools/import-photos.js     Replaces a stock photo and clip with a walk-around
+                           built from two or more angles you photographed
+                           yourself of your own gym's machine
 
 robots.txt                 Keeps the shared-by-link site out of search results
 
