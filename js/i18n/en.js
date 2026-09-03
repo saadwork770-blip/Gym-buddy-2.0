@@ -763,6 +763,15 @@ I18n.register("en", {
   },
 
   food: {
+    "chicken-kabsa": { name: "Chicken kabsa", serving: "1 plate, ~350g rice and chicken" },
+    "chicken-mandi": { name: "Chicken mandi", serving: "1 plate, ~350g rice and chicken" },
+    "chicken-jareesh": { name: "Chicken jareesh", serving: "1 bowl, ~300g" },
+    "chicken-saleeg": { name: "Chicken saleeg", serving: "1 bowl, ~300g" },
+    "margoog": { name: "Margoog", serving: "1 bowl, ~350g" },
+    "foul-medames": { name: "Foul medames", serving: "1 bowl, ~250g with olive oil" },
+    "balila": { name: "Balila (warm chickpeas)", serving: "1 bowl, ~200g" },
+    "shakshuka": { name: "Shakshuka", serving: "2 eggs in tomato sauce, ~300g" },
+    "sambousek-meat": { name: "Sambousek (meat)", serving: "3 baked pieces, ~120g" },
     "grilled-chicken-breast": { name: "Grilled chicken breast", serving: "150g grilled" },
     "grilled-fish-hammour": { name: "Grilled hammour (fish)", serving: "150g grilled" },
     "shawarma-chicken-plate": { name: "Chicken shawarma plate", serving: "1 plate, no bread, light sauce" },
@@ -780,7 +789,6 @@ I18n.register("en", {
     "dates": { name: "Dates", serving: "5 pieces" },
     "banana": { name: "Banana", serving: "1 medium" },
     "sweet-potato": { name: "Sweet potato", serving: "200g baked" },
-    "freekeh": { name: "Freekeh", serving: "1 cup cooked, ~180g" },
     "fattoush-salad": { name: "Fattoush salad", serving: "1 bowl with olive oil dressing" },
     "tabbouleh": { name: "Tabbouleh", serving: "1 cup" },
     "hummus-bowl": { name: "Hummus", serving: "150g with a little olive oil" },
