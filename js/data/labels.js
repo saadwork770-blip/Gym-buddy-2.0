@@ -45,15 +45,36 @@
    rather than reading the English constant directly, so a language switch
    re-renders the whole app instead of leaving English islands behind. */
 
-function exName(id)     { return I18n.t(`exercise.${id}.name`); }
-function exSteps(id)    { return I18n.list(`exercise.${id}.steps`); }
-function exTips(id)     { return I18n.list(`exercise.${id}.tips`); }
+/* ---------- Brand-aware exercise content ----------
+   The neutral library names the movement; a brand overlay names the machine.
+   Look for the overlay first and fall through when a brand has nothing to say
+   about this exercise, which is the normal case for free weights. */
+function brandKey(id, field) { return `brand.${activeBrand()}.exercise.${id}.${field}`; }
+
+function exName(id) {
+  const k = brandKey(id, "name");
+  return I18n.has(k) ? I18n.t(k) : I18n.t(`exercise.${id}.name`);
+}
+function exSteps(id) {
+  const k = brandKey(id, "steps");
+  return I18n.has(k) ? I18n.list(k) : I18n.list(`exercise.${id}.steps`);
+}
+function exTips(id) {
+  const k = brandKey(id, "tips");
+  return I18n.has(k) ? I18n.list(k) : I18n.list(`exercise.${id}.tips`);
+}
 function exMediaNote(id){ return I18n.has(`mediaNote.${id}`) ? I18n.t(`mediaNote.${id}`) : null; }
 
 function muscleLabel(m)   { return I18n.t(`muscle.${m}`); }
 function patternLabel(p)  { return I18n.t(`pattern.${p}`); }
 function loadTypeLabel(l) { return I18n.t(`loadType.${l}`); }
 function equipmentLabel(e){ return I18n.has(`equipment.${e}`) ? I18n.t(`equipment.${e}`) : e; }
+/** The equipment label for an exercise, which a brand may override. */
+function exEquipment(id) {
+  const ex = exerciseById(id);
+  return brandEquipment(id) || (ex ? equipmentLabel(ex.equipment) : "");
+}
+function brandLabel(id) { return I18n.t(`brandName.${id || activeBrand()}`); }
 function jointLabel(j)    { return I18n.t(`joint.${j}`); }
 function goalLabel(g)     { return I18n.has(`goal.${g}`) ? I18n.t(`goal.${g}`) : g; }
 function levelLabel(l)    { return I18n.has(`level.${l}`) ? I18n.t(`level.${l}`) : l; }

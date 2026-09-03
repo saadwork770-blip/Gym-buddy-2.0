@@ -665,6 +665,8 @@ I18n.register("en", {
     setTime: "Time per session",
     setTimeHint: "Lifting time, not counting the cardio finisher. Sessions longer than this get trimmed — the main compounds are kept and the finishers go first.",
     setTimeOption: "{n} min",
+    setBrand: "Equipment brand",
+    setBrandHint: "Pick the brand your gym is kitted out with and every machine is renamed to what is written on the frame, with setup cues for that machine. Choose none and the app names the movement rather than the product.",
     setEquipment: "Equipment at your gym",
     setEquipmentHint: "Turn anything off and the coach substitutes around it, telling you what it changed and why.",
     eqMachine: "Selectorised & plate machines", eqCable: "Cable stations", eqDumbbell: "Dumbbells",

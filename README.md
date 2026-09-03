@@ -1,48 +1,97 @@
-# GymBuddy 2.0 — Technogym edition
+# GymBuddy 2.0
 
 An adaptive training companion built from a real training plan —
-**"4-Day Fat Loss Program — Fitness Time (Standard Commercial Gym)"** — with
-its exercise library rewritten for a gym kitted out by **Technogym**.
+**"4-Day Fat Loss Program — Fitness Time (Standard Commercial Gym)."**
 
-This branch is the same coaching engine as the main edition. What differs is
-the thirty machine, cable and cardio entries: they are named for the Technogym
-range a member actually walks past, and their setup cues describe those
-machines rather than a generic equivalent.
+Version 1 turned that plan into a browsable website. Version 2.0 keeps every bit
+of that — the full program, the exercise library with real gym photographs and
+animated demonstrations, the local profile — and puts a coaching engine
+underneath it.
 
-| The plan says | You are standing at |
+The engine does four things the static version could not:
+
+1. **It picks your weights.** Not a fixed number printed on a page: the load for
+   your next session is derived from the reps and effort you logged in the last
+   one, and rounded to what the machine can actually select.
+2. **It rebuilds your week around the days you can train.** Choose one to six
+   days and it re-selects the split, re-orders the sessions so overlapping
+   muscle work lands as far apart as the week allows, and re-sizes each session
+   to the time you have.
+3. **It changes the workouts.** Stalled lifts, missing equipment, a joint that
+   hurts, volume above what you can recover from — each triggers a specific,
+   explained modification that you accept or reject. Between blocks it rotates
+   the program on its own, keeping your main lifts long enough to get strong at
+   them and varying the work around them.
+4. **It knows when you have been away.** Come back after five weeks and it
+   brings the loads down and the effort ceiling with them, rather than handing
+   you the bar you left with the word "increase" on it.
+
+It runs in **English and Arabic**, with full right-to-left layout — including
+the coaching prose, which is generated from your training data rather than
+written in advance.
+
+The library is **66 exercises**, every one with a real gym photograph and a
+silent looping demonstration.
+
+It is still a static site. No build step, no dependencies, no server, no
+account. Everything you log stays in your browser.
+
+---
+
+## Equipment brands
+
+The same movement is the same movement everywhere, but the machine it is done
+on is not. "Chest Press Machine" is what the exercise *is*; "Chest Press
+(Selection)" is what is written on the frame in a gym kitted out by Technogym —
+and a member looking for it reads the frame.
+
+So the library underneath is brand-neutral and each brand supplies an overlay.
+Pick yours in **Profile → Training settings → Equipment brand** and every
+machine is renamed, with setup cues describing the adjustments that machine
+actually has. Two ship today:
+
+| Brand | What changes |
 |---|---|
-| Chest Press, Pectoral, Shoulder Press, Lat Machine, Low Row, Arm Curl, Leg Press, Leg Extension, Leg Curl, Abductor / Adductor, Rotary Calf, Abdominal Crunch, Glute, Rear Delt | **Selection** |
-| Hack Squat, Seated Calf, plate-loaded Leg Press | **Pure Strength** |
-| Rows, pushdowns, face pulls, crossovers, lateral raises | **Pulley** |
-| Incline press on a fixed bar path | **Multipower** |
-| Run, Bike, Synchro, Climb | **Excite** |
-| Rower | **Skillrow** |
+| **No particular brand** (default) | Names the movement rather than the product. Right for a gym with mixed equipment. |
+| **Technogym** | 31 machine, cable and cardio entries renamed to the Selection, Pure Strength, Pulley, Multipower, Excite and Skill lines, with setup cues for those machines. |
 
-The setup cues follow the conventions of those machines: the numbered seat
-scale worth remembering, the range-of-motion selector, the thigh pad that is
-the only thing keeping you in the seat on a lat pulldown.
+Under Technogym the plan reads: Chest Press, Pectoral, Shoulder Press, Lat
+Machine, Low Row, Arm Curl, Leg Extension, Leg Curl, Abductor / Adductor,
+Rotary Calf, Abdominal Crunch, Glute and Rear Delt on **Selection**; Hack Squat,
+Seated Calf and the plate-loaded Leg Press on **Pure Strength**; rows,
+pushdowns, face pulls and crossovers at the **Pulley**; the fixed-bar incline
+press on the **Multipower**; Run, Bike, Synchro and Climb on **Excite**; the
+rower is **Skillrow**.
+
+Adding a brand is one file plus its Arabic half — `js/data/brands.js` and
+`js/i18n/brands.ar.js`. An overlay can be as small as a single exercise;
+anything it does not mention falls through to the neutral entry.
 
 ### About the photographs
 
-The pictures are **not** of Technogym machines, and the app says so on the
-library page. Technogym's product photography belongs to Technogym and is not
-licensed for redistribution, so this edition keeps the public-domain
-photographs the main edition uses: the movement in each one is correct, the
-badge on the frame is not.
+A brand can ship its own photography in `assets/photos/<brand>/`, and
+`js/data/brand-photos.js` records which exercises it has covered so nothing
+ever requests a file that is not there. Anything a brand has not photographed
+falls back to the shared set.
+
+**Technogym's list is deliberately empty.** Their product photography belongs
+to them and is not licensed for redistribution, so the pictures you see under
+that brand are still the shared public-domain ones: the movement in each is
+correct, the badge on the frame is not. The library page says so, and stops
+saying so once the photographs are your own.
 
 The honest fix is your own camera. `tools/import-photos.js` takes two
 photographs of a machine in your gym — the start and the end of a rep — and
 turns them into the same photo-and-clip pair the build pipeline produces:
 
 ```bash
-node tools/import-photos.js leg-press start.jpg end.jpg
-node tools/import-photos.js --dir ~/gym-photos     # <id>-start.jpg / <id>-end.jpg
+node tools/import-photos.js leg-press start.jpg end.jpg          # the shared set
+node tools/import-photos.js --brand technogym --dir ~/gym-photos # that brand only
 ```
 
 Shoot both frames from the same spot; the clip cross-fades between them, and a
-camera that moved reads as a jump rather than as a rep. Once every machine is
-your own photograph, delete the `library.photoProvenance` line from the
-dictionaries — it will no longer be telling the truth.
+camera that moved reads as a jump rather than as a rep. Filed under a brand, they show only
+for profiles set to it — everybody else keeps the shared pictures.
 
 Version 1 turned that plan into a browsable website. Version 2.0 keeps every bit
 of that — the full program, the exercise library with real gym photographs and
@@ -479,6 +528,7 @@ js/i18n.js                 Translation core: message objects, deferred
 js/i18n/en.js              English strings (source of truth)
 js/i18n/ar.js              Arabic strings
 js/i18n/content.ar.js      Arabic exercise library + the plan's own guidelines
+js/i18n/brands.ar.js       Arabic half of the brand overlays
 
 js/data/library.js         The exercise library and the source program:
                            names, steps, tips, media paths, the four-day plan
@@ -487,6 +537,10 @@ js/data/coaching.js        What the engine reasons about: movement patterns,
                            volume landmarks, goal and experience profiles
 js/data/labels.js          Registers the English source text and resolves
                            deferred references into the current language
+js/data/brands.js          Per-brand exercise overlays: names, equipment
+                           labels and setup cues for one make of machine
+js/data/brand-photos.js    Generated: which exercises each brand has its
+                           own photographs for
 js/templates.js            Session blueprints as pattern slots; split definitions
 js/storage.js              localStorage persistence, schema v2, v1 migration
 js/ui.js                   Page chrome, formatting, charts, toasts, modals

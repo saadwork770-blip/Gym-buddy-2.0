@@ -5,6 +5,16 @@
    ============================================================================ */
 
 UI.ready(() => {
+  /* The note about whose machines are pictured is only true while the brand in
+     force has no photography of its own. Once somebody has imported theirs it
+     would be describing a state that no longer exists. */
+  const provenance = document.querySelector(".media-provenance");
+  if (provenance) {
+    const brand = activeBrand();
+    const own = ((typeof BRAND_PHOTOS !== "undefined" && BRAND_PHOTOS[brand]) || []).length;
+    provenance.hidden = brand === "generic" || own >= EXERCISES.length;
+  }
+
   const grid = document.getElementById("exGrid");
   const emptyState = document.getElementById("emptyState");
   const searchInput = document.getElementById("search");
@@ -61,7 +71,7 @@ UI.ready(() => {
           <h3>${UI.esc(exName(ex.id))}</h3>
           <div class="ex-meta">
             <span class="badge" style="--accent-cat:${color}">${UI.esc(muscleLabel(ex.muscle))}</span>
-            <span class="badge" style="--accent-cat:#8892a0">${UI.esc(equipmentLabel(ex.equipment))}</span>
+            <span class="badge" style="--accent-cat:#8892a0">${UI.esc(exEquipment(ex.id))}</span>
             ${inPlan ? `<span class="badge" style="--accent-cat:var(--accent)">${UI.t("library.badgeInPlan")}</span>` : ""}
             ${flagged ? `<span class="badge" style="--accent-cat:#ffd43b">${UI.t("library.badgePain", { joint: jointLabel(flagged) })}</span>` : ""}
             ${excluded ? `<span class="badge" style="--accent-cat:#ff6b6b">${UI.t("library.badgeExcluded")}</span>` : ""}
@@ -87,7 +97,7 @@ UI.ready(() => {
       if (activeExtra === "isolation" && ex.role !== "isolation") return false;
       if (activeExtra === "flagged" && !ctx.pain[ex.id] && !ctx.excluded.has(ex.id)) return false;
       if (!q) return true;
-      return [exName(ex.id), ex.name, equipmentLabel(ex.equipment), ex.equipment,
+      return [exName(ex.id), ex.name, exEquipment(ex.id), equipmentLabel(ex.equipment), ex.equipment,
               patternLabel(ex.pattern), muscleLabel(ex.muscle)]
         .join(" ").toLowerCase().includes(q);
     });
@@ -151,7 +161,7 @@ UI.ready(() => {
       <div class="modal-head" style="--accent-cat:${color}"><div>
         <span class="badge" style="--accent-cat:${color}">${UI.esc(muscleLabel(ex.muscle))}</span>
         <h3 style="margin-top:10px;">${UI.esc(exName(ex.id))}</h3>
-        <div class="hint">${UI.esc(equipmentLabel(ex.equipment))} · ${UI.esc(patternLabel(ex.pattern))} · ${UI.esc(loadTypeLabel(ex.loadType))}</div>
+        <div class="hint">${UI.esc(exEquipment(ex.id))} · ${UI.esc(patternLabel(ex.pattern))} · ${UI.esc(loadTypeLabel(ex.loadType))}</div>
       </div></div>
       <div class="modal-body">
         ${mediaBlock}

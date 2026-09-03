@@ -364,6 +364,15 @@ UI.ready(() => {
       </div>
 
       <div class="settings-group">
+        <h3>${UI.t("profile.setBrand")}</h3>
+        <p class="hint">${UI.t("profile.setBrandHint")}</p>
+        <div class="seg" id="brandSeg" role="group" aria-label="${UI.t("profile.setBrand")}">
+          ${Object.keys(BRANDS).map(b => `<button data-brand="${b}" class="${(s.equipmentBrand || "generic") === b ? "on" : ""}"
+            aria-pressed="${(s.equipmentBrand || "generic") === b}">${UI.esc(brandLabel(b))}</button>`).join("")}
+        </div>
+      </div>
+
+      <div class="settings-group">
         <h3>${UI.t("profile.setEquipment")}</h3>
         <p class="hint">${UI.t("profile.setEquipmentHint")}</p>
         <div class="toggle-grid">
@@ -412,6 +421,12 @@ UI.ready(() => {
 
     panel.querySelectorAll("#timeSeg button").forEach(btn => btn.addEventListener("click", () => {
       save({ sessionMinutes: Number(btn.dataset.min) });
+      render();
+    }));
+    panel.querySelectorAll("#brandSeg button").forEach(btn => btn.addEventListener("click", () => {
+      /* Changing brand renames every machine and rewrites its setup cues, so
+         the page is redrawn rather than patched. */
+      save({ equipmentBrand: btn.dataset.brand });
       render();
     }));
     panel.querySelectorAll("[data-eq]").forEach(cb => cb.addEventListener("change", () => {

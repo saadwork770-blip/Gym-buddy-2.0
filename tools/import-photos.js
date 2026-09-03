@@ -21,6 +21,9 @@
        # a whole folder, named <exercise-id>-start.jpg / <exercise-id>-end.jpg
        node tools/import-photos.js --dir ~/gym-photos
 
+       # file them under a brand, so only that brand's users see them
+       node tools/import-photos.js --brand technogym --dir ~/technogym-photos
+
    Shoot both frames from the same spot, ideally on a tripod or propped against
    something: the clip cross-fades between them, and a camera that moved between
    shots reads as a jump rather than as a rep.
@@ -44,8 +47,12 @@ const FPS = 25, HOLD_START = 11, CONCENTRIC = 4, HOLD_END = 7, ECCENTRIC = 8;
 function usage(msg) {
   if (msg) console.error(msg + "\n");
   console.error(`Usage:
-  node tools/import-photos.js <exercise-id> <start.jpg> <end.jpg>
-  node tools/import-photos.js --dir <folder>      (expects <id>-start.jpg / <id>-end.jpg)
+  node tools/import-photos.js [--brand <id>] <exercise-id> <start.jpg> <end.jpg>
+  node tools/import-photos.js [--brand <id>] --dir <folder>   (expects <id>-start.jpg / <id>-end.jpg)
+
+  --brand files the photographs under that brand only, so a gym kitted out by
+  someone else keeps the shared pictures. Without it they replace the shared
+  set for everybody.
 
 Known exercise ids are the keys of tools/media-map.json (${Object.keys(MAP).length} of them).`);
   process.exit(2);
@@ -81,7 +88,16 @@ function collectJobs(argv) {
 }
 
 async function main() {
-  const jobs = collectJobs(process.argv.slice(2)).filter(j => knownId(j.id));
+  let argv = process.argv.slice(2);
+  let brand = null;
+  const bi = argv.indexOf("--brand");
+  if (bi !== -1) {
+    brand = argv[bi + 1];
+    if (!brand) usage("--brand needs a brand id, e.g. technogym.");
+    argv = argv.slice(0, bi).concat(argv.slice(bi + 2));
+  }
+
+  const jobs = collectJobs(argv).filter(j => knownId(j.id));
   if (!jobs.length) process.exit(2);
 
   jobs.forEach(j => [j.start, j.end].forEach(f => {
@@ -95,28 +111,63 @@ async function main() {
     process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   const page = await browser.newPage();
 
-  fs.mkdirSync(path.join(ROOT, "assets/photos"), { recursive: true });
-  fs.mkdirSync(path.join(ROOT, "assets/clips"), { recursive: true });
+  const photoDir = path.join(ROOT, "assets/photos", brand || "");
+  const clipDir = path.join(ROOT, "assets/clips", brand || "");
+  fs.mkdirSync(photoDir, { recursive: true });
+  fs.mkdirSync(clipDir, { recursive: true });
 
   let done = 0;
+  const imported = [];
   for (const job of jobs) {
     const a = fs.readFileSync(job.start).toString("base64");
     const b = fs.readFileSync(job.end).toString("base64");
     const out = await renderFrames(page, a, b);
-    fs.writeFileSync(path.join(ROOT, "assets/photos", `${job.id}.jpg`), out.poster);
-    encodeWebm(out.frames, path.join(ROOT, "assets/clips", `${job.id}.webm`));
+    fs.writeFileSync(path.join(photoDir, `${job.id}.jpg`), out.poster);
+    encodeWebm(out.frames, path.join(clipDir, `${job.id}.webm`));
+    imported.push(job.id);
     done++;
     console.log(`  ${job.id} — photo and clip rebuilt from your own frames`);
   }
   await browser.close();
 
+  if (brand) updateManifest(brand, imported);
+
   console.log(`\n${done} exercise${done === 1 ? "" : "s"} imported.`);
   console.log("Check them with:  node tools/contact-sheet.js && open tools/contact-sheet.html");
-  if (done) {
+  if (done && brand) {
+    console.log(`\njs/data/brand-photos.js now lists these under "${brand}", so only a`);
+    console.log("profile set to that brand sees them. Everyone else keeps the shared set.");
+  } else if (done) {
     console.log("\nOnce every machine in your gym is your own photograph, drop the");
     console.log("`library.photoProvenance` line from the dictionaries — it will no");
     console.log("longer be telling the truth.");
   }
+}
+
+/**
+ * Record which exercises a brand now has its own photographs for.
+ *
+ * The site is static and cannot ask whether a file exists, so this list is how
+ * it knows — an id in here is served from the brand folder, anything else
+ * falls back to the shared set. Rewritten rather than appended so a deleted
+ * photograph disappears from the list too.
+ */
+function updateManifest(brand, ids) {
+  const file = path.join(ROOT, "js/data/brand-photos.js");
+  const src = fs.readFileSync(file, "utf8");
+  const dir = path.join(ROOT, "assets/photos", brand);
+  const onDisk = fs.existsSync(dir)
+    ? fs.readdirSync(dir).filter(f => f.endsWith(".jpg")).map(f => f.replace(/\.jpg$/, "")).sort()
+    : [];
+  const listed = onDisk.map(id => `    ${JSON.stringify(id)},`).join("\n");
+  const block = `  ${JSON.stringify(brand)}: [\n${listed}\n  ],`;
+  /* The key may be written quoted or bare; match either so a second import
+     replaces the entry instead of adding a duplicate that shadows it. */
+  const re = new RegExp(`  (?:"${brand}"|${brand}): \\[[^\\]]*\\],`);
+  const next = re.test(src) ? src.replace(re, block)
+                            : src.replace(/const BRAND_PHOTOS = \{/, `const BRAND_PHOTOS = {\n${block}`);
+  fs.writeFileSync(file, next);
+  console.log(`  manifest: ${onDisk.length} photograph${onDisk.length === 1 ? "" : "s"} under "${brand}"`);
 }
 
 /* Identical to the pipeline in build-media.js: the canvas does the decode,
