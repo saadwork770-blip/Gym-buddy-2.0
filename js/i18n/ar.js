@@ -23,6 +23,20 @@ I18n.register("ar", {
     skipToContent: "تخطَّ إلى المحتوى", primary: "التنقّل",
   },
 
+  /* Bottom-bar labels, where a tab is about 55 points wide. Only the ones
+     whose full name does not fit are listed; the rest fall back to nav. */
+  tab: {
+    diet: "الغذاء",
+    profile: "حسابي",
+  },
+
+  app: {
+    installTitle: "ثبّت جيم بادي",
+    installBody: "اضغط مشاركة ثم <b>إضافة إلى الشاشة الرئيسية</b>. يفتح بملء الشاشة ويعمل بدون إنترنت.",
+    updateReady: "هناك إصدار جديد جاهز.",
+    updateNow: "تحديث",
+  },
+
   footer: {
     tagline: "جيم بادي 2.0 — تدريب متكيّف مبني على خطتك التدريبية من فتنس تايم.",
     privacy: "كل البيانات تبقى في هذا المتصفّح. الصور والعروض التوضيحية من free-exercise-db (ملكية عامة).",

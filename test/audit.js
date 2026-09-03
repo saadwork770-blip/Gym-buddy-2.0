@@ -316,6 +316,93 @@ const A11Y = () => {
     await p3.close();
   }
 
+  /* ------------------------------------------------------------------
+     Installed app
+     ------------------------------------------------------------------
+     The app is meant to be added to an iPhone home screen and used in a
+     basement gym. That claim has three moving parts — a manifest iOS will
+     accept, an icon and launch image for every size it asks for, and a
+     service worker holding the whole shell — and all three fail silently.
+     ------------------------------------------------------------------ */
+  log("\nInstalled app");
+  {
+    const ctx = await browser.newContext({
+      viewport: { width: 390, height: 844 }, deviceScaleFactor: 3,
+      isMobile: true, hasTouch: true,
+    });
+    const ip = await ctx.newPage();
+    await ip.goto(`${BASE}/index.html`);
+    await ip.waitForTimeout(900);
+
+    /* Every page, not just this one: a manifest missing from the page someone
+       happens to be on when they tap Share is a manifest that does nothing. */
+    const missing = [];
+    for (const name of PAGES) {
+      await ip.goto(`${BASE}/${name}.html`);
+      const has = await ip.evaluate(() => ({
+        manifest: !!document.querySelector('link[rel="manifest"]'),
+        icon: !!document.querySelector('link[rel="apple-touch-icon"]'),
+        splash: document.querySelectorAll('link[rel="apple-touch-startup-image"]').length,
+        capable: !!document.querySelector('meta[name="apple-mobile-web-app-capable"][content="yes"]'),
+      }));
+      if (!has.manifest || !has.icon || !has.capable || has.splash < 1) {
+        missing.push(`${name} (${Object.entries(has).map(([k, v]) => `${k}:${v}`).join(" ")})`);
+      }
+    }
+    if (missing.length) fail(`pages that cannot be added to a home screen — ${missing.join("; ")}`);
+    else pass(`all ${PAGES.length} pages carry the manifest, the touch icon and a launch image`);
+
+    const mf = await ip.evaluate(async () => {
+      const href = document.querySelector('link[rel="manifest"]').getAttribute("href");
+      const res = await fetch(href);
+      if (!res.ok) return { error: `HTTP ${res.status}` };
+      const json = await res.json();
+      const results = await Promise.all(json.icons.map(async i => {
+        const r = await fetch(i.src, { method: "HEAD" });
+        return r.ok ? null : `${i.src} → ${r.status}`;
+      }));
+      const splashes = await Promise.all(
+        [...document.querySelectorAll('link[rel="apple-touch-startup-image"]')].map(async l => {
+          const r = await fetch(l.getAttribute("href"), { method: "HEAD" });
+          return r.ok ? null : l.getAttribute("href");
+        }));
+      return { display: json.display, start: json.start_url, icons: json.icons.length,
+               maskable: json.icons.some(i => (i.purpose || "").includes("maskable")),
+               brokenIcons: results.filter(Boolean), brokenSplashes: splashes.filter(Boolean) };
+    });
+    if (mf.error) fail(`manifest — ${mf.error}`);
+    else if (mf.display !== "standalone") fail(`manifest display is "${mf.display}", so it opens in a browser tab`);
+    else if (!mf.maskable) fail("manifest has no maskable icon, so a round launcher crops the mark");
+    else if (mf.brokenIcons.length) fail(`manifest icons missing — ${mf.brokenIcons.join(", ")}`);
+    else if (mf.brokenSplashes.length) fail(`launch images missing — ${mf.brokenSplashes.join(", ")}`);
+    else pass(`manifest opens standalone at ${mf.start}, ${mf.icons} icons and every launch image resolves`);
+
+    const sw = await ip.evaluate(async () => {
+      const reg = await navigator.serviceWorker.getRegistration();
+      return { registered: !!reg, controlling: !!navigator.serviceWorker.controller };
+    });
+    if (!sw.registered) fail("no service worker registered — the app cannot open without a connection");
+    else if (!sw.controlling) fail("a service worker is registered but is not controlling the page");
+    else pass("a service worker is registered and controlling the page");
+
+    /* The real test of the claim: pull the network out and walk the app. */
+    await ctx.setOffline(true);
+    const dead = [];
+    for (const name of PAGES) {
+      try {
+        await ip.goto(`${BASE}/${name}.html`, { waitUntil: "domcontentloaded" });
+        const alive = await ip.evaluate(() =>
+          !!document.querySelector("nav.nav") && !!document.querySelector(".tabbar"));
+        if (!alive) dead.push(`${name} (loaded without its chrome)`);
+      } catch (e) { dead.push(`${name} (${String(e.message).split("\n")[0]})`); }
+    }
+    await ctx.setOffline(false);
+    if (dead.length) fail(`pages that do not work offline — ${dead.join("; ")}`);
+    else pass(`all ${PAGES.length} pages open and render with the network switched off`);
+
+    await ctx.close();
+  }
+
   log("\nStorage");
   const storage = await page.evaluate(() => {
     const key = "gymbuddy_profiles_v2";

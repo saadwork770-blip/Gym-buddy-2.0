@@ -121,12 +121,29 @@ const UI = (function () {
       bar.setAttribute("aria-label", I18n.t("nav.primary"));
       bar.innerHTML = TABS.map(t => {
         const active = t.href === here;
+        /* A tab is 55 points wide. Arabic's "النظام الغذائي" is two words and
+           wrapped to two lines, which pushed the label out of the bar
+           altogether — so a language may give the bar a shorter label of its
+           own, and falls back to the full nav label when it does not need to. */
+        const short = `tab.${t.icon}`;
+        const label = I18n.has(short) ? I18n.t(short) : I18n.t(t.key);
         return `<a href="${t.href}" class="${active ? "active" : ""}"${active ? ' aria-current="page"' : ""}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICON[t.icon]}</svg>
-          <span>${esc(I18n.t(t.key))}</span></a>`;
+          <span>${esc(label)}</span></a>`;
       }).join("");
       document.body.appendChild(bar);
+
+      /* Tapping the tab you are already on scrolls back to the top instead of
+         reloading the page you are already looking at. It is a small thing
+         that every iOS app does, and its absence is felt long before it is
+         noticed. */
+      bar.addEventListener("click", e => {
+        const link = e.target.closest("a");
+        if (!link || !link.classList.contains("active")) return;
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
     }
 
     if (!document.querySelector("body > footer")) {
@@ -275,9 +292,69 @@ const UI = (function () {
     overlay.querySelector(".modal-close").addEventListener("click", close);
     overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
     document.addEventListener("keydown", onKey);
+    wireSheetDismiss(overlay, close);
     const firstField = overlay.querySelector("input, select, textarea, button:not(.modal-close), a[href]");
     (firstField || overlay.querySelector(".modal-close")).focus();
     return { el: overlay, close };
+  }
+
+  /**
+   * Swipe a dialog down to close it.
+   *
+   * On a phone the stylesheet presents dialogs as bottom sheets, and a sheet
+   * you cannot flick away is a sheet in appearance only — it is the gesture,
+   * not the rounded corner, that people actually recognise. The rule iOS uses
+   * is the one worth copying: a downward drag pulls the sheet only when the
+   * content inside it is already scrolled to the top, so reading a long
+   * technique list never turns into dismissing it by accident.
+   */
+  function wireSheetDismiss(overlay, close) {
+    const sheet = overlay.querySelector(".modal");
+    if (!sheet || !window.matchMedia) return;
+    const isSheet = () => window.matchMedia("(max-width: 700px)").matches;
+
+    let startY = 0, startedAt = 0, moved = 0, dragging = false, scroller = null;
+
+    sheet.addEventListener("touchstart", e => {
+      if (!isSheet() || e.touches.length !== 1) return;
+      dragging = true; moved = 0;
+      startY = e.touches[0].clientY;
+      startedAt = Date.now();
+      scroller = e.target.closest(".modal-body");
+      sheet.style.transition = "none";
+    }, { passive: true });
+
+    sheet.addEventListener("touchmove", e => {
+      if (!dragging) return;
+      const delta = e.touches[0].clientY - startY;
+      if (delta <= 0 || (scroller && scroller.scrollTop > 0)) {
+        moved = 0; sheet.style.transform = "";
+        return;                       // an upward drag, or a list still to read
+      }
+      moved = delta;
+      /* One-to-one with the finger, which is what makes it feel picked up
+         rather than animated at. */
+      sheet.style.transform = `translateY(${delta}px)`;
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    const release = () => {
+      if (!dragging) return;
+      dragging = false;
+      sheet.style.transition = "";
+      const speed = moved / Math.max(1, Date.now() - startedAt);   // px per ms
+      /* Far enough, or a genuine flick. A flick still has to travel — without
+         the distance floor, any quick downward nudge on the sheet closes it,
+         because a few pixels in a few milliseconds is a very high speed. */
+      if (moved > sheet.offsetHeight * 0.26 || (moved > 70 && speed > 0.6)) {
+        sheet.style.transform = "translateY(100%)";
+        setTimeout(close, 200);
+      } else {
+        sheet.style.transform = "";
+      }
+    };
+    sheet.addEventListener("touchend", release);
+    sheet.addEventListener("touchcancel", release);
   }
 
   /* ---------------- Formatting ---------------- */
@@ -618,6 +695,120 @@ const UI = (function () {
     } catch (e) { /* audio is a nicety, never a requirement */ }
   }
 
+  /* ============================================================================
+     Installed-app plumbing
+     ----------------------------------------------------------------------------
+     Everything below is what separates "a website that looks like an app" from
+     an app: it opens from the home screen with no browser chrome, it opens
+     instantly, and it keeps working in a basement gym with one bar of signal
+     and nothing behind it.
+     ============================================================================ */
+
+  /** True when the app was launched from the home screen rather than in Safari. */
+  function isStandalone() {
+    return window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  }
+
+  /**
+   * Register the service worker, and offer the update rather than forcing it.
+   *
+   * A worker that calls skipWaiting on install swaps the scripts under a page
+   * that may be halfway through a set. So the new one waits, and the lifter is
+   * told there is a new version and taps when they are between exercises.
+   */
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    /* Opened by double-clicking the folder: there is no origin to scope a
+       worker to, and registering throws. The app still works; it just has no
+       offline cache, which it does not need from a local disk anyway. */
+    if (location.protocol === "file:") return;
+
+    /* Set only when the lifter has actually asked for the new version. The
+       worker also claims the page on a first visit, which fires the same
+       event — reloading on that would mean every first visit silently
+       reloads itself, and a navigation in progress gets aborted with it. */
+    let swapping = false;
+
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      /* controller means this page was already served by a worker, so a worker
+         found waiting now is genuinely a NEW version — on the very first visit
+         the first worker is not an update and must not be announced as one. */
+      const announce = worker => {
+        if (!navigator.serviceWorker.controller) return;
+        toast(I18n.t("app.updateReady"), "info");
+        const host = document.querySelector(".toast-host .toast");
+        if (!host) return;
+        host.classList.add("toast-action");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = I18n.t("app.updateNow");
+        button.addEventListener("click", () => {
+          swapping = true;
+          worker.postMessage({ type: "SKIP_WAITING" });
+        });
+        host.appendChild(button);
+      };
+
+      if (reg.waiting) announce(reg.waiting);
+      reg.addEventListener("updatefound", () => {
+        const installing = reg.installing;
+        if (!installing) return;
+        installing.addEventListener("statechange", () => {
+          if (installing.state === "installed") announce(installing);
+        });
+      });
+    }).catch(() => { /* no cache, no app-shell speed-up, everything else fine */ });
+
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!swapping || reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
+  }
+
+  /**
+   * The Add to Home Screen hint.
+   *
+   * iOS gives a web page no way to ask — there is no install prompt to call,
+   * only the Share sheet — so the only honest thing to do is to point at it
+   * once. Shown to iPhone Safari, never to somebody who has already installed,
+   * and never again after it is dismissed.
+   */
+  const INSTALL_DISMISSED = "gymbuddy.installHintDismissed";
+
+  function maybeOfferInstall() {
+    if (isStandalone()) return;
+    try { if (localStorage.getItem(INSTALL_DISMISSED)) return; } catch (e) { return; }
+
+    const ua = navigator.userAgent;
+    const iOS = /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);  // iPadOS
+    /* Chrome and Firefox on iOS cannot add to the home screen from the Share
+       sheet the way Safari can, so pointing them at it would be a lie. */
+    const safari = !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    if (!iOS || !safari) return;
+
+    const card = document.createElement("div");
+    card.className = "install-hint";
+    card.innerHTML = `
+      <div class="install-mark">${LOGO}</div>
+      <div class="install-copy">
+        <b>${esc(I18n.t("app.installTitle"))}</b>
+        <span>${I18n.t("app.installBody")}</span>
+      </div>
+      <button type="button" class="install-close" aria-label="${esc(I18n.t("common.dismiss"))}">&times;</button>`;
+    document.body.appendChild(card);
+    requestAnimationFrame(() => card.classList.add("in"));
+
+    card.querySelector(".install-close").addEventListener("click", () => {
+      card.classList.remove("in");
+      setTimeout(() => card.remove(), 220);
+      try { localStorage.setItem(INSTALL_DISMISSED, "1"); } catch (e) { /* private mode */ }
+    });
+  }
+
   /* ---------------- Boot ---------------- */
 
   function ready(fn) {
@@ -628,6 +819,7 @@ const UI = (function () {
   return {
     esc, t, tx, mountChrome, refreshChrome, applyStaticStrings, requireProfile, toast, modal, fmt, actionBadge,
     exerciseThumb, exerciseClip, canPlayClips: () => CAN_PLAY_CLIPS, unlockAudio, wireThumbHover, lineChart, volumeBars, prepCanvas, beep, ready, hexA,
+    isStandalone, registerServiceWorker, maybeOfferInstall,
   };
 })();
 
@@ -636,6 +828,13 @@ window.GymBuddyUI = UI;
 /* Language has to be resolved before the first paint, otherwise the page
    renders left-to-right and then flips, which looks broken. */
 I18n.detect();
+
+/* Set before the chrome mounts, so the stylesheet can lay the app out for a
+   home-screen launch — no browser toolbar to leave room for, no install hint,
+   and a header that has to pay back the notch itself — without a visible
+   re-layout a frame later. */
+if (UI.isStandalone()) document.documentElement.classList.add("standalone");
+
 UI.ready(UI.mountChrome);
 
 /* Ask the browser not to evict this origin's storage on a routine cleanup.
@@ -658,4 +857,9 @@ UI.ready(() => {
   document.addEventListener("touchend", arm, { passive: true });
   document.addEventListener("mousedown", arm);
   document.addEventListener("keydown", arm);
+
+  UI.registerServiceWorker();
+  /* After the page has settled, so the first thing a new visitor sees is the
+     app rather than a request to install it. */
+  setTimeout(UI.maybeOfferInstall, 2600);
 });
